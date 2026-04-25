@@ -510,13 +510,22 @@ const testRowToMeta = (row: TestGameRow): GameMeta => ({
 
 const Test = () => {
   const [unlocked, setUnlocked] = useState(isTestUnlocked());
+  const [chatUsername, setChatUsername] = useState("");
   const { rows, loading, reload } = useTestGames();
   const [editPwOpen, setEditPwOpen] = useState(false);
   const [editingGame, setEditingGame] = useState<TestGameRow | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [manageMode, setManageMode] = useState(false);
 
-  if (!unlocked) return <TestGate onUnlock={() => setUnlocked(true)} />;
+  if (!unlocked)
+    return (
+      <TestGate
+        onUnlock={(name) => {
+          setChatUsername(name);
+          setUnlocked(true);
+        }}
+      />
+    );
 
   const requestEdit = (g: TestGameRow) => {
     setEditingGame(g);
