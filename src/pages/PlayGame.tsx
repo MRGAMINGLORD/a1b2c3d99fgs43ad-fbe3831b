@@ -25,7 +25,7 @@ const GAMES: Record<GameId, { src: string; title: string; loadingFlavor: string 
   "neon-snake": {
     src: "/games/neon-snake/index.html",
     title: "Neon Snake",
-    loadingFlavor: "firing up the lights",
+    loadingFlavor: "Booting the neon grid...",
   },
 };
 
