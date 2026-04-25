@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import CoverImagePicker from "@/components/CoverImagePicker";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
+import { GAMES } from "@/lib/games";
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
+const BUILTIN_SLUGS = new Set(GAMES.map((g) => g.id));
 
 const slugify = (s: string) =>
   s
