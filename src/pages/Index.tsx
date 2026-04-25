@@ -20,6 +20,7 @@ const Index = () => {
   const tycoonGames = allGames.filter((g) => g.category === "tycoon");
   const twistGames = allGames.filter((g) => g.category === "twist");
   const otherGames = allGames.filter((g) => g.category === "other");
+  const educationGames = allGames.filter((g) => g.category === "education");
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,8 +65,50 @@ const Index = () => {
       {/* Featured Games (admin-curated) */}
       <FeaturedGamesCarousel />
 
+      {/* Education */}
+      <section className="mx-auto max-w-5xl px-6 pb-4 pt-10">
+        <h2 className="mb-6 text-center font-display text-3xl text-primary sm:text-4xl">
+          Education
+        </h2>
+        <Accordion
+          type="multiple"
+          defaultValue={["education"]}
+          className="space-y-3"
+        >
+          <AccordionItem
+            value="education"
+            className="rounded-lg border border-primary/40 bg-card/40 px-4 border-glow"
+          >
+            <AccordionTrigger className="hover:no-underline">
+              <div className="text-left">
+                <div className="font-display text-xl uppercase tracking-wider text-primary">
+                  Learning Tools
+                </div>
+                <div className="text-xs italic text-muted-foreground">
+                  AI tutors and educational diversions
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="grid gap-6 pt-2 sm:grid-cols-2">
+                {educationGames.map((g) => (
+                  <GameCard
+                    key={g.id}
+                    title={g.title}
+                    description={g.description}
+                    cover={g.cover}
+                    available={g.available}
+                    playUrl={g.playUrl}
+                  />
+                ))}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </section>
+
       {/* Games (collapsible sections) */}
-      <section className="mx-auto max-w-5xl px-6 pb-12 pt-10">
+      <section className="mx-auto max-w-5xl px-6 pb-12 pt-6">
         <h2 className="mb-6 text-center font-display text-3xl text-primary sm:text-4xl">
           Games
         </h2>
