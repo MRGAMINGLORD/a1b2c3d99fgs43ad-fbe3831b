@@ -52,6 +52,8 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ChatRow | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Persist username locally so testers don't have to re-enter every visit.
