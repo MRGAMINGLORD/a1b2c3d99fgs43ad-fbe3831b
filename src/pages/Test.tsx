@@ -30,6 +30,7 @@ import {
 import CoverImagePicker from "@/components/CoverImagePicker";
 import GameCard from "@/components/GameCard";
 import TesterChat from "@/components/TesterChat";
+import TestSyncPanel from "@/components/TestSyncPanel";
 import { GAMES, type GameMeta } from "@/lib/games";
 import heroBg from "@/assets/hero-bg.png";
 
@@ -805,6 +806,8 @@ const Test = () => {
           </AccordionItem>
         </Accordion>
       </section>
+
+      <TestSyncPanel onSynced={reload} />
 
       <TesterChat defaultUsername={chatUsername} />
 
