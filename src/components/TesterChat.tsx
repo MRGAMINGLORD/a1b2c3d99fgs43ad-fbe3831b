@@ -65,6 +65,7 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
   const [clearPwOpen, setClearPwOpen] = useState(false);
   const [clearPw, setClearPw] = useState("");
   const [clearPwErr, setClearPwErr] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Persist username locally so testers don't have to re-enter every visit.
   useEffect(() => {
