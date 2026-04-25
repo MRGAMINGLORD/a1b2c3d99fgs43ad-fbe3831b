@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 10% 6%;
+    --foreground: 48 100% 50%;
+
+    --card: 40 10% 10%;
+    --card-foreground: 48 90% 90%;
+
+    --popover: 40 10% 8%;
+    --popover-foreground: 48 90% 90%;
+
+    --primary: 48 100% 50%;
+    --primary-foreground: 40 10% 6%;
+
+    --secondary: 40 8% 16%;
+    --secondary-foreground: 48 80% 80%;
+
+    --muted: 40 8% 14%;
+    --muted-foreground: 40 10% 55%;
+
+    --accent: 36 100% 55%;
+    --accent-foreground: 40 10% 6%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 12% 18%;
+    --input: 40 12% 18%;
+    --ring: 48 100% 50%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 40 10% 8%;
+    --sidebar-foreground: 48 80% 80%;
+    --sidebar-primary: 48 100% 50%;
+    --sidebar-primary-foreground: 40 10% 6%;
+    --sidebar-accent: 40 8% 16%;
+    --sidebar-accent-foreground: 48 80% 80%;
+    --sidebar-border: 40 12% 18%;
+    --sidebar-ring: 48 100% 50%;
+
+    --font-display: 'Black Ops One', cursive;
+    --font-body: 'Inter', sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .text-glow {
+    text-shadow: 0 0 20px hsl(48 100% 50% / 0.5), 0 0 40px hsl(48 100% 50% / 0.3);
+  }
+
+  .border-glow {
+    box-shadow: 0 0 15px hsl(48 100% 50% / 0.2), inset 0 0 15px hsl(48 100% 50% / 0.05);
+  }
+
+  @keyframes border-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 1px hsl(48 100% 50% / 0.4), 0 0 12px hsl(48 100% 50% / 0.25);
+    }
+    50% {
+      box-shadow: 0 0 0 2px hsl(48 100% 50% / 0.9), 0 0 28px hsl(48 100% 50% / 0.65);
+    }
+  }
+
+  .animate-border-pulse {
+    animation: border-pulse 2.4s ease-in-out infinite;
+  }
+}

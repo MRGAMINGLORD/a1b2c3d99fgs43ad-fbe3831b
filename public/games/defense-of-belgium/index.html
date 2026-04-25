@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Defense of Belgium: Alternate 1940</title>
+    <style>
+        body {
+            background-color: #0c0c0c;
+            color: #33ff33;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        #header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #33ff33;
+            padding-bottom: 10px;
+        }
+        #stats-bar {
+            display: flex;
+            justify-content: space-between;
+            background-color: #1a1a1a;
+            padding: 10px;
+            border: 1px solid #33ff33;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        #medals-bar {
+            text-align: center;
+            font-size: 14px;
+            color: #ffd700;
+            margin-bottom: 15px;
+            min-height: 20px;
+            font-weight: bold;
+        }
+        
+        /* --- MAP & CAFE CSS --- */
+        #tactical-map-container {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        #map-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #aaaaaa;
+        }
+        #mini-map {
+            width: 100%;
+            height: 30px;
+            background-color: #002200;
+            border: 1px solid #33ff33;
+            position: relative;
+        }
+        #advance-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            transition: width 0.8s ease-in-out;
+            z-index: 1;
+        }
+        .map-phase-1 {
+            right: 0;
+            background-image: repeating-linear-gradient(45deg, #aa0000, #aa0000 10px, #660000 10px, #660000 20px);
+            border-left: 2px solid #ff3333;
+        }
+        .map-phase-2 {
+            left: 0;
+            background-image: repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #003366 10px, #003366 20px);
+            border-right: 2px solid #33ccff;
+        }
+        .map-marker {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            border-left: 1px dashed #33ff33;
+            z-index: 2;
+        }
+        
+        /* Phase 3 Cafe Grid */
+        #cafe-floor {
+            display: grid;
+            gap: 2px;
+            background-color: #111;
+            border: 1px solid #33ff33;
+            padding: 5px;
+            margin: 0 auto;
+            justify-content: center;
+        }
+        .grid-cell {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+        }
+        /* Grid States */
+        .table-empty { background-color: #228b22; color: #fff; font-size: 14px;} 
+        .table-waiting { background-color: #ffd700; color: #000; font-size: 14px;} 
+        .table-eating { background-color: #1e90ff; color: #fff; font-size: 14px;} 
+        .table-dirty { background-color: #8b4513; color: #fff; font-size: 14px;} 
+        .player-avatar { background-color: #444; }
+        .grid-office { background-color: #555; border: 1px solid #fff; }
+
+        #console {
+            flex-grow: 1;
+            background-color: #000;
+            border: 1px solid #33ff33;
+            padding: 15px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        #controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        button {
+            background-color: #1a1a1a;
+            color: #33ff33;
+            border: 1px solid #33ff33;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        button:hover:not(:disabled) {
+            background-color: #33ff33;
+            color: #000;
+        }
+        button:disabled {
+            border-color: #004400;
+            color: #004400;
+            cursor: not-allowed;
+        }
+        .full-width-btn { grid-column: span 2; }
+        
+        .warning { color: #ff3333; }
+        .success { color: #33ffff; }
+        .highlight { color: #ffff33; }
+        .system { color: #ff00ff; }
+        .medal { color: #ffd700; }
+        .cafe-text { color: #ffebcd; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="header">
+        <h2 id="title-text">========================================<br>
+            DEFENSE OF BELGIUM: 1940<br>
+            ========================================</h2>
+        <p id="subtitle-text">May 10, 1940. You are the Prime Minister of Belgium.</p>
+    </div>
+
+    <div id="stats-bar"></div>
+    <div id="medals-bar"></div>
+
+    <div id="tactical-map-container">
+        <div id="map-labels">
+            <span id="label-west">[WEST] Brussels</span>
+            <span id="label-mid">K-W Line</span>
+            <span id="label-east">Germany [EAST]</span>
+        </div>
+        <div id="mini-map">
+            <div id="advance-zone" class="map-phase-1" style="width: 0%;"></div>
+            <div id="marker-1" class="map-marker" style="right: 70%;"></div>
+            <div id="marker-2" class="map-marker" style="right: 30%;"></div>
+        </div>
+    </div>
+
+    <div id="console"></div>
+
+    <div id="controls">
+        <button id="btn-1" onclick="handleAction(1)">1. Reinforce K-W Line (Boosts Forts)</button>
+        <button id="btn-2" onclick="handleAction(2)">2. Request Allied Support (Risky)</button>
+        <button id="btn-3" onclick="handleAction(3)">3. Rally the Nation (Boosts Morale)</button>
+        <button id="btn-4" onclick="handleAction(4)">4. Launch Counter-Attack (Needs Troops)</button>
+        <button id="btn-5" onclick="handleAction(5)">5. Strategic Retreat (Delays Germans)</button>
+        <button id="btn-6" onclick="handleAction(6)">6. Supply Lines (+34% Troop Efficiency)</button>
+    </div>
+</div>
+
+<script>
+    let state = {
+        phase: 1, 
+        days: 0,
+        troops: 100, efficiency: 1.0, forts: 100, morale: 100, enemyAdvance: 0,
+        campaignDay: 0, rank: "Private", rankLevel: 1, xp: 0, health: 100, squadSize: 1, alliedAdvance: 0,
+        medals: [], milestones: { brussels: false, bulge: false, rhine: false }, gameOver: false,
+        
+        // Phase 3 Stats (Cafe)
+        cafe: {
+            day: 1,
+            money: 50,
+            tablesCount: 3,
+            land: 1, 
+            staffLevel: 0,
+            playerCapacity: 1,
+            gridW: 7,
+            gridH: 5,
+            playerX: 1, // Spawn just outside the office
+            playerY: 0,
+            officeX: 0, // Top left corner is the office
+            officeY: 0,
+            inOffice: false,
+            tablesData: [],
+            movesCounter: 0
+        }
+    };
+
+    const consoleDiv = document.getElementById('console');
+    const buttons = document.querySelectorAll('button');
+    const advanceZone = document.getElementById('advance-zone');
+    const statsBar = document.getElementById('stats-bar');
+    const medalsBar = document.getElementById('medals-bar');
+
+    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    async function printSlow(text, colorClass = '') {
+        const span = document.createElement('span');
+        if (colorClass) span.className = colorClass;
+        consoleDiv.appendChild(span);
+        
+        for (let i = 0; i < text.length; i++) {
+            span.innerHTML += text.charAt(i);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            await new Promise(r => setTimeout(r, 10)); 
+        }
+        consoleDiv.appendChild(document.createElement('br'));
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    function toggleButtons(disable) { buttons.forEach(btn => btn.disabled = disable); }
+
+    function updateStatsUI() {
+        if (state.phase === 1) {
+            statsBar.innerHTML = `
+                <span>Day: ${state.days}</span>
+                <span>Troops: ${state.troops}%</span>
+                <span class="highlight">Efficiency: ${Math.round(state.efficiency * 100)}%</span>
+                <span>Forts: ${state.forts}%</span>
+                <span>Morale: ${state.morale}%</span>
+                <span class="warning">Advance: ${state.enemyAdvance}%</span>
+            `;
+            advanceZone.style.width = `${state.enemyAdvance}%`;
+        } else if (state.phase === 2) {
+            statsBar.innerHTML = `
+                <span>Campaign: Day ${state.campaignDay}</span>
+                <span class="success">Rank: ${state.rank}</span>
+                <span class="highlight">Men: ${state.squadSize}</span>
+                <span>Health: ${state.health}%</span>
+                <span>XP: ${state.xp}</span>
+                <span class="system">Allied Push: ${state.alliedAdvance}%</span>
+            `;
+            medalsBar.innerHTML = state.medals.length > 0 ? `🎖️ Decorations: ${state.medals.join(" | ")} 🎖️` : "No Decorations Yet";
+            advanceZone.style.width = `${state.alliedAdvance}%`;
+        } else if (state.phase === 3) {
+            let maxTables = Math.floor((state.cafe.gridW * state.cafe.gridH - 2) / 3); 
+            statsBar.innerHTML = `
+                <span>Day: ${state.cafe.day}</span>
+                <span class="highlight">Funds: $${state.cafe.money}</span>
+                <span>Tables: ${state.cafe.tablesCount} / ${maxTables}</span>
+                <span class="success">Capacity: ${state.cafe.playerCapacity}</span>
+                <span class="system">Staff Lvl: ${state.cafe.staffLevel}</span>
+            `;
+            medalsBar.innerHTML = state.medals.length > 0 ? `🎖️ Proudly Displayed: ${state.medals.join(" | ")} 🎖️` : "";
+            renderCafeFloor();
+            updateCafeButtons();
+        }
+    }
+
+    function renderCafeFloor() {
+        const floor = document.getElementById('cafe-floor');
+        if (!floor) return;
+        floor.innerHTML = '';
+        floor.style.gridTemplateColumns = `repeat(${state.cafe.gridW}, 30px)`;
+        floor.style.gridTemplateRows = `repeat(${state.cafe.gridH}, 30px)`;
+
+        for (let y = 0; y < state.cafe.gridH; y++) {
+            for (let x = 0; x < state.cafe.gridW; x++) {
+                let cell = document.createElement('div');
+                cell.className = 'grid-cell';
+
+                if (state.cafe.playerX === x && state.cafe.playerY === y) {
+                    cell.innerText = '🧑‍🍳';
+                    cell.classList.add('player-avatar');
+                } else if (state.cafe.officeX === x && state.cafe.officeY === y) {
+                    cell.innerText = '🏢';
+                    cell.classList.add('grid-office');
+                } else {
+                    let table = state.cafe.tablesData.find(t => t.x === x && t.y === y);
+                    if (table) {
+                        if (table.status === 0) { cell.classList.add('table-empty'); cell.innerText = "E"; }
+                        if (table.status === 1) { cell.classList.add('table-waiting'); cell.innerText = "W"; }
+                        if (table.status === 2) { cell.classList.add('table-eating'); cell.innerText = "F"; }
+                        if (table.status === 3) { cell.classList.add('table-dirty'); cell.innerText = "D"; }
+                    }
+                }
+                floor.appendChild(cell);
+            }
+        }
+    }
+
+    function clampStats() {
+        if (state.phase === 1) {
+            state.troops = Math.max(0, Math.min(100, state.troops));
+            state.forts = Math.max(0, Math.min(100, state.forts));
+            state.morale = Math.max(0, Math.min(100, state.morale));
+            state.enemyAdvance = Math.max(0, state.enemyAdvance);
+        } else if (state.phase === 2) {
+            state.health = Math.max(0, Math.min(100, state.health));
+            state.squadSize = Math.max(0, state.squadSize);
+            state.alliedAdvance = Math.max(0, state.alliedAdvance);
+        }
+    }
+
+    async function startGame() {
+        toggleButtons(true);
+        updateStatsUI();
+        await printSlow("German forces have just crossed the border. The invasion has begun.");
+        await printSlow("Defend Belgium for 18 days to change history.\n");
+        startDay();
+    }
+
+    async function startDay() {
+        if (checkGameOver()) return;
+        
+        if (state.phase === 1) {
+            state.days++;
+            if (state.days === 19) { await triggerPhaseTwoTransition(); return; }
+            updateStatsUI();
+            await printSlow(`\n================ DAY ${state.days} ================`, 'success');
+            await printSlow("Awaiting your strategic orders...");
+        } else if (state.phase === 2) {
+            state.campaignDay++;
+            updateStatsUI();
+            await printSlow(`\n================ CAMPAIGN DAY ${state.campaignDay} ================`, 'system');
+            await printSlow(`Awaiting orders, ${state.rank}...`);
+        } else if (state.phase === 3) {
+            updateStatsUI();
+        }
+        toggleButtons(false);
+    }
+
+    async function handleAction(choice) {
+        toggleButtons(true);
+        if (state.phase !== 3) await printSlow("\n> Action taken.", 'success');
+
+        if (state.phase === 1) await pmPhase(choice);
+        else if (state.phase === 2) await soldierPhase(choice);
+        else if (state.phase === 3) await cafePhase(choice);
+    }
+
+    // ==========================================
+    // PHASE 1: PRIME MINISTER LOGIC
+    // ==========================================
+    async function pmPhase(choice) {
+        if (choice === 1) {
+            await printSlow("You order engineers to reinforce the defensive lines.");
+            state.forts += rand(10, 25); state.troops -= rand(5, 10);
+        } else if (choice === 2) {
+            await printSlow("You send desperate cables to London and Paris.");
+            if (Math.random() > 0.4) {
+                await printSlow("Allied air support arrives! The German advance is halted.", 'success');
+                state.enemyAdvance -= rand(5, 15); state.morale += 10;
+            } else {
+                await printSlow("Communication lines cut. Allies delayed.", 'warning');
+            }
+        } else if (choice === 3) {
+            await printSlow("You deliver a rousing speech over the radio.");
+            state.morale += rand(15, 30); state.enemyAdvance += rand(5, 10);
+        } else if (choice === 4) {
+            await printSlow("Chasseurs Ardennais counter-attack!");
+            if (Math.random() > 0.5) {
+                let pushBack = Math.round(rand(15, 25) * state.efficiency);
+                await printSlow(`Ambush successful! Germans pushed back ${pushBack}%.`, 'success');
+                state.enemyAdvance -= pushBack;
+                state.troops -= Math.round(rand(10, 20) / state.efficiency);
+            } else {
+                await printSlow(`Attack repelled. Heavy losses.`, 'warning');
+                state.troops -= Math.round(rand(20, 35) / state.efficiency); state.morale -= 15;
+            }
+        } else if (choice === 5) {
+            await printSlow("Tactical withdrawal ordered to preserve forces.");
+            state.enemyAdvance -= rand(0, 5); state.morale -= rand(10, 20);
+        } else if (choice === 6) {
+            await printSlow("Logistics routed. Troop combat effectiveness increased by 34%!", 'highlight');
+            state.efficiency += 0.34; state.enemyAdvance += rand(3, 8); 
+        }
+
+        clampStats(); updateStatsUI(); if (!checkGameOver()) await enemyPhasePM();
+    }
+
+    async function enemyPhasePM() {
+        await printSlow("\n--- Enemy Phase ---", 'warning');
+        let attackPower = rand(10, 25);
+        if (state.forts > 0) {
+            await printSlow(`Fortifications assaulted with ${attackPower} strength.`);
+            state.forts -= attackPower;
+            if (state.forts < 0) { state.enemyAdvance += Math.abs(state.forts); state.forts = 0; await printSlow("Forts breached! Germans advance.", 'warning'); }
+            else { await printSlow("Forts hold... for now."); state.enemyAdvance += rand(5, 10); }
+        } else {
+            await printSlow("Panzers sweep across the plains!", 'warning');
+            state.enemyAdvance += attackPower; state.troops -= Math.round(rand(5, 15) / state.efficiency);
+        }
+        clampStats(); updateStatsUI(); if (!checkGameOver()) setTimeout(startDay, 1000);
+    }
+
+    // ==========================================
+    // PHASE 2: SOLDIER LOGIC
+    // ==========================================
+    async function triggerPhaseTwoTransition() {
+        consoleDiv.innerHTML = ""; 
+        await printSlow("========================================", 'system');
+        await printSlow("          DAY 19: THE MIRACLE", 'system');
+        await printSlow("========================================\n", 'system');
+        await printSlow("Against all odds, the Belgian defense held firm.");
+        await printSlow("Massive French and British mechanized divisions crash into the German flanks.");
+        await printSlow("Your perspective shifts. You are now a Private pushing East.");
+        
+        state.phase = 2;
+        document.getElementById('title-text').innerHTML = "========================================<br>ALLIED PUSH: ROAD TO BERLIN<br>========================================";
+        document.getElementById('subtitle-text').innerText = "1940-1945. Lead your men to victory.";
+        document.getElementById('label-west').innerText = "[WEST] Belgium";
+        document.getElementById('label-mid').innerText = "Rhine River";
+        document.getElementById('label-east').innerText = "Berlin [EAST]";
+        advanceZone.className = "map-phase-2";
+        advanceZone.style.width = "0%";
+        document.getElementById('btn-1').innerHTML = "1. Follow Orders (Low Risk, +XP)";
+        document.getElementById('btn-2').innerHTML = "2. Heroic Charge (High Risk, ++XP, +Advance)";
+        document.getElementById('btn-3').innerHTML = "3. Scavenge Supplies (+Health)";
+        document.getElementById('btn-4').innerHTML = "4. Tactical Flank (Needs Squad > 5, ++Advance)";
+        document.getElementById('btn-5').innerHTML = "5. Call Artillery (Needs Rank: Lieutenant)";
+        document.getElementById('btn-6').innerHTML = "6. Dig In (Heal Squad, Defend Position)";
+        updateStatsUI(); setTimeout(startDay, 2000);
+    }
+
+    async function soldierPhase(choice) {
+        let xpGained = 0;
+        if (choice === 1) { 
+            await printSlow("You execute standard infantry tactics.");
+            xpGained = rand(10, 20); state.alliedAdvance += rand(1, 4); state.health -= rand(0, 10); 
+        }
+        else if (choice === 2) { 
+            await printSlow("You lead a brazen assault!");
+            if (Math.random() > 0.4) { await printSlow("Nest cleared! You are a hero.", 'success'); xpGained = rand(30, 50); state.alliedAdvance += rand(5, 12); state.health -= rand(10, 20); } 
+            else { await printSlow("Pinned down. You take heavy fire.", 'warning'); state.health -= rand(30, 50); xpGained = rand(5, 10); } 
+        }
+        else if (choice === 3) { 
+            await printSlow("You scrounge for rations and bandages.");
+            state.health += rand(20, 40); 
+        }
+        else if (choice === 4) { 
+            if (state.squadSize >= 5) { await printSlow("You order a tactical flank."); xpGained = rand(20, 40); state.alliedAdvance += rand(8, 15); state.squadSize -= rand(0, 2); } 
+            else { await printSlow("Not enough men to flank! Turn wasted.", 'warning'); }
+        }
+        else if (choice === 6) { 
+            await printSlow("You dig foxholes and hold the line.");
+            state.health += rand(10, 20); if (state.rankLevel > 1) state.squadSize += rand(1, 3); 
+        }
+        else if (choice === 5) { 
+            if (state.rankLevel >= 4) { await printSlow("You radio coordinates. Rain fire!", 'system'); state.alliedAdvance += rand(15, 25); xpGained = rand(15, 30); } 
+            else { await printSlow("HQ ignores you. Rank too low.", 'warning'); }
+        }
+
+        state.xp += xpGained; checkPromotions(); clampStats(); updateStatsUI();
+        if (!checkGameOver()) { await checkMilestones(); if (!checkGameOver()) await enemyPhaseSoldier(); }
+    }
+
+    async function checkMilestones() {
+        if (state.alliedAdvance >= 25 && !state.milestones.brussels) { state.milestones.brussels = true; await printSlow("\n*** HISTORICAL MILESTONE: LIBERATION OF BRUSSELS ***", 'highlight'); state.health = 100; state.medals.push("Order of Leopold"); updateStatsUI(); await new Promise(r => setTimeout(r, 1500)); }
+        else if (state.alliedAdvance >= 50 && !state.milestones.bulge) { state.milestones.bulge = true; await printSlow("\n*** HISTORICAL MILESTONE: BATTLE OF THE BULGE ***", 'warning'); state.health -= rand(40, 60); state.squadSize -= Math.floor(state.squadSize * 0.4); state.medals.push("Croix de Guerre"); updateStatsUI(); await new Promise(r => setTimeout(r, 1500)); }
+        else if (state.alliedAdvance >= 75 && !state.milestones.rhine) { state.milestones.rhine = true; await printSlow("\n*** HISTORICAL MILESTONE: CROSSING THE RHINE ***", 'highlight'); state.xp += 100; state.medals.push("Rhine Crossing Ribbon"); checkPromotions(); updateStatsUI(); await new Promise(r => setTimeout(r, 1500)); }
+    }
+
+    async function enemyPhaseSoldier() {
+        await printSlow("\n--- Wehrmacht Counter-Attack ---", 'warning');
+        if (Math.random() > 0.6) { await printSlow(`A German mortar barrage hits your sector!`, 'warning'); state.health -= rand(10, 30); }
+        else { await printSlow("The enemy falls back to their next defensive line."); }
+        clampStats(); updateStatsUI(); if (!checkGameOver()) setTimeout(startDay, 1000);
+    }
+
+    function checkPromotions() {
+        if (state.xp >= 50 && state.rankLevel === 1) { state.rankLevel = 2; state.rank = "Corporal"; state.squadSize += 4; printSlow("\n*** PROMOTION! You are now a Corporal. ***", 'highlight'); }
+        else if (state.xp >= 150 && state.rankLevel === 2) { state.rankLevel = 3; state.rank = "Sergeant"; state.squadSize += 7; printSlow("\n*** PROMOTION! You are now a Sergeant. ***", 'highlight'); }
+        else if (state.xp >= 350 && state.rankLevel === 3) { state.rankLevel = 4; state.rank = "Lieutenant"; state.squadSize += 28; printSlow("\n*** PROMOTION! You are now a Lieutenant. ***", 'highlight'); }
+        else if (state.xp >= 700 && state.rankLevel === 4) { state.rankLevel = 5; state.rank = "Captain"; state.squadSize += 110; printSlow("\n*** PROMOTION! You are now a Captain. ***", 'highlight'); }
+    }
+
+    function checkGameOver() {
+        if (state.phase === 1 && (state.enemyAdvance >= 100 || state.troops <= 0 || state.morale <= 0)) { endGamePM(); return true; }
+        if (state.phase === 2 && state.health <= 0) { endGameSoldier(false); return true; }
+        if (state.phase === 2 && state.alliedAdvance >= 100) { triggerPhaseThreeTransition(); return true; }
+        return false;
+    }
+
+    async function endGamePM() { state.gameOver = true; toggleButtons(true); await printSlow("\n================ GAME OVER ================", 'warning'); try { dobSave(); } catch {} showRestartButton(); }
+    async function endGameSoldier(victory) { state.gameOver = true; toggleButtons(true); await printSlow("\n================ WAR OVER ================", 'system'); await printSlow("You have fallen in combat.", 'warning'); try { dobSave(); } catch {} showRestartButton(); }
+
+    // ==========================================
+    // PHASE 3: COFFEE SHOP
+    // ==========================================
+    async function triggerPhaseThreeTransition() {
+        consoleDiv.innerHTML = ""; 
+        await printSlow("========================================", 'success');
+        await printSlow("          VICTORY IN EUROPE", 'success');
+        await printSlow("========================================\n", 'success');
+        
+        await printSlow("Berlin has fallen. The war is over.", 'highlight');
+        await printSlow("You traded your rifle for an espresso machine.");
+        await printSlow("\nUSE ARROW KEYS TO MOVE AROUND THE CAFE.", 'highlight');
+        await printSlow("Walk into Waiting [W] tables to serve them.");
+        await printSlow("Walk into Dirty [D] tables to buss them.");
+        await printSlow("Walk into the Office [🏢] at the top-left to buy upgrades.\n", 'cafe-text');
+        
+        state.phase = 3;
+        
+        document.getElementById('title-text').innerHTML = "========================================<br>CAFÉ LEOPOLD: POST-WAR PEACE<br>========================================";
+        document.getElementById('subtitle-text').innerText = "1946. Click the game, then use Arrow Keys to play.";
+        
+        document.getElementById('tactical-map-container').innerHTML = `
+            <div id="map-labels">
+                <span style="color:#555">[🏢] Office</span>
+                <span style="color:#228b22">[E] Empty</span>
+                <span style="color:#ffd700">[W] Waiting</span>
+                <span style="color:#1e90ff">[F] Food</span>
+                <span style="color:#8b4513">[D] Dirty</span>
+            </div>
+            <div id="cafe-floor"></div>
+        `;
+        
+        state.cafe.tablesData = [
+            { x: 3, y: 1, status: 0 },
+            { x: 5, y: 1, status: 0 },
+            { x: 3, y: 3, status: 0 }
+        ];
+
+        updateStatsUI();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (state.phase !== 3 || state.cafe.inOffice) return; 
+        
+        let dx = 0, dy = 0;
+        if (e.key === 'ArrowUp') dy = -1;
+        else if (e.key === 'ArrowDown') dy = 1;
+        else if (e.key === 'ArrowLeft') dx = -1;
+        else if (e.key === 'ArrowRight') dx = 1;
+        else return;
+
+        e.preventDefault(); 
+        handlePlayerMovement(dx, dy);
+    });
+
+    function handlePlayerMovement(dx, dy) {
+        let nx = state.cafe.playerX + dx;
+        let ny = state.cafe.playerY + dy;
+
+        // Wall collision
+        if (nx < 0 || ny < 0 || nx >= state.cafe.gridW || ny >= state.cafe.gridH) return;
+
+        // Check if entering the office
+        if (nx === state.cafe.officeX && ny === state.cafe.officeY) {
+            state.cafe.playerX = nx;
+            state.cafe.playerY = ny;
+            state.cafe.inOffice = true;
+            printSlow("I stepped into the back office to review the books. (Menu Opened)", "system");
+            updateStatsUI();
+            return;
+        }
+
+        // Check for table at target destination
+        let tableIndex = state.cafe.tablesData.findIndex(t => t.x === nx && t.y === ny);
+        
+        if (tableIndex !== -1) {
+            let table = state.cafe.tablesData[tableIndex];
+            if (table.status === 1) { // Waiting -> Serve
+                let servedCount = 0;
+                table.status = 2; servedCount++;
+                state.cafe.tablesData.forEach(t => {
+                    if (t.status === 1 && servedCount < state.cafe.playerCapacity) { t.status = 2; servedCount++; }
+                });
+                printSlow(`I distributed magic self-filling plates to ${servedCount} table(s)!`, "success");
+                advanceCafeTurn();
+            } else if (table.status === 3) { // Dirty -> Buss
+                let bussedCount = 0;
+                table.status = 0; bussedCount++;
+                state.cafe.tablesData.forEach(t => {
+                    if (t.status === 3 && bussedCount < state.cafe.playerCapacity) { t.status = 0; bussedCount++; }
+                });
+                printSlow(`I rapidly cleared and wiped down ${bussedCount} table(s)!`, "success");
+                advanceCafeTurn();
+            }
+        } else {
+            // Walk into empty space
+            state.cafe.playerX = nx;
+            state.cafe.playerY = ny;
+            
+            state.cafe.movesCounter++;
+            if (state.cafe.movesCounter >= 4) { 
+                state.cafe.movesCounter = 0;
+                advanceCafeTurn();
+            }
+        }
+        updateStatsUI();
+    }
+
+    function getCosts() {
+        return {
+            staff: 50 + (state.cafe.staffLevel * 50),
+            speed: 40 * state.cafe.playerCapacity,
+            table: 30 * state.cafe.tablesCount,
+            land: 150 * state.cafe.land
+        };
+    }
+
+    function updateCafeButtons() {
+        if (state.phase !== 3) return;
+        const costs = getCosts();
+        
+        if (state.cafe.inOffice) {
+            document.getElementById('btn-1').style.display = 'block';
+            document.getElementById('btn-1').innerHTML = `1. Hire Staff ($${costs.staff}) - Auto-buss/serve`;
+            document.getElementById('btn-1').className = ""; document.getElementById('btn-1').disabled = false;
+            
+            document.getElementById('btn-2').style.display = 'block';
+            document.getElementById('btn-2').innerHTML = `2. Up Capabilities ($${costs.speed}) - Multi-Serve`;
+            document.getElementById('btn-2').className = ""; document.getElementById('btn-2').disabled = false;
+            
+            document.getElementById('btn-3').style.display = 'block';
+            document.getElementById('btn-3').innerHTML = `3. Buy Table ($${costs.table})`;
+            document.getElementById('btn-3').className = ""; document.getElementById('btn-3').disabled = false;
+            
+            document.getElementById('btn-4').style.display = 'block';
+            document.getElementById('btn-4').innerHTML = `4. Expand Land ($${costs.land}) - More floor space`;
+            document.getElementById('btn-4').className = ""; document.getElementById('btn-4').disabled = false;
+            
+            document.getElementById('btn-5').style.display = 'block';
+            document.getElementById('btn-5').innerHTML = `5. EXIT OFFICE (Return to Floor)`;
+            document.getElementById('btn-5').className = "full-width-btn"; document.getElementById('btn-5').disabled = false;
+            
+            document.getElementById('btn-6').style.display = 'none';
+        } else {
+            document.getElementById('btn-1').style.display = 'block';
+            document.getElementById('btn-1').innerHTML = `Walk into [🏢] at top-left to open Upgrade Menu`;
+            document.getElementById('btn-1').className = "full-width-btn"; document.getElementById('btn-1').disabled = true;
+            
+            document.getElementById('btn-2').style.display = 'block';
+            document.getElementById('btn-2').innerHTML = `CLICK HERE THEN USE ARROW KEYS TO MOVE`;
+            document.getElementById('btn-2').className = "full-width-btn"; document.getElementById('btn-2').disabled = true;
+            
+            document.getElementById('btn-3').style.display = 'none';
+            document.getElementById('btn-4').style.display = 'none';
+            document.getElementById('btn-5').style.display = 'none';
+            document.getElementById('btn-6').style.display = 'none';
+        }
+    }
+
+    async function cafePhase(choice) {
+        if (!state.cafe.inOffice) return; // Prevent actions if not in office
+        
+        const costs = getCosts();
+
+        if (choice === 1) { // Staff
+            if (state.cafe.money >= costs.staff) {
+                state.cafe.money -= costs.staff;
+                state.cafe.staffLevel++;
+                await printSlow(`\nI hired a local kid to help out! Staff Level is now ${state.cafe.staffLevel}.`, 'success');
+            } else await printSlow("\nI don't have enough money for that.", 'warning');
+        }
+        else if (choice === 2) { // Capabilities
+            if (state.cafe.money >= costs.speed) {
+                state.cafe.money -= costs.speed;
+                state.cafe.playerCapacity++;
+                await printSlow(`\nI upgraded my capabilities! I can now multi-serve ${state.cafe.playerCapacity} tables at once.`, 'success');
+            } else await printSlow("\nI don't have enough money for that.", 'warning');
+        }
+        else if (choice === 3) { // Table
+            let maxTables = Math.floor((state.cafe.gridW * state.cafe.gridH - 2) / 3);
+            if (state.cafe.tablesCount >= maxTables) {
+                await printSlow("\nI don't have enough room! I need to expand the shop first.", 'warning');
+            } else if (state.cafe.money >= costs.table) {
+                state.cafe.money -= costs.table;
+                state.cafe.tablesCount++;
+                
+                for (let y = 1; y < state.cafe.gridH; y+=2) {
+                    for (let x = 1; x < state.cafe.gridW; x++) {
+                        if ((x===0 && y===0) || (x===1 && y===0)) continue;
+                        if (!state.cafe.tablesData.some(t => t.x === x && t.y === y)) {
+                            state.cafe.tablesData.push({x: x, y: y, status: 0});
+                            y = state.cafe.gridH; break;
+                        }
+                    }
+                }
+                await printSlow(`\nI bought a beautiful oak table.`, 'success');
+            } else await printSlow("\nI don't have enough money for that.", 'warning');
+        }
+        else if (choice === 4) { // Land
+            if (state.cafe.money >= costs.land) {
+                state.cafe.money -= costs.land;
+                state.cafe.land++;
+                state.cafe.gridW += 2; 
+                state.cafe.gridH += 1;
+                await printSlow(`\nI knocked down a wall and expanded the floor plan!`, 'success');
+            } else await printSlow("\nI don't have enough money for that.", 'warning');
+        }
+        else if (choice === 5) { // Exit Office
+            state.cafe.inOffice = false;
+            state.cafe.playerX = 1; 
+            state.cafe.playerY = 0;
+            await printSlow(`\nI stepped out of the office and back onto the cafe floor.`, 'system');
+            
+            buttons.forEach(btn => btn.style.display = 'block');
+        }
+
+        updateStatsUI();
+        toggleButtons(false);
+    }
+
+    function advanceCafeTurn() {
+        state.cafe.day++;
+        let earnedThisTurn = 0;
+
+        // 1. People finish eating
+        state.cafe.tablesData.forEach(t => {
+            if (t.status === 2) {
+                t.status = 3; 
+                earnedThisTurn += rand(5, 15);
+            }
+        });
+
+        // 2. Staff Actions 
+        if (state.cafe.staffLevel > 0) {
+            let staffActions = state.cafe.staffLevel;
+            for (let i = 0; i < state.cafe.tablesData.length && staffActions > 0; i++) {
+                let t = state.cafe.tablesData[i];
+                if (t.status === 3) { t.status = 0; staffActions--; } // Buss
+                else if (t.status === 1 && staffActions > 0) { t.status = 2; staffActions--; } // Serve
+            }
+        }
+
+        // 3. New Customers Arrive
+        let newCustomers = rand(0, 2 + Math.floor(state.cafe.land / 2));
+        for (let i = 0; i < state.cafe.tablesData.length && newCustomers > 0; i++) {
+            if (state.cafe.tablesData[i].status === 0) {
+                state.cafe.tablesData[i].status = 1; 
+                newCustomers--;
+            }
+        }
+
+        if (earnedThisTurn > 0) {
+            state.cafe.money += earnedThisTurn;
+            printSlow(`The till rings! I earned $${earnedThisTurn}.`, 'highlight');
+        }
+    }
+
+    // ============ AUTOSAVE WRAPPER ============
+    const DOB_SAVE_KEY = 'dob:save:v1';
+    const DOB_META_KEY = 'apocalypse-waffle:save-meta';
+
+    // Restart UI shown after game over (or when restoring a dead save)
+    function showRestartButton() {
+      if (document.getElementById('dob-restart-btn')) return;
+      const btn = document.createElement('button');
+      btn.id = 'dob-restart-btn';
+      btn.textContent = '↻ RESTART CAMPAIGN';
+      btn.style.cssText = 'margin: 16px auto; display: block; padding: 12px 24px; background: #33ff33; color: #0c0c0c; border: none; font-family: "Courier New", monospace; font-weight: bold; font-size: 14px; cursor: pointer; letter-spacing: 2px;';
+      btn.onmouseover = () => { btn.style.background = '#66ff66'; };
+      btn.onmouseout = () => { btn.style.background = '#33ff33'; };
+      btn.onclick = () => {
+        try { localStorage.removeItem(DOB_SAVE_KEY); } catch {}
+        location.reload();
+      };
+      const container = document.getElementById('game-container') || document.body;
+      container.appendChild(btn);
+    }
+    // Expose for outside callers
+    window.dobShowRestart = showRestartButton;
+
+    function dobSave() {
+      try {
+        if (state.gameOver) {
+          localStorage.removeItem(DOB_SAVE_KEY);
+          dobUpdateMeta();
+          return;
+        }
+        // state contains only JSON-safe data (numbers, arrays, plain objects, booleans)
+        localStorage.setItem(DOB_SAVE_KEY, JSON.stringify({
+          savedAt: Date.now(),
+          state: state,
+        }));
+        dobUpdateMeta();
+      } catch (e) {
+        console.warn('[DoB] save failed', e);
+      }
+    }
+
+    function dobUpdateMeta() {
+      try {
+        const raw = localStorage.getItem(DOB_META_KEY);
+        const meta = raw ? JSON.parse(raw) : {};
+        meta['defense-of-belgium'] = { savedAt: Date.now() };
+        localStorage.setItem(DOB_META_KEY, JSON.stringify(meta));
+      } catch {}
+    }
+
+    function dobLoad() {
+      try {
+        const raw = localStorage.getItem(DOB_SAVE_KEY);
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data || !data.state) return false;
+        // Replace top-level fields in state
+        Object.keys(state).forEach(k => delete state[k]);
+        Object.assign(state, data.state);
+        return true;
+      } catch (e) {
+        console.warn('[DoB] load failed', e);
+        return false;
+      }
+    }
+
+    // Wrap handleAction to autosave after each action
+    const __dobOriginalHandleAction = handleAction;
+    handleAction = async function(choice) {
+      const result = await __dobOriginalHandleAction(choice);
+      dobSave();
+      return result;
+    };
+
+    // Save on tab close / hide
+    window.addEventListener('pagehide', dobSave);
+    window.addEventListener('beforeunload', dobSave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') dobSave();
+    });
+
+    // Detect a "dead" / finished state from older saves where gameOver wasn't set
+    function dobIsDeadState() {
+      if (state.gameOver) return true;
+      if (state.phase === 1 && (state.enemyAdvance >= 100 || state.troops <= 0 || state.morale <= 0)) return true;
+      if (state.phase === 2 && state.health <= 0) return true;
+      return false;
+    }
+
+    // Manual "Save Now" support — listen for broadcast from the hub
+    try {
+      const __dobBC = new BroadcastChannel('apocalypse-waffle');
+      __dobBC.addEventListener('message', (e) => {
+        if (e && e.data && e.data.type === 'save-now') dobSave();
+      });
+    } catch {}
+
+    // Init: load save before starting
+    window.onload = async function() {
+      const restored = dobLoad();
+      if (restored) {
+        toggleButtons(true);
+        updateStatsUI();
+        if (dobIsDeadState()) {
+          await printSlow("=== PREVIOUS CAMPAIGN ENDED ===", 'warning');
+          await printSlow("Your last campaign was lost. Restart to fight again.\n");
+          showRestartButton();
+          return;
+        }
+        await printSlow("=== SAVE RESTORED ===", 'success');
+        await printSlow(`Resuming campaign... Phase ${state.phase}.\n`);
+        toggleButtons(false);
+      } else {
+        await startGame();
+      }
+    };
+</script>
+</body>
+</html>
