@@ -116,8 +116,13 @@ const SaveDataPanel = () => {
               {lastTitle
                 ? `Last deployment: ${lastTitle}.`
                 : "No previous deployments logged."}{" "}
-              Use <span className="text-primary">Export save</span> to back up your progress to a file, and{" "}
-              <span className="text-primary">Import save</span> to restore it on this or another device.
+              Use <span className="text-primary">Export save</span> to back up
+              progress from <span className="text-primary">every</span> game on
+              the hub to a single file, and{" "}
+              <span className="text-primary">Import save</span> to restore it on
+              this or another device. Custom games and patch notes themselves
+              live on the server and are always available — only your in-game
+              progress is per-device.
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 font-display text-[10px] uppercase tracking-wider">
