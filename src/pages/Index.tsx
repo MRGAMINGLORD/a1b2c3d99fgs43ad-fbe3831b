@@ -62,9 +62,6 @@ const Index = () => {
       {/* Save / Continue */}
       <SaveDataPanel />
 
-      {/* Featured Games (admin-curated) */}
-      <FeaturedGamesCarousel />
-
       {/* Education */}
       <section className="mx-auto max-w-5xl px-6 pb-4 pt-10">
         <h2 className="mb-6 text-center font-display text-3xl text-primary sm:text-4xl">
@@ -106,6 +103,9 @@ const Index = () => {
           </AccordionItem>
         </Accordion>
       </section>
+
+      {/* Featured Games (admin-curated) */}
+      <FeaturedGamesCarousel />
 
       {/* Games (collapsible sections) */}
       <section className="mx-auto max-w-5xl px-6 pb-12 pt-6">
