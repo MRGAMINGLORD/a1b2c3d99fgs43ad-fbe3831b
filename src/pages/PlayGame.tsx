@@ -296,11 +296,20 @@ const PlayGame = () => {
         setResolving(false);
         return;
       }
-      const blob = new Blob([row.html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      blobUrlRef.current = url;
+      // New behavior: `html` is a URL to a real file in the game-files
+      // Storage bucket — load it directly, exactly like a built-in game.
+      // Legacy fallback: if it's still raw HTML, render via a Blob URL.
+      const isUrl = /^https?:\/\//i.test(row.html.trim());
+      let src: string;
+      if (isUrl) {
+        src = row.html.trim();
+      } else {
+        const blob = new Blob([row.html], { type: "text/html" });
+        src = URL.createObjectURL(blob);
+        blobUrlRef.current = src;
+      }
       setResolved({
-        src: url,
+        src,
         title: row.title,
         loadingFlavor: "Loading custom game...",
         isCustom: true,
