@@ -806,6 +806,8 @@ const Test = () => {
         </Accordion>
       </section>
 
+      <TestSyncPanel onSynced={reload} />
+
       <TesterChat defaultUsername={chatUsername} />
 
       <EditPasswordDialog
