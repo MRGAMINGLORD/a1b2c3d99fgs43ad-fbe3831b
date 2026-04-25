@@ -5,6 +5,7 @@ import coverTurtleTradeCo from "@/assets/cover-turtle-trade-co.jpg";
 import coverWaffleWorks from "@/assets/cover-waffle-works.jpg";
 import coverWaffleCraft from "@/assets/cover-waffle-craft.jpg";
 import coverDefenseOfBelgium from "@/assets/cover-defense-of-belgium.jpg";
+import coverBobTurtleAI from "@/assets/cover-bob-turtle-ai.jpg";
 
 export interface GameMeta {
   id: string;
@@ -13,7 +14,7 @@ export interface GameMeta {
   cover: string;
   available: boolean;
   playUrl?: string;
-  category: "tycoon" | "twist" | "other";
+  category: "tycoon" | "twist" | "other" | "education";
 }
 
 export const GAMES: GameMeta[] = [
@@ -54,6 +55,16 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/defense-of-belgium",
     category: "other",
+  },
+  {
+    id: "bob-turtle-ai",
+    title: "Bob the Turtle AI",
+    description:
+      "A patient turtle tutor powered by Gemini. Ask Bob about any subject — math, science, history, languages, code — and he'll explain it slow, steady, and shell-sized.",
+    cover: coverBobTurtleAI,
+    available: true,
+    playUrl: "/education/bob-turtle-ai",
+    category: "education",
   },
 ];
 
