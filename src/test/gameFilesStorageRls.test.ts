@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment node
+ *
  * RLS contract test for the `game-files` Storage bucket.
  *
  * Verifies, against the LIVE Supabase project, that:
@@ -22,7 +24,6 @@ const anon = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 describe("game-files Storage RLS (anon)", () => {
   it("anon CAN list / publicly read the bucket", async () => {
-    // Public read = able to LIST objects in a public bucket without error.
     const { error } = await anon.storage.from(BUCKET).list("", { limit: 1 });
     expect(error, `list failed: ${error?.message}`).toBeNull();
   });
@@ -32,53 +33,27 @@ describe("game-files Storage RLS (anon)", () => {
     expect(data.publicUrl).toContain("/storage/v1/object/public/game-files/");
   });
 
-  it(
-    "anon CANNOT upload to game-files",
-    async () => {
-      const path = `__rls_test__/anon-${Date.now()}.html`;
-      const result = await Promise.race([
-        anon.storage.from(BUCKET).upload(
-          path,
-          new Blob(["<html>nope</html>"], { type: "text/html" }),
-          { upsert: false },
-        ),
-        new Promise<{ error: { message: string } }>((resolve) =>
-          setTimeout(
-            () => resolve({ error: { message: "blocked-timeout" } }),
-            8000,
-          ),
-        ),
-      ]);
-      expect(result.error, "upload was unexpectedly allowed for anon").not.toBeNull();
-    },
-    15000,
-  );
+  it("anon CANNOT upload to game-files", async () => {
+    const path = `__rls_test__/anon-${Date.now()}.html`;
+    const { error } = await anon.storage
+      .from(BUCKET)
+      .upload(path, new Blob(["<html>nope</html>"], { type: "text/html" }), {
+        upsert: false,
+      });
+    expect(error, "upload was unexpectedly allowed for anon").not.toBeNull();
+  });
 
-  it(
-    "anon CANNOT update / overwrite objects in game-files",
-    async () => {
-      const path = `__rls_test__/anon-update-${Date.now()}.html`;
-      const result = await Promise.race([
-        anon.storage.from(BUCKET).upload(
-          path,
-          new Blob(["<html>overwrite</html>"], { type: "text/html" }),
-          { upsert: true },
-        ),
-        new Promise<{ error: { message: string } }>((resolve) =>
-          setTimeout(
-            () => resolve({ error: { message: "blocked-timeout" } }),
-            8000,
-          ),
-        ),
-      ]);
-      expect(result.error, "update/upsert was unexpectedly allowed for anon").not.toBeNull();
-    },
-    15000,
-  );
+  it("anon CANNOT update / overwrite objects in game-files", async () => {
+    const path = `__rls_test__/anon-update-${Date.now()}.html`;
+    const { error } = await anon.storage
+      .from(BUCKET)
+      .upload(path, new Blob(["<html>overwrite</html>"], { type: "text/html" }), {
+        upsert: true, // exercises both INSERT and UPDATE policies
+      });
+    expect(error, "update/upsert was unexpectedly allowed for anon").not.toBeNull();
+  });
 
   it("anon CANNOT delete objects in game-files", async () => {
-    // Deleting a non-existent path should still be blocked by RLS at the
-    // policy layer, not return success. Supabase returns an error or empty data.
     const { data, error } = await anon.storage
       .from(BUCKET)
       .remove([`__rls_test__/does-not-exist-${Date.now()}.html`]);
