@@ -3,7 +3,7 @@ import { Star, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { GAMES } from "@/lib/games";
+import { useAllGames } from "@/hooks/useAllGames";
 
 interface FeaturedRow {
   id: string;
@@ -12,6 +12,7 @@ interface FeaturedRow {
 }
 
 const FeaturedGamesAdmin = () => {
+  const { games: allGames, loading: gamesLoading } = useAllGames();
   const [rows, setRows] = useState<FeaturedRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,9 +65,10 @@ const FeaturedGamesAdmin = () => {
       </div>
       <p className="mb-4 text-sm text-muted-foreground">
         Pick which games appear in the Featured Games carousel on the home page.
+        Both built-in and custom games are eligible.
       </p>
 
-      {loading ? (
+      {loading || gamesLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : (
         <>
@@ -76,7 +78,7 @@ const FeaturedGamesAdmin = () => {
                 Currently Featured ({rows.length})
               </h3>
               {rows.map((r) => {
-                const game = GAMES.find((g) => g.id === r.game_id);
+                const game = allGames.find((g) => g.id === r.game_id);
                 return (
                   <div
                     key={r.id}
@@ -84,6 +86,11 @@ const FeaturedGamesAdmin = () => {
                   >
                     <span className="font-display text-sm text-primary">
                       {game?.title ?? r.game_id}
+                      {!game && (
+                        <span className="ml-2 font-sans text-xs text-destructive">
+                          (missing — game was deleted)
+                        </span>
+                      )}
                     </span>
                     <Button
                       variant="ghost"
@@ -102,7 +109,7 @@ const FeaturedGamesAdmin = () => {
             Add Game
           </h3>
           <div className="flex flex-wrap gap-2">
-            {GAMES.filter((g) => !featuredIds.has(g.id)).map((g) => (
+            {allGames.filter((g) => !featuredIds.has(g.id)).map((g) => (
               <Button
                 key={g.id}
                 variant="outline"
@@ -112,7 +119,7 @@ const FeaturedGamesAdmin = () => {
                 + {g.title}
               </Button>
             ))}
-            {GAMES.every((g) => featuredIds.has(g.id)) && (
+            {allGames.every((g) => featuredIds.has(g.id)) && (
               <p className="text-sm text-muted-foreground">
                 All games are already featured.
               </p>

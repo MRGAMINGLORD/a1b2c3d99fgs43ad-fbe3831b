@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Lock, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { GAMES, getGame } from "@/lib/games";
+import { useAllGames } from "@/hooks/useAllGames";
 
 interface FeaturedGameRow {
   game_id: string;
@@ -10,6 +10,7 @@ interface FeaturedGameRow {
 }
 
 const FeaturedGamesCarousel = () => {
+  const { games: allGames, loading: gamesLoading } = useAllGames();
   const [featuredIds, setFeaturedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,12 +32,13 @@ const FeaturedGamesCarousel = () => {
     };
   }, []);
 
-  // Only show games that exist in our registry
+  // Resolve featured ids against ALL games (built-in + custom)
+  const gameById = new Map(allGames.map((g) => [g.id, g]));
   const games = featuredIds
-    .map((id) => getGame(id))
-    .filter((g): g is (typeof GAMES)[number] => Boolean(g));
+    .map((id) => gameById.get(id))
+    .filter((g): g is (typeof allGames)[number] => Boolean(g));
 
-  if (loading) {
+  if (loading || gamesLoading) {
     return (
       <section className="mx-auto max-w-5xl px-6 pt-6">
         <h2 className="mb-3 font-display text-2xl uppercase tracking-wider text-primary text-glow sm:text-3xl">
