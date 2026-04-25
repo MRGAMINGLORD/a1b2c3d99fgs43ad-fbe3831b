@@ -165,8 +165,10 @@ const EditGameDialog = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewRefreshKey = useMemo(() => ({ current: 0 }), []);
 
-  // Sync when opened with a different game
-  if (game && open && title === "" && description === "" && html === "" && coverUrl === "") {
+  // Sync form state when a new game is loaded into the dialog.
+  // Tracking by game id avoids the previous render-time mutation antipattern.
+  useEffect(() => {
+    if (!open || !game) return;
     setTitle(game.title);
     setDescription(game.description);
     setCoverUrl(game.cover_url ?? "");
@@ -176,7 +178,8 @@ const EditGameDialog = ({
         : "other",
     );
     setHtml(game.html);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id, open]);
 
   const cleanupPreview = () => {
     if (previewUrl) {
