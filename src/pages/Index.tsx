@@ -2,6 +2,7 @@ import heroBg from "@/assets/hero-bg.png";
 import FeedbackForm from "@/components/FeedbackForm";
 import GameCard from "@/components/GameCard";
 import WhatsNew from "@/components/WhatsNew";
+import PatchNotes from "@/components/PatchNotes";
 import SaveDataPanel from "@/components/SaveDataPanel";
 import FeaturedGamesCarousel from "@/components/FeaturedGamesCarousel";
 import {
@@ -53,6 +54,9 @@ const Index = () => {
 
       {/* What's New */}
       <WhatsNew />
+
+      {/* Patch Notes */}
+      <PatchNotes />
 
       {/* Save / Continue */}
       <SaveDataPanel />
