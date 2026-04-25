@@ -3,7 +3,7 @@
 // They will NOT stop a determined user — they only prevent casual access.
 // For real protection, log in as admin (server-validated).
 
-const TEST_PASSWORD = "TESTER67";
+const TEST_PASSWORD = "TESTER";
 const EDIT_CODE_PASSWORD = "LATTEISCUTE";
 
 const TEST_KEY = "apocalypse-waffle:test-unlocked";
