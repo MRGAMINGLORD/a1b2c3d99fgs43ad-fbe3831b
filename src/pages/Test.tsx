@@ -505,6 +505,46 @@ const Test = () => {
     }
   };
 
+  // Built-in games (from the static GAMES registry) have no test_custom_games row
+  // yet. When admin clicks "Edit (built-in)", we seed a test row by copying the
+  // meta and (if available) fetching the live HTML from /public/games/{slug}/.
+  const seedAndEdit = async (meta: GameMeta) => {
+    let html = "";
+    if (meta.available && meta.playUrl) {
+      try {
+        const res = await fetch(`/games/${meta.id}/index.html`);
+        if (res.ok) html = await res.text();
+      } catch {
+        // ignore — user can paste code in the editor
+      }
+    }
+    const { data, error } = await supabase
+      .from("test_custom_games")
+      .insert({
+        slug: meta.id,
+        title: meta.title,
+        description: meta.description,
+        cover_url: null,
+        category: meta.category,
+        html,
+      })
+      .select("*")
+      .single();
+    if (error) {
+      toast({
+        title: "Could not create test copy",
+        description: error.message.includes("duplicate")
+          ? "A test entry already exists for this slug. Reloading…"
+          : error.message,
+        variant: "destructive",
+      });
+      reload();
+      return;
+    }
+    await reload();
+    requestEdit(data as TestGameRow);
+  };
+
   const handlePost = async (g: TestGameRow) => {
     if (!confirm(`Post "${g.title}" to the LIVE hub? This will overwrite any existing live game with the same slug.`)) return;
     const { error } = await supabase.from("custom_games").upsert(
@@ -539,7 +579,9 @@ const Test = () => {
   // the registry PLUS the test_custom_games table.
   const testMetas = rows.map(testRowToMeta);
   const testRowBySlug = new Map(rows.map((r) => [r.slug, r]));
-  const allGames: GameMeta[] = [...GAMES, ...testMetas];
+  // Prefer the test row's meta over the static registry's so edits show up live in the test hub.
+  const builtInsWithoutTestRow = GAMES.filter((g) => !testRowBySlug.has(g.id));
+  const allGames: GameMeta[] = [...builtInsWithoutTestRow, ...testMetas];
   const tycoonGames = allGames.filter((g) => g.category === "tycoon");
   const twistGames = allGames.filter((g) => g.category === "twist");
   const otherGames = allGames.filter((g) => g.category === "other");
@@ -555,6 +597,7 @@ const Test = () => {
           onEdit={requestEdit}
           onPost={handlePost}
           onDelete={handleDelete}
+          onSeedAndEdit={seedAndEdit}
         />
       ))}
     </div>
