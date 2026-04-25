@@ -323,7 +323,20 @@ const EditGameDialog = ({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Edit: {game?.title ?? ""}</DialogTitle>
+          <div className="flex items-center justify-between gap-3 pr-8">
+            <DialogTitle>Edit: {game?.title ?? ""}</DialogTitle>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={undo}
+              disabled={history.length === 0}
+              title="Undo last change (Ctrl/Cmd+Z)"
+            >
+              <Undo2 className="mr-1 h-3 w-3" />
+              Undo {history.length > 0 && <span className="ml-1 text-[10px] text-muted-foreground">({history.length})</span>}
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="grid max-h-[72vh] gap-4 overflow-y-auto md:grid-cols-2">
@@ -331,12 +344,12 @@ const EditGameDialog = ({
           <div className="space-y-3">
             <div>
               <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} />
+              <Input value={title} onChange={(e) => updateForm("title", e.target.value)} maxLength={80} />
             </div>
-            <CoverImagePicker value={coverUrl} onChange={setCoverUrl} hint={title} />
+            <CoverImagePicker value={coverUrl} onChange={(v) => updateForm("coverUrl", v)} hint={title} />
             <div>
               <Label>Description</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={500} />
+              <Textarea value={description} onChange={(e) => updateForm("description", e.target.value)} rows={2} maxLength={500} />
             </div>
             <div>
               <Label>Category</Label>
@@ -347,7 +360,7 @@ const EditGameDialog = ({
                     type="button"
                     size="sm"
                     variant={category === c ? "default" : "outline"}
-                    onClick={() => setCategory(c)}
+                    onClick={() => updateForm("category", c)}
                   >
                     {c}
                   </Button>
@@ -372,13 +385,13 @@ const EditGameDialog = ({
               </div>
               <Textarea
                 value={html}
-                onChange={(e) => setHtml(e.target.value)}
+                onChange={(e) => updateForm("html", e.target.value)}
                 rows={14}
                 className="mt-1 font-mono text-xs"
                 placeholder="<html>...</html>"
               />
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Preview renders the HTML in a sandboxed iframe. Nothing is posted to live until you save and click "Post to live".
+                Preview renders the HTML in a sandboxed iframe. Nothing is posted to live until you save and click "Post to live". Press <kbd className="rounded border border-border bg-muted px-1 text-[10px]">Ctrl/Cmd+Z</kbd> to undo any change (including removing the cover image).
               </p>
             </div>
           </div>
