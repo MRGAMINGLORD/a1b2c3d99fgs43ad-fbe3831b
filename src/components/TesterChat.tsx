@@ -265,6 +265,63 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
           </p>
         </form>
       </div>
+
+      {/* Confirm single delete */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this message?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete && (
+                <span className="block rounded border border-border bg-muted/40 p-2 text-foreground">
+                  <span className="font-display text-xs uppercase tracking-wider text-primary">
+                    {pendingDelete.username}:
+                  </span>{" "}
+                  {pendingDelete.message}
+                </span>
+              )}
+              <span className="mt-2 block">This can't be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingDelete) removeRow(pendingDelete.id);
+                setPendingDelete(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm clear all */}
+      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear the entire tester chat?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all {rows.length} message{rows.length === 1 ? "" : "s"}.
+              This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                clearAll();
+                setConfirmClear(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Clear chat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 };
