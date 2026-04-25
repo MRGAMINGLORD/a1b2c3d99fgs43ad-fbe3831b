@@ -340,6 +340,51 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password gate before the actual confirm dialog appears */}
+      <Dialog open={clearPwOpen} onOpenChange={setClearPwOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-primary" />
+              Password required to clear chat
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (unlockEdit(clearPw)) {
+                setClearPwOpen(false);
+                setClearPw("");
+                setClearPwErr(false);
+                setConfirmClear(true);
+              } else {
+                setClearPwErr(true);
+                setClearPw("");
+              }
+            }}
+            className="space-y-3"
+          >
+            <Input
+              type="password"
+              autoFocus
+              placeholder="Password"
+              value={clearPw}
+              onChange={(e) => setClearPw(e.target.value)}
+              className={clearPwErr ? "border-destructive" : ""}
+            />
+            {clearPwErr && (
+              <p className="text-xs text-destructive">Wrong password.</p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setClearPwOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Unlock</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
