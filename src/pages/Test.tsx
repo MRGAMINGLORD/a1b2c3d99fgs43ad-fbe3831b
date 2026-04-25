@@ -175,33 +175,88 @@ const EditGameDialog = ({
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
 }) => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [coverUrl, setCoverUrl] = useState("");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("other");
-  const [html, setHtml] = useState("");
+  type Snapshot = {
+    title: string;
+    description: string;
+    coverUrl: string;
+    category: (typeof CATEGORIES)[number];
+    html: string;
+  };
+  const emptySnapshot = (): Snapshot => ({
+    title: "",
+    description: "",
+    coverUrl: "",
+    category: "other",
+    html: "",
+  });
+
+  const [form, setForm] = useState<Snapshot>(emptySnapshot());
+  const [history, setHistory] = useState<Snapshot[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const { title, description, coverUrl, category, html } = form;
+
+  // Mutate one field while pushing the previous full snapshot onto the
+  // undo stack. This makes EVERY change in the editor reversible —
+  // including "remove image" (cover cleared via the X button), category
+  // toggles, code edits, etc.
+  const updateForm = <K extends keyof Snapshot>(key: K, value: Snapshot[K]) => {
+    setHistory((h) => [...h.slice(-49), form]); // cap at 50 entries
+    setForm((f) => ({ ...f, [key]: value }));
+  };
+
+  const undo = () => {
+    setHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setForm(prev);
+      toast({ title: "Undone", description: "Reverted last change." });
+      return h.slice(0, -1);
+    });
+  };
 
   // Preview state
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewRefreshKey = useMemo(() => ({ current: 0 }), []);
 
-  // Sync form state when a new game is loaded into the dialog.
-  // Tracking by game id avoids the previous render-time mutation antipattern.
+  // Sync form state when a new game is loaded into the dialog. Resets the
+  // undo history because we're starting fresh on a different game.
   useEffect(() => {
     if (!open || !game) return;
-    setTitle(game.title);
-    setDescription(game.description);
-    setCoverUrl(game.cover_url ?? "");
-    setCategory(
-      (CATEGORIES as readonly string[]).includes(game.category)
+    setForm({
+      title: game.title,
+      description: game.description,
+      coverUrl: game.cover_url ?? "",
+      category: (CATEGORIES as readonly string[]).includes(game.category)
         ? (game.category as (typeof CATEGORIES)[number])
         : "other",
-    );
-    setHtml(game.html);
+      html: game.html,
+    });
+    setHistory([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.id, open]);
+
+  // Ctrl/Cmd+Z to undo while the dialog is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) {
+        // Only intercept if we have something to undo and the focused element
+        // isn't relying on its own native undo (textarea/input native undo
+        // is fine — but our snapshot undo also covers them, so we let it
+        // through here too).
+        if (history.length > 0) {
+          e.preventDefault();
+          undo();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, history.length]);
 
   const cleanupPreview = () => {
     if (previewUrl) {
@@ -212,7 +267,8 @@ const EditGameDialog = ({
 
   const handleClose = (v: boolean) => {
     if (!v) {
-      setTitle(""); setDescription(""); setCoverUrl(""); setHtml(""); setCategory("other");
+      setForm(emptySnapshot());
+      setHistory([]);
       setPreviewOpen(false);
       cleanupPreview();
     }
