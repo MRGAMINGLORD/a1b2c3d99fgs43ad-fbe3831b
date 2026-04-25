@@ -35,21 +35,66 @@ const Admin = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate("/login"); return; }
-
-      // Hard restriction: only this specific email may access the admin dashboard,
-      // even if they have a valid login or admin role on other accounts.
       const ALLOWED_ADMIN_EMAIL = "mrgaminglordfuzz@gmail.com";
-      if ((user.email ?? "").toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
-        await supabase.auth.signOut();
-        navigate("/");
-        toast({ title: "Access denied", description: "This account is not authorized.", variant: "destructive" });
+
+      // 1. Must be logged in
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        toast({
+          title: "Sign in required",
+          description: "You must be signed in to access the admin dashboard.",
+          variant: "destructive",
+        });
+        navigate("/login");
         return;
       }
 
-      const { data } = await supabase.rpc("is_admin" as never);
-      if (!data) { navigate("/"); toast({ title: "Access denied", variant: "destructive" }); return; }
+      // 2. Must have a confirmed email (relevant for accounts created
+      //    before email auto-confirm was enabled).
+      if (!user.email_confirmed_at && !(user as unknown as { confirmed_at?: string }).confirmed_at) {
+        await supabase.auth.signOut();
+        toast({
+          title: "Email not confirmed",
+          description: "Confirm the email link sent to your inbox, then sign in again.",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+
+      // 3. Must be the allow-listed admin email
+      if ((user.email ?? "").toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
+        await supabase.auth.signOut();
+        toast({
+          title: "Account not authorized",
+          description: `Only ${ALLOWED_ADMIN_EMAIL} can access the admin dashboard.`,
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+
+      // 4. Must have the admin role in the database
+      const { data: hasRole, error: roleErr } = await supabase.rpc("is_admin" as never);
+      if (roleErr) {
+        toast({
+          title: "Could not verify admin role",
+          description: roleErr.message,
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
+      if (!hasRole) {
+        await supabase.auth.signOut();
+        toast({
+          title: "Missing admin role",
+          description: "Your account is signed in but doesn't have the admin role yet.",
+          variant: "destructive",
+        });
+        navigate("/");
+        return;
+      }
 
       setIsAdmin(true);
       setLoading(false);

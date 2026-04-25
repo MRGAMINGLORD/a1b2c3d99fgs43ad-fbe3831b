@@ -32,7 +32,17 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (error) {
-        toast({ title: "Login failed", description: error.message, variant: "destructive" });
+        // Surface the specific reason so admins know exactly what's wrong.
+        const code = (error as { code?: string }).code;
+        if (code === "email_not_confirmed" || error.message.toLowerCase().includes("email not confirmed")) {
+          toast({
+            title: "Email not confirmed",
+            description: "Click the confirmation link in your inbox, then sign in again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({ title: "Login failed", description: error.message, variant: "destructive" });
+        }
       } else {
         navigate("/admin");
       }
