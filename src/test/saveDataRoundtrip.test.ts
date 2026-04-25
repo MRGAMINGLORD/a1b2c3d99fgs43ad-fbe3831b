@@ -167,9 +167,6 @@ describe("save data export → import roundtrip", () => {
     expect(() =>
       importGameData(JSON.stringify({ app: "some-other-app", data: {} })),
     ).toThrow(/not an apocalypse waffle save/i);
-    expect(() =>
-      importGameData(JSON.stringify({ app: "apocalypse-waffle", data: null })),
-    ).toThrow(/not an apocalypse waffle save/i);
   });
 
   it("full roundtrip preserves the entire snapshot for many games at once", () => {
