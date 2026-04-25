@@ -38,7 +38,12 @@ const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 
 // ---------- Password gate ----------
-const TestGate = ({ onUnlock }: { onUnlock: () => void }) => {
+const TestGate = ({
+  onUnlock,
+}: {
+  onUnlock: (username: string) => void;
+}) => {
+  const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState(false);
 
@@ -46,7 +51,7 @@ const TestGate = ({ onUnlock }: { onUnlock: () => void }) => {
     e.preventDefault();
     if (unlockTest(pw)) {
       setError(false);
-      onUnlock();
+      onUnlock(username.trim());
     } else {
       setError(true);
       setPw("");
@@ -68,14 +73,30 @@ const TestGate = ({ onUnlock }: { onUnlock: () => void }) => {
         <p className="text-sm text-muted-foreground">
           Enter the test password to access the staging environment.
         </p>
-        <Input
-          type="password"
-          autoFocus
-          placeholder="Password"
-          value={pw}
-          onChange={(e) => setPw(e.target.value)}
-          className={error ? "border-destructive" : ""}
-        />
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
+            Username <span className="text-muted-foreground/60">(optional)</span>
+          </label>
+          <Input
+            placeholder="Pick a name for tester chat"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            maxLength={40}
+            autoComplete="off"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
+            Password
+          </label>
+          <Input
+            type="password"
+            placeholder="Password"
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            className={error ? "border-destructive" : ""}
+          />
+        </div>
         {error && <p className="text-xs text-destructive">Wrong password.</p>}
         <div className="flex gap-2">
           <Button type="submit" className="flex-1">
