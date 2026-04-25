@@ -10,6 +10,7 @@ import PlayGame from "./pages/PlayGame";
 import PlayTestGame from "./pages/PlayTestGame";
 import Test from "./pages/Test";
 import NotFound from "./pages/NotFound";
+import { SirWafflingtonChat } from "./components/SirWafflingtonChat";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <SirWafflingtonChat />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
