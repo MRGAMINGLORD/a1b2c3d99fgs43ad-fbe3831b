@@ -29,6 +29,7 @@ import {
 } from "@/lib/testAuth";
 import CoverImagePicker from "@/components/CoverImagePicker";
 import GameCard from "@/components/GameCard";
+import TesterChat from "@/components/TesterChat";
 import { GAMES, type GameMeta } from "@/lib/games";
 import heroBg from "@/assets/hero-bg.png";
 
