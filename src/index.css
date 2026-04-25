@@ -86,4 +86,18 @@
   .animate-border-pulse {
     animation: border-pulse 2.4s ease-in-out infinite;
   }
+
+  @keyframes marquee-x {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .animate-marquee {
+    animation: marquee-x 40s linear infinite;
+  }
+
+  .marquee-mask {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+            mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+  }
 }
