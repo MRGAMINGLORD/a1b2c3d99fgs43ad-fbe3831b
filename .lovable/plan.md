@@ -1,59 +1,91 @@
+## Sir Wafflington the 67th — AI Game Guide
 
-
-## Fix: admin permissions + game save persistence
-
-Two unrelated bugs, two targeted fixes.
+A monocle-wearing, top-hatted, cane-twirling waffle aristocrat who tells visitors all about the games on the hub. Speaks with refined Victorian flair, but still on-brand with the gritty post-apocalyptic Waffle House theme — a dignified gentleman who has weathered the collapse with his manners (and syrup) intact.
 
 ---
 
-### 1. Admin "permission denied for function has_role"
+### 1. Character
 
-**Root cause:** The `has_role(uuid, app_role)` SQL function was created without granting EXECUTE to the `authenticated` and `anon` roles. The `feedback` and `announcements` RLS policies call `has_role(auth.uid(), 'admin')`, so every admin SELECT/INSERT/DELETE fails with `42501 permission denied for function has_role` — even though `is_admin()` works (it has the grants).
-
-You're still an admin in `user_roles`; the function just isn't callable.
-
-**Fix (one migration):**
-
-```sql
-GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role)
-  TO authenticated, anon;
-```
-
-After this runs, the Admin page will load feedback, post announcements, and delete entries normally — no code changes needed on the React side.
+**Name:** Sir Wafflington the 67th
+**Title:** "Hub Concierge & Connoisseur of Fine Diversions"
+**Voice:** Posh, verbose, fond of "Indeed!", "Quite so, dear visitor.", "Allow me to elucidate…". Refers to games as "diversions" or "amusements". Occasional dry remark about the wasteland between syrup metaphors.
+**Scope:** Only answers questions about the hub's games (built-in + custom), how to play, what's new, save/export, and general site navigation. Politely deflects unrelated topics in-character.
 
 ---
 
-### 2. Games don't save progress
+### 2. Visual — the avatar
 
-**Root cause:** I checked both `public/games/turtle-trade-co/index.html` and `public/games/defense-of-belgium/index.html`. Neither file contains a single `localStorage.setItem` / `getItem` call. The games hold all state in JavaScript variables only, so closing the tab (or navigating away from `/play/...`) wipes everything.
+Custom inline SVG (no external assets) of a golden-brown waffle wearing:
+- **Top hat** — tall black silk hat with a yellow hazard-stripe band
+- **Monocle** — gold ring + chain on the right "eye" square of the waffle grid
+- **Cane** — black with a gold tip, held at a jaunty angle
+- **Bowtie** — small yellow bowtie under the waffle
+- A subtle drip of syrup as a flourish
 
-The hub's "Bunker Save Terminal" Export/Import works correctly — there's just nothing for it to capture, because the games never write any save data.
+Used at three sizes:
+- 48px — floating action button
+- 64px — chat sheet header
+- 32px — assistant message avatar
 
-**Two ways forward — pick one:**
-
-**Option A — I add autosave wrappers to each game HTML file (recommended).**
-For each game I'd:
-- Identify the in-memory state object the game uses (e.g. islands array for Turtle Trade, fortifications/medals/turn for Belgium).
-- Add a small `<script>` block that:
-  - Loads saved state from `localStorage` on startup and rehydrates the game.
-  - Saves the state to `localStorage` (debounced, every few seconds + on visibility change/unload) under a stable key like `ttc:save:v1` and `dob:save:v1`.
-- This makes progress survive tab close, and the hub's existing Export/Import will then capture it automatically (same-origin localStorage is shared with the hub).
-
-This means I'd be editing the game files, which technically crosses the "AI only builds the hub" line in the project memory — but it's a small, surgical persistence wrapper, not gameplay logic. Confirm you're okay with that and I'll proceed.
-
-**Option B — You add the save code to the games yourself.**
-I'll give you a copy-paste snippet for each game (load on startup + debounced autosave + save on `pagehide`) using the keys `ttc:save:v1` and `dob:save:v1`. You drop it into each `index.html` and the hub's Export/Import will pick it up immediately.
-
-Either way, Waffle Craft will need the same treatment whenever you add it.
+Built as `src/components/SirWafflingtonAvatar.tsx` so it scales crisply.
 
 ---
 
-### Summary of changes
+### 3. UI / placement
 
-| Change | Where |
-|---|---|
-| Grant EXECUTE on `has_role` to authenticated/anon | New SQL migration |
-| Add load + autosave wrapper | `public/games/turtle-trade-co/index.html` and `public/games/defense-of-belgium/index.html` (Option A) — or you do it (Option B) |
+- **Floating button** (fixed bottom-right) on every route, mounted in `src/App.tsx`. Avatar + "Ask Sir Wafflington" hover label. Uses the existing `animate-pulse-glow` for a subtle shimmer.
+- **Chat panel** opens in a right-side `Sheet` (already in the codebase).
+- **Header:** large avatar + "Sir Wafflington the 67th" in `font-display` (Black Ops One) + tagline.
+- **Messages:** user right-aligned plain bubbles; assistant left-aligned with the 32px avatar, rendered via `react-markdown`.
+- **Input:** textarea + send button. Enter sends, Shift+Enter newline. Disabled while streaming.
+- **Empty state:** Sir Wafflington introduces himself and offers 3 starter prompts ("What games are available?", "How do I save my progress?", "Tell me about Defense of Belgium").
 
-Reply with **A** or **B** (and approve) and I'll implement.
+New file: `src/components/SirWafflingtonChat.tsx`.
 
+---
+
+### 4. Backend — streaming edge function
+
+New: `supabase/functions/sir-wafflington/index.ts`
+
+- **Lovable AI Gateway** (`LOVABLE_API_KEY` already provisioned, no user setup) using **`google/gemini-3-flash-preview`** for fast, cheap streaming.
+- SSE streamed line-by-line to the client following the standard pattern.
+- **System prompt** establishes the character (top hat, monocle, cane, 67th of his line, refined-but-apocalyptic concierge of the hub) and locks scope to hub/games.
+- **Game context** built server-side per request:
+  - Static block summarising built-in games (`Defense of Belgium`, `Turtle Trade Co`, etc.) with one-line descriptions.
+  - Live `select slug, title, description, category from custom_games` to inject every admin-added game's title + description (NOT the HTML — keeps tokens low).
+- 429 (rate-limited) and 402 (credits exhausted) bubbled back with friendly toasts on the client.
+- CORS + OPTIONS handler per the standard pattern.
+- Public endpoint — anyone visiting the hub can chat with him. Lovable-managed default `verify_jwt = false` is fine; no `config.toml` change needed.
+
+Request body: `{ messages: [{ role, content }, ...] }`. The client sends full conversation history each turn; chat is in-memory only (resets when the sheet closes), matching a "concierge dropping by" feel.
+
+---
+
+### 5. Dependency
+
+Add `react-markdown` so assistant responses render formatted (lists, bold, code). No other new deps.
+
+---
+
+### 6. Files
+
+**Created**
+- `src/components/SirWafflingtonAvatar.tsx` — the SVG character
+- `src/components/SirWafflingtonChat.tsx` — floating button + Sheet chat UI with streaming
+- `supabase/functions/sir-wafflington/index.ts` — streaming AI edge function with character prompt + game context
+
+**Modified**
+- `src/App.tsx` — mount `<SirWafflingtonChat />` once at app root
+- `package.json` — add `react-markdown`
+
+**Memory**
+- New `mem://features/sir-wafflington` capturing his character, look, and scope so future changes stay consistent.
+
+---
+
+### 7. Out of scope (intentionally)
+
+- No persistent chat history across sessions.
+- No access to save data, admin tools, or live game state — he's a concierge, not an operator.
+- No voice / TTS.
