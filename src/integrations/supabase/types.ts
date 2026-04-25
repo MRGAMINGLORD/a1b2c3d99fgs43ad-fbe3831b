@@ -185,6 +185,27 @@ export type Database = {
         }
         Relationships: []
       }
+      tester_chat: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          username?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
