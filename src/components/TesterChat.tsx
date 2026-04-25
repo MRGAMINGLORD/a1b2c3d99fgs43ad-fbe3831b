@@ -227,7 +227,7 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                    onClick={() => removeRow(r.id)}
+                    onClick={() => setPendingDelete(r)}
                     aria-label="Delete message"
                   >
                     <Trash2 className="h-3 w-3 text-destructive" />
