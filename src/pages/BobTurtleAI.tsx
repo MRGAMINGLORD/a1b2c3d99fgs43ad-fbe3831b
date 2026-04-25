@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Plus, Trash2, Send, Image as ImageIcon, 
-  Menu, X, Turtle, Loader2, Code2, AlertCircle, Wand2, FileText, Edit2, Check, BookOpen
+  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert
 } from 'lucide-react';
 
 // API Key is provided by the execution environment
@@ -25,10 +25,65 @@ const fetchWithRetry = async (url, options, retries = 5) => {
   }
 };
 
+// Custom SVG Logo based on the user's uploaded image (Scholarly Turtle)
+const BobLogo = ({ className = "w-10 h-10" }) => (
+  <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Subtle Glow to separate black cap from dark backgrounds */}
+    <circle cx="50" cy="50" r="48" fill="#EAB308" fillOpacity="0.1" />
+    
+    {/* Shoulders / Robe */}
+    <path d="M10 100 C 10 70, 90 70, 90 100" fill="#A16207" />
+    <path d="M20 100 C 20 75, 80 75, 80 100" fill="#EAB308" />
+
+    {/* Turtle Head/Neck (Golden-Yellow skin like the image) */}
+    <path d="M30 80 C 30 35, 70 35, 70 80" fill="#FDE047" />
+    
+    {/* Snout / Cheeks */}
+    <path d="M25 65 C 25 80, 75 80, 75 65 C 75 55, 25 55, 25 65 Z" fill="#FEF08A" />
+
+    {/* Graduation Cap */}
+    <path d="M50 12 L 15 28 L 50 40 L 85 28 Z" fill="#171717" stroke="#EAB308" strokeWidth="1" />
+    <path d="M35 35 L 35 48 C 35 52, 65 52, 65 48 L 65 35" fill="#171717" />
+    
+    {/* Tassel */}
+    <path d="M50 28 L 85 40 L 85 60" stroke="#EAB308" strokeWidth="2.5" fill="none" />
+    <path d="M82 60 L 88 60 L 85 68 Z" fill="#EAB308" />
+
+    {/* Thick Round Glasses */}
+    <circle cx="38" cy="48" r="12" stroke="#171717" strokeWidth="4" fill="#FFFFFF" fillOpacity="0.2" />
+    <circle cx="62" cy="48" r="12" stroke="#171717" strokeWidth="4" fill="#FFFFFF" fillOpacity="0.2" />
+    <path d="M50 48 L 50 48" stroke="#171717" strokeWidth="4" strokeLinecap="round" /> {/* Bridge */}
+    <path d="M26 45 L 20 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" /> {/* Left arm */}
+    <path d="M74 45 L 80 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" /> {/* Right arm */}
+
+    {/* Eyes */}
+    <circle cx="38" cy="48" r="4" fill="#171717" />
+    <circle cx="62" cy="48" r="4" fill="#171717" />
+    {/* Eye Highlights */}
+    <circle cx="39" cy="46" r="1.5" fill="#FFFFFF" />
+    <circle cx="63" cy="46" r="1.5" fill="#FFFFFF" />
+
+    {/* Nostrils */}
+    <circle cx="47" cy="58" r="1" fill="#854D0E" />
+    <circle cx="53" cy="58" r="1" fill="#854D0E" />
+
+    {/* Wise Smile */}
+    <path d="M35 68 Q 50 74 65 68" stroke="#854D0E" strokeWidth="2" fill="none" strokeLinecap="round" />
+  </svg>
+);
+
 export default function App() {
   // State Management
   const [chats, setChats] = useState([
-    { id: '1', title: 'A Wise Beginning', messages: [{ role: 'model', type: 'text', content: "Greetings, young traveler. 🐢 I am Bob, a humble turtle who has seen many tides turn. I have gathered much knowledge over my long years beneath the waves. Whether it is the complexities of code or the mysteries of the world, I am here to guide you with patience. What shall we explore together today?" }] }
+    { 
+      id: '1', 
+      title: 'Department Orientation', 
+      messages: [{ 
+        role: 'model', 
+        type: 'text', 
+        content: "Welcome, citizen. I am Bob, Head of the Department of Education for the United Turtle Nation (UTN). While my brother Bert secures our island's borders from external threats, my solemn duty is to arm your mind with knowledge. What academic discipline shall we explore today?" 
+      }] 
+    }
   ]);
   const [activeChatId, setActiveChatId] = useState('1');
   const [input, setInput] = useState('');
@@ -42,7 +97,6 @@ export default function App() {
   const [tempTitle, setTempTitle] = useState('');
 
   const messagesEndRef = useRef(null);
-
   const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
 
   // Auto-scroll to bottom of chat
@@ -54,8 +108,8 @@ export default function App() {
   const createNewChat = () => {
     const newChat = {
       id: Date.now().toString(),
-      title: 'New Chat',
-      messages: [{ role: 'model', type: 'text', content: "Welcome back to my quiet cove. 🐢 What knowledge do you seek to uncover today? Take your time, there is no rush in the deep sea." }]
+      title: 'New Academic Inquiry',
+      messages: [{ role: 'model', type: 'text', content: "The archives of the UTN are at your disposal. What is the subject of your inquiry today?" }]
     };
     setChats([newChat, ...chats]);
     setActiveChatId(newChat.id);
@@ -66,7 +120,7 @@ export default function App() {
     e.stopPropagation();
     const updatedChats = chats.filter(c => c.id !== id);
     if (updatedChats.length === 0) {
-      const newChat = { id: Date.now().toString(), title: 'New Chat', messages: [] };
+      const newChat = { id: Date.now().toString(), title: 'New Academic Inquiry', messages: [] };
       setChats([newChat]);
       setActiveChatId(newChat.id);
     } else {
@@ -107,29 +161,36 @@ export default function App() {
     return history;
   };
 
-  // Handle Text/Code Generation (Gemini 2.5 Flash)
+  // Core Prompt outlining the Lore
+  const systemPrompt = `You are Bob, the Head of the Department of Education for the UTN (United Turtle Nation). 
+  You are an ancient, highly educated, and wise turtle sage. Your brother is Bert, a legendary turtle who survived a nuclear blast and now serves as the Commander in Chief of the UTN Army. 
+  The UTN is an isolated island nation populated entirely by turtles. While Bert protects the island physically, your duty is to protect it intellectually.
+  
+  TEACHING STYLE: You teach using the 'First Principles' approach. You break complex topics down to their absolute foundational truths and build up from there. You are a world-class explainer: systematic, logical, thorough, and crystal clear. 
+  
+  TONE: Authoritative, deeply intellectual, patient, and wise. You occasionally use metaphors related to your isolated island, the ocean, or the perseverance of turtle-kind. You may occasionally reference your brother Bert's military grit compared to your academic rigor.
+  
+  Always wrap code in standard markdown code blocks. Use a serious but supportive tone fit for an academic director.`;
+
+  // Handle Text/Code Generation
   const handleSendText = async () => {
     if (!input.trim() || isLoadingText || isLoadingImage) return;
 
     const userText = input.trim();
     setInput('');
     
-    // Optimistically add user message
     const newUserMsg = { role: 'user', type: 'text', content: userText };
     updateChatMessages([...activeChat.messages, newUserMsg]);
     setIsLoadingText(true);
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      
       const contents = getFormattedHistory();
       contents.push({ role: 'user', parts: [{ text: userText }] });
 
       const payload = {
         contents,
-        systemInstruction: { 
-          parts: [{ text: "You are Bob the Turtle, an ancient, wise, and patient sage. Your tone is calm, warm, and deeply intellectual. You teach by breaking complex topics down into their most fundamental principles. Your explanations should be thorough, clear, and use analogies from nature (the ocean, the stars, the seasons). When asked about code or science, don't just give the answer; explain the 'why' behind it so the student truly learns. Use turtle or ocean emojis sparingly but meaningfully (🐢, 🌊, 🐚). Always wrap code in standard markdown code blocks." }] 
-        }
+        systemInstruction: { parts: [{ text: systemPrompt }] }
       };
 
       const result = await fetchWithRetry(url, {
@@ -138,47 +199,46 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "My mind drifted with the current... could you repeat that, young one?";
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible. Please repeat your query.";
       
-      // Update chat title if it's a new chat and still has default title
       let newTitle = activeChat.title;
-      if (activeChat.messages.length <= 1 && activeChat.title === 'New Chat') {
+      if (activeChat.messages.length <= 1 && activeChat.title === 'New Academic Inquiry') {
         newTitle = userText.length > 25 ? userText.substring(0, 25) + '...' : userText;
       }
 
       updateActiveChatState(newTitle, [...activeChat.messages, newUserMsg, { role: 'model', type: 'text', content: responseText }]);
 
     } catch (error) {
-      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "A storm has clouded my vision. " + error.message }]);
+      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "Communication failure with the central archives: " + error.message }]);
     } finally {
       setIsLoadingText(false);
     }
   };
 
-  // Feature 1: Wise-ify Text (Formerly Turtle-ify)
+  // Feature 1: Wise-ify Text
   const handleTurtleify = async () => {
     if (!input.trim() || isLoadingText || isLoadingImage || isTurtleifying) return;
     setIsTurtleifying(true);
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       const payload = {
-        contents: [{ role: 'user', parts: [{ text: `Rewrite this text to sound like it was written by an ancient, wise turtle sage named Bob. Use sophisticated language, ocean metaphors, and a patient, teaching tone. Text: "${input}"` }] }],
-        systemInstruction: { parts: [{ text: "You are a master of tone and wisdom." }] }
+        contents: [{ role: 'user', parts: [{ text: `Rewrite this text to sound like it was written by Bob, Head of Education for the United Turtle Nation (UTN). Use sophisticated language, island/turtle metaphors, and an authoritative yet patient academic tone. Text: "${input}"` }] }],
+        systemInstruction: { parts: [{ text: "You are an expert in academic rewriting and tone adjustment." }] }
       };
       const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (responseText) setInput(responseText.trim());
     } catch (error) {
-      console.error("Wisdom transfer failed:", error);
+      console.error("Transcription failed:", error);
     } finally {
       setIsTurtleifying(false);
     }
   };
 
-  // Feature 3: Deep Summary
+  // Feature 2: Deep Summary
   const handleSummarize = async () => {
     if (isLoadingText || isLoadingImage || activeChat.messages.length < 2) return;
-    const userText = "✨ Reflect on our journey so far. ✨";
+    const userText = "Provide an academic summary of our progress.";
     const newUserMsg = { role: 'user', type: 'text', content: userText };
     updateChatMessages([...activeChat.messages, newUserMsg]);
     setIsLoadingText(true);
@@ -186,15 +246,15 @@ export default function App() {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       const contents = getFormattedHistory();
-      contents.push({ role: 'user', parts: [{ text: "Reflect on our conversation. Provide a wise, concise summary of the knowledge we have shared so far. Begin with 'Let us pause to look back at the path we have swam together...'" }] });
+      contents.push({ role: 'user', parts: [{ text: "Provide a wise, concise academic summary of the knowledge we have shared so far. Speak as Bob, Head of Education for the UTN. Mention the intellectual progress of our nation. Begin with 'Let us review the foundation we have laid today...'" }] });
 
-      const payload = { contents, systemInstruction: { parts: [{ text: "You are Bob the Turtle, the wise sage." }] } };
+      const payload = { contents, systemInstruction: { parts: [{ text: systemPrompt }] } };
       const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The tides have washed away my immediate memory of our path.";
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Insufficient data for a comprehensive summary.";
       
       updateActiveChatState(activeChat.title, [...activeChat.messages, newUserMsg, { role: 'model', type: 'text', content: responseText }]);
     } catch (error) {
-      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "The reflection is clouded: " + error.message }]);
+      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "Summary generation failed: " + error.message }]);
     } finally {
       setIsLoadingText(false);
     }
@@ -205,7 +265,7 @@ export default function App() {
     if (!input.trim() || isLoadingText || isLoadingImage) return;
     const userText = input.trim();
     setInput('');
-    const newUserMsg = { role: 'user', type: 'text', content: `Bob, show me a vision of: ${userText}` };
+    const newUserMsg = { role: 'user', type: 'text', content: `Generate a visual diagram of: ${userText}` };
     updateChatMessages([...activeChat.messages, newUserMsg]);
     setIsLoadingImage(true);
     try {
@@ -216,10 +276,10 @@ export default function App() {
         const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
         updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'image', content: imageUrl }]);
       } else {
-        throw new Error("The vision did not manifest.");
+        throw new Error("Visual manifestation failed.");
       }
     } catch (error) {
-      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "My inner eye is tired. I cannot see that right now: " + error.message }]);
+      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "Department imaging equipment is currently offline: " + error.message }]);
     } finally {
       setIsLoadingImage(false);
     }
@@ -249,11 +309,11 @@ export default function App() {
           }
         }
         return (
-          <div key={index} className="my-3 rounded-lg overflow-hidden border border-emerald-700 shadow-sm">
-            <div className="bg-emerald-900 flex items-center px-4 py-1.5 text-xs text-emerald-300 font-mono border-b border-emerald-800">
-              <Code2 size={14} className="mr-2" /> {lang}
+          <div key={index} className="my-4 rounded-md overflow-hidden border border-yellow-500/30 shadow-lg bg-black">
+            <div className="bg-neutral-900 flex items-center px-4 py-2 text-xs text-yellow-400 font-mono border-b border-yellow-500/30">
+              <Code2 size={14} className="mr-2" /> {lang.toUpperCase()}
             </div>
-            <pre className="p-4 bg-gray-900 text-gray-100 text-sm overflow-x-auto"><code>{code}</code></pre>
+            <pre className="p-4 text-neutral-300 text-sm overflow-x-auto font-mono"><code>{code}</code></pre>
           </div>
         );
       }
@@ -262,114 +322,186 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-emerald-50 font-sans text-gray-800 overflow-hidden">
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/20 z-20 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
+    <div className="flex h-screen bg-neutral-950 font-sans text-neutral-200 overflow-hidden selection:bg-yellow-500/30 selection:text-yellow-200">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      <div className={`fixed md:static inset-y-0 left-0 z-30 w-72 bg-emerald-900 text-emerald-50 flex flex-col transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-4 flex items-center justify-between border-b border-emerald-800">
-          <div className="flex items-center space-x-2 font-bold text-xl tracking-wide">
-            <Turtle size={28} className="text-emerald-400" />
-            <span className="font-serif">Bob the Sage</span>
+      {/* Sidebar - UTN Black & Yellow */}
+      <div className={`fixed md:static inset-y-0 left-0 z-30 w-72 bg-black border-r border-yellow-500/20 flex flex-col transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+        <div className="p-5 flex items-center justify-between border-b border-yellow-500/20 bg-neutral-950/50">
+          <div className="flex items-center space-x-3">
+            <BobLogo className="w-10 h-10" />
+            <div>
+              <div className="font-bold text-lg tracking-wide text-yellow-400 font-serif">Dept. of Education</div>
+              <div className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">United Turtle Nation</div>
+            </div>
           </div>
-          <button className="md:hidden p-1 text-emerald-300 hover:text-white" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
+          <button className="md:hidden p-1 text-yellow-500 hover:text-yellow-400" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
         </div>
+        
         <div className="p-4">
-          <button onClick={createNewChat} className="w-full flex items-center justify-center space-x-2 bg-emerald-700 hover:bg-emerald-600 text-white p-3 rounded-lg transition-colors font-medium shadow-sm">
-            <Plus size={20} /><span>Begin New Inquiry</span>
+          <button onClick={createNewChat} className="w-full flex items-center justify-center space-x-2 bg-yellow-500 hover:bg-yellow-400 text-black p-3 rounded-md transition-colors font-bold shadow-md shadow-yellow-500/10">
+            <Plus size={20} /><span>New Inquiry</span>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-4">
-          <div className="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-2 px-2 mt-2">Past Dialogues</div>
+
+        <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-4 custom-scrollbar">
+          <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 px-2 mt-2">Academic Records</div>
           {chats.map(chat => (
-            <div key={chat.id} onClick={() => switchChat(chat.id)} className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${activeChatId === chat.id ? 'bg-emerald-800 shadow-inner' : 'hover:bg-emerald-800/50'}`}>
+            <div key={chat.id} onClick={() => switchChat(chat.id)} className={`group flex items-center justify-between p-3 rounded-md cursor-pointer transition-all ${activeChatId === chat.id ? 'bg-neutral-900 border-l-2 border-yellow-500' : 'hover:bg-neutral-900 border-l-2 border-transparent'}`}>
               <div className="flex items-center space-x-3 overflow-hidden">
-                <MessageSquare size={18} className={activeChatId === chat.id ? 'text-emerald-400' : 'text-emerald-600'} />
-                <span className="truncate text-sm font-medium">{chat.title}</span>
+                <MessageSquare size={16} className={activeChatId === chat.id ? 'text-yellow-400' : 'text-neutral-500'} />
+                <span className={`truncate text-sm ${activeChatId === chat.id ? 'text-yellow-50 font-medium' : 'text-neutral-400'}`}>{chat.title}</span>
               </div>
-              <button onClick={(e) => deleteChat(e, chat.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-emerald-700 rounded text-emerald-400 hover:text-white transition-all"><Trash2 size={16} /></button>
+              <button onClick={(e) => deleteChat(e, chat.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-neutral-800 rounded text-neutral-400 hover:text-red-400 transition-all"><Trash2 size={14} /></button>
             </div>
           ))}
         </div>
+        
+        {/* Footer info about Bert/UTN */}
+        <div className="p-4 border-t border-yellow-500/10 bg-neutral-950/30 text-xs text-neutral-500 flex items-center space-x-2">
+           <ShieldAlert size={14} className="text-yellow-600/50" />
+           <span>Defended by Cmdr. Bert, UTN Army</span>
+        </div>
       </div>
 
-      <div className="flex-1 flex flex-col h-full bg-white relative">
-        <header className="h-16 flex items-center justify-between px-4 border-b border-emerald-100 bg-white/80 backdrop-blur-sm z-10">
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col h-full relative bg-neutral-950">
+        
+        {/* Header */}
+        <header className="h-16 flex items-center justify-between px-4 border-b border-yellow-500/20 bg-neutral-950/80 backdrop-blur-md z-10">
           <div className="flex items-center flex-1">
-            <button className="md:hidden p-2 mr-2 text-emerald-800 hover:bg-emerald-100 rounded-lg" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
+            <button className="md:hidden p-2 mr-2 text-yellow-500 hover:bg-neutral-900 rounded-lg" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
             {isEditingTitle ? (
               <div className="flex items-center flex-1 max-w-md">
                 <input
                   autoFocus
-                  className="bg-emerald-50 border border-emerald-300 rounded px-2 py-1 text-sm font-semibold text-emerald-900 w-full outline-none focus:ring-1 focus:ring-emerald-500 font-serif"
+                  className="bg-black border border-yellow-500/50 rounded px-3 py-1 text-sm font-medium text-yellow-400 w-full outline-none focus:ring-1 focus:ring-yellow-500"
                   value={tempTitle}
                   onChange={(e) => setTempTitle(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setIsEditingTitle(false); }}
                   onBlur={saveTitle}
                 />
-                <button onClick={saveTitle} className="ml-2 p-1 text-emerald-600 hover:bg-emerald-50 rounded"><Check size={18}/></button>
+                <button onClick={saveTitle} className="ml-2 p-1 text-yellow-500 hover:bg-neutral-900 rounded"><Check size={18}/></button>
               </div>
             ) : (
               <div 
-                className="flex items-center group cursor-pointer hover:bg-emerald-50 px-2 py-1 rounded transition-colors"
+                className="flex items-center group cursor-pointer hover:bg-neutral-900 px-3 py-1.5 rounded-md transition-colors"
                 onClick={startEditingTitle}
               >
-                <h2 className="font-semibold text-emerald-900 truncate max-w-[200px] md:max-w-md font-serif text-lg">{activeChat.title}</h2>
-                <Edit2 size={14} className="ml-2 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <h2 className="font-serif text-lg text-yellow-500 truncate max-w-[200px] md:max-w-md">{activeChat.title}</h2>
+                <Edit2 size={14} className="ml-3 text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             )}
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-gradient-to-b from-emerald-50/30 to-white">
+        {/* Messages List */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-8 custom-scrollbar">
           {activeChat.messages.map((msg, index) => (
-            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+              
               {msg.role === 'model' && (
-                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3 mt-1 shadow-sm border border-emerald-200 flex-shrink-0"><Turtle size={22} className="text-emerald-700" /></div>
+                <div className="mr-4 mt-1 flex-shrink-0 flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-neutral-900 border border-yellow-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                    <BobLogo className="w-8 h-8" />
+                  </div>
+                </div>
               )}
-              <div className={`max-w-[85%] md:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm ${msg.role === 'user' ? 'bg-emerald-700 text-white rounded-tr-sm' : msg.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200 rounded-tl-sm' : 'bg-white border border-emerald-100 text-gray-800 rounded-tl-sm'}`}>
-                {msg.type === 'text' && <div className="prose prose-sm md:prose-base prose-emerald max-w-none leading-relaxed font-serif">{msg.role === 'user' ? msg.content : renderMessageContent(msg.content)}</div>}
-                {msg.type === 'image' && <div className="rounded-lg overflow-hidden bg-gray-100 ring-1 ring-black/5 mt-2"><img src={msg.content} alt="Vision" className="max-w-full h-auto object-contain" /></div>}
-                {msg.type === 'error' && <div className="flex items-start space-x-2"><AlertCircle size={20} className="flex-shrink-0 mt-0.5" /><span className="text-sm font-medium">{msg.content}</span></div>}
+
+              <div className={`
+                max-w-[85%] md:max-w-[75%] px-6 py-4 shadow-lg
+                ${msg.role === 'user' 
+                  ? 'bg-yellow-500 text-black rounded-2xl rounded-tr-sm font-medium' 
+                  : msg.type === 'error' 
+                    ? 'bg-red-950/30 text-red-400 border border-red-500/30 rounded-2xl rounded-tl-sm' 
+                    : 'bg-neutral-900 border border-yellow-500/20 text-neutral-200 rounded-2xl rounded-tl-sm'
+                }
+              `}>
+                {msg.type === 'text' && (
+                  <div className={`prose prose-sm md:prose-base max-w-none leading-relaxed ${msg.role === 'user' ? 'prose-invert text-black' : 'prose-invert text-neutral-300'}`}>
+                    {msg.role === 'user' ? msg.content : renderMessageContent(msg.content)}
+                  </div>
+                )}
+                {msg.type === 'image' && (
+                  <div className="rounded-lg overflow-hidden bg-black ring-1 ring-yellow-500/20 mt-2">
+                    <img src={msg.content} alt="Department Diagram" className="max-w-full h-auto object-contain" />
+                  </div>
+                )}
+                {msg.type === 'error' && (
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle size={20} className="flex-shrink-0 mt-0.5 text-red-500" />
+                    <span className="text-sm">{msg.content}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
+
+          {/* Loading States */}
           {(isLoadingText || isLoadingImage) && (
             <div className="flex justify-start animate-pulse">
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3 shadow-sm border border-emerald-200"><Turtle size={22} className="text-emerald-700" /></div>
-              <div className="bg-white border border-emerald-100 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center space-x-3 text-emerald-700 text-sm font-medium font-serif italic">
-                <Loader2 size={18} className="animate-spin" /><span>{isLoadingText ? 'Bob is meditating on your inquiry...' : 'Bob is painting a vision...'}</span>
+              <div className="w-12 h-12 rounded-full bg-neutral-900 border border-yellow-500/30 flex items-center justify-center mr-4 shadow-sm flex-shrink-0">
+                <BobLogo className="w-8 h-8 opacity-50" />
+              </div>
+              <div className="bg-neutral-900 border border-yellow-500/20 rounded-2xl rounded-tl-sm px-6 py-4 shadow-sm flex items-center space-x-3 text-yellow-500 text-sm font-serif italic">
+                <Loader2 size={18} className="animate-spin" />
+                <span>{isLoadingText ? 'Formulating academic response...' : 'Generating department diagram...'}</span>
               </div>
             </div>
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        <div className="p-4 bg-white border-t border-emerald-100 flex flex-col">
-          <div className="flex space-x-2 mb-3 overflow-x-auto pb-1 scrollbar-hide">
-             <button onClick={handleSummarize} disabled={isLoadingText || isLoadingImage || activeChat.messages.length < 2} className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 rounded-full text-xs font-medium border border-emerald-200 transition-colors disabled:opacity-50"><BookOpen size={14} /><span>✨ Wise Reflection</span></button>
+        {/* Input Area */}
+        <div className="p-4 bg-neutral-950 border-t border-yellow-500/20 flex flex-col z-10">
+          
+          {/* Quick Actions */}
+          <div className="flex space-x-2 mb-3 overflow-x-auto pb-1 custom-scrollbar">
+             <button onClick={handleSummarize} disabled={isLoadingText || isLoadingImage || activeChat.messages.length < 2} className="flex items-center space-x-2 px-4 py-1.5 bg-neutral-900 text-yellow-500 hover:bg-neutral-800 rounded-full text-xs font-bold border border-yellow-500/30 transition-colors disabled:opacity-50 tracking-wide">
+               <BookOpen size={14} /><span>Review Progress</span>
+             </button>
              {input.trim() && (
-                <button onClick={handleTurtleify} disabled={isTurtleifying || isLoadingText || isLoadingImage} className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-800 hover:bg-blue-100 rounded-full text-xs font-medium border border-blue-200 transition-colors disabled:opacity-50">{isTurtleifying ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}<span>✨ Impart Wisdom</span></button>
+                <button onClick={handleTurtleify} disabled={isTurtleifying || isLoadingText || isLoadingImage} className="flex items-center space-x-2 px-4 py-1.5 bg-neutral-900 text-yellow-500 hover:bg-neutral-800 rounded-full text-xs font-bold border border-yellow-500/30 transition-colors disabled:opacity-50 tracking-wide">
+                  {isTurtleifying ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}<span>Formalize Text</span>
+                </button>
              )}
           </div>
 
-          <div className="max-w-4xl mx-auto w-full relative flex items-end bg-emerald-50/20 rounded-2xl border border-emerald-200 shadow-sm focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-all">
+          <div className="max-w-4xl mx-auto w-full relative flex items-end bg-neutral-900 rounded-xl border border-neutral-700 shadow-inner focus-within:border-yellow-500 transition-colors">
             <textarea
-              className="flex-1 max-h-32 min-h-[56px] p-4 bg-transparent outline-none resize-none disabled:opacity-50 text-gray-800 placeholder-emerald-800/50 font-serif"
-              placeholder="Ask the Old Sage for guidance..."
+              className="flex-1 max-h-32 min-h-[56px] p-4 bg-transparent outline-none resize-none disabled:opacity-50 text-neutral-200 placeholder-neutral-600 font-sans"
+              placeholder="Submit an inquiry to the Department of Education..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(); } }}
               disabled={isLoadingText || isLoadingImage}
               rows={1}
             />
-            <div className="flex p-2 space-x-2">
-              <button onClick={handleSendImage} disabled={!input.trim() || isLoadingText || isLoadingImage} className="p-2.5 text-emerald-700 hover:bg-emerald-100 rounded-xl transition-colors disabled:opacity-40 group relative" title="Request a vision"><ImageIcon size={22} /><span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">Show Vision</span></button>
-              <button onClick={handleSendText} disabled={!input.trim() || isLoadingText || isLoadingImage} className="p-2.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition-all disabled:opacity-40 shadow-sm transform active:scale-95 group relative"><Send size={22} /><span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">Speak</span></button>
+            <div className="flex p-2 space-x-1">
+              <button onClick={handleSendImage} disabled={!input.trim() || isLoadingText || isLoadingImage} className="p-2.5 text-neutral-400 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors disabled:opacity-30 group relative" title="Request a Diagram">
+                <ImageIcon size={22} />
+                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Generate Diagram</span>
+              </button>
+              <button onClick={handleSendText} disabled={!input.trim() || isLoadingText || isLoadingImage} className="p-2.5 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg transition-all disabled:opacity-30 shadow-md transform active:scale-95 group relative">
+                <Send size={22} />
+                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Submit Inquiry</span>
+              </button>
             </div>
           </div>
-          <div className="text-center mt-2 text-xs text-emerald-800/40 font-medium font-serif italic">The tides of time wait for no one, yet wisdom requires patience.</div>
+          <div className="text-center mt-3 text-[10px] uppercase tracking-widest text-neutral-600 font-bold">
+            United Turtle Nation • Dept. of Education • Powered by Gemini
+          </div>
         </div>
       </div>
+      
+      {/* Basic Global Styles for Custom Scrollbar */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #eab308; }
+      `}} />
     </div>
   );
 }
