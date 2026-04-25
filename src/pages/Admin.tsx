@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
 import FeaturedGamesAdmin from "@/components/FeaturedGamesAdmin";
 import CustomGamesAdmin from "@/components/CustomGamesAdmin";
+import PatchNotesAdmin from "@/components/PatchNotesAdmin";
 
 interface Feedback {
   id: string;
@@ -126,6 +127,9 @@ const Admin = () => {
             ))}
           </div>
         </div>
+
+        {/* Patch Notes (admin-edited) */}
+        <PatchNotesAdmin />
 
         {/* Feedback */}
         <div>

@@ -165,8 +165,10 @@ const EditGameDialog = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewRefreshKey = useMemo(() => ({ current: 0 }), []);
 
-  // Sync when opened with a different game
-  if (game && open && title === "" && description === "" && html === "" && coverUrl === "") {
+  // Sync form state when a new game is loaded into the dialog.
+  // Tracking by game id avoids the previous render-time mutation antipattern.
+  useEffect(() => {
+    if (!open || !game) return;
     setTitle(game.title);
     setDescription(game.description);
     setCoverUrl(game.cover_url ?? "");
@@ -176,7 +178,8 @@ const EditGameDialog = ({
         : "other",
     );
     setHtml(game.html);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game?.id, open]);
 
   const cleanupPreview = () => {
     if (previewUrl) {
@@ -412,6 +415,7 @@ const TestHubCard = ({
   onEdit,
   onPost,
   onDelete,
+  onSeedAndEdit,
 }: {
   meta: GameMeta;
   testRow?: TestGameRow;
@@ -419,8 +423,8 @@ const TestHubCard = ({
   onEdit?: (g: TestGameRow) => void;
   onPost?: (g: TestGameRow) => void;
   onDelete?: (g: TestGameRow) => void;
+  onSeedAndEdit?: (meta: GameMeta) => void;
 }) => {
-  // Render same look as live hub
   return (
     <div className="relative">
       <GameCard
@@ -430,25 +434,39 @@ const TestHubCard = ({
         available={meta.available}
         playUrl={meta.playUrl}
       />
-      {manage && testRow && (
+      {manage && (
         <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-3">
           <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1 rounded-md border border-primary/60 bg-background/90 p-1 shadow-lg backdrop-blur">
-            <Button size="sm" variant="secondary" onClick={() => onEdit?.(testRow)}>
-              <Code2 className="mr-1 h-3 w-3" />
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => onPost?.(testRow)}
-              disabled={!testRow.html.trim()}
-              title={testRow.html.trim() ? "Promote to live" : "Add code first"}
-            >
-              <Send className="mr-1 h-3 w-3" />
-              Post live
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onDelete?.(testRow)}>
-              <Trash2 className="h-3 w-3 text-destructive" />
-            </Button>
+            {testRow ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => onEdit?.(testRow)}>
+                  <Code2 className="mr-1 h-3 w-3" />
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => onPost?.(testRow)}
+                  disabled={!testRow.html.trim()}
+                  title={testRow.html.trim() ? "Promote to live" : "Add code first"}
+                >
+                  <Send className="mr-1 h-3 w-3" />
+                  Post live
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => onDelete?.(testRow)}>
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onSeedAndEdit?.(meta)}
+                title="Create a test copy of this built-in game so you can edit it"
+              >
+                <Code2 className="mr-1 h-3 w-3" />
+                Edit (built-in)
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -487,6 +505,46 @@ const Test = () => {
     }
   };
 
+  // Built-in games (from the static GAMES registry) have no test_custom_games row
+  // yet. When admin clicks "Edit (built-in)", we seed a test row by copying the
+  // meta and (if available) fetching the live HTML from /public/games/{slug}/.
+  const seedAndEdit = async (meta: GameMeta) => {
+    let html = "";
+    if (meta.available && meta.playUrl) {
+      try {
+        const res = await fetch(`/games/${meta.id}/index.html`);
+        if (res.ok) html = await res.text();
+      } catch {
+        // ignore — user can paste code in the editor
+      }
+    }
+    const { data, error } = await supabase
+      .from("test_custom_games")
+      .insert({
+        slug: meta.id,
+        title: meta.title,
+        description: meta.description,
+        cover_url: null,
+        category: meta.category,
+        html,
+      })
+      .select("*")
+      .single();
+    if (error) {
+      toast({
+        title: "Could not create test copy",
+        description: error.message.includes("duplicate")
+          ? "A test entry already exists for this slug. Reloading…"
+          : error.message,
+        variant: "destructive",
+      });
+      reload();
+      return;
+    }
+    await reload();
+    requestEdit(data as TestGameRow);
+  };
+
   const handlePost = async (g: TestGameRow) => {
     if (!confirm(`Post "${g.title}" to the LIVE hub? This will overwrite any existing live game with the same slug.`)) return;
     const { error } = await supabase.from("custom_games").upsert(
@@ -521,7 +579,9 @@ const Test = () => {
   // the registry PLUS the test_custom_games table.
   const testMetas = rows.map(testRowToMeta);
   const testRowBySlug = new Map(rows.map((r) => [r.slug, r]));
-  const allGames: GameMeta[] = [...GAMES, ...testMetas];
+  // Prefer the test row's meta over the static registry's so edits show up live in the test hub.
+  const builtInsWithoutTestRow = GAMES.filter((g) => !testRowBySlug.has(g.id));
+  const allGames: GameMeta[] = [...builtInsWithoutTestRow, ...testMetas];
   const tycoonGames = allGames.filter((g) => g.category === "tycoon");
   const twistGames = allGames.filter((g) => g.category === "twist");
   const otherGames = allGames.filter((g) => g.category === "other");
@@ -537,6 +597,7 @@ const Test = () => {
           onEdit={requestEdit}
           onPost={handlePost}
           onDelete={handleDelete}
+          onSeedAndEdit={seedAndEdit}
         />
       ))}
     </div>
