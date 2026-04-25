@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import CoverImagePicker from "@/components/CoverImagePicker";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
+import { GAMES } from "@/lib/games";
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
+const BUILTIN_SLUGS = new Set(GAMES.map((g) => g.id));
 
 const slugify = (s: string) =>
   s
@@ -75,10 +77,28 @@ const CustomGamesAdmin = () => {
       toast({ title: "Title is required", variant: "destructive" });
       return;
     }
-    setSubmitting(true);
     const slug = editingId
       ? rows.find((r) => r.id === editingId)?.slug ?? slugify(title)
       : slugify(title);
+
+    // Block slug collisions with built-in games (only when creating new — existing
+    // rows keep their slug, and seeded built-in copies are intentional).
+    if (!editingId && BUILTIN_SLUGS.has(slug)) {
+      toast({
+        title: "Slug conflicts with a built-in game",
+        description: `"${slug}" is already used by a built-in. Pick a different title (e.g. "${title} 2") so the URL /play/${slug} stays unique.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Confirm before saving so admins don't post placeholder games by accident.
+    const confirmMsg = editingId
+      ? `Save changes to "${title.trim()}"?`
+      : `Post "${title.trim()}" as a new game at /play/${slug}?`;
+    if (!confirm(confirmMsg)) return;
+
+    setSubmitting(true);
 
     if (editingId) {
       const { error } = await supabase

@@ -53,6 +53,11 @@ const FeaturedGamesCarousel = () => {
     return null;
   }
 
+  // Duplicate the list so the marquee can loop seamlessly with translateX(-50%).
+  // Only enable autoscroll when there are enough cards to actually need it.
+  const shouldAnimate = games.length >= 3;
+  const loopGames = shouldAnimate ? [...games, ...games] : games;
+
   return (
     <section className="mx-auto max-w-5xl px-6 pt-6">
       <div className="mb-3 flex items-center gap-2">
@@ -61,57 +66,71 @@ const FeaturedGamesCarousel = () => {
           Featured Games
         </h2>
       </div>
-      <div className="rounded-lg border border-primary/40 bg-card/60 p-3 border-glow">
-        <div className="scrollbar-thin -mx-1 flex gap-3 overflow-x-auto px-1 pb-2">
-          {games.map((g) => {
-            const card = (
-              <div
-                className={`group relative w-44 shrink-0 overflow-hidden rounded-md border text-left transition-transform duration-300 ${
-                  g.available
-                    ? "border-primary/50 bg-card hover:scale-[1.04] hover:border-primary"
-                    : "border-border bg-card/50 opacity-60"
-                }`}
-              >
-                <div className="relative aspect-[3/2] w-full overflow-hidden bg-muted">
-                  <img
-                    src={g.cover}
-                    alt={`${g.title} cover art`}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
-                  {!g.available && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/70">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Lock className="h-3 w-3" />
-                        <span className="font-display text-[10px] uppercase tracking-wider">
-                          Soon
-                        </span>
+      <div className="group/carousel rounded-lg border border-primary/40 bg-card/60 p-3 border-glow">
+        <div className={shouldAnimate ? "marquee-mask overflow-hidden" : "scrollbar-thin -mx-1 overflow-x-auto px-1 pb-2"}>
+          <div
+            className={
+              shouldAnimate
+                ? "flex w-max gap-3 animate-marquee group-hover/carousel:[animation-play-state:paused]"
+                : "flex gap-3"
+            }
+          >
+            {loopGames.map((g, idx) => {
+              const card = (
+                <div
+                  className={`group relative w-44 shrink-0 overflow-hidden rounded-md border text-left transition-transform duration-300 ${
+                    g.available
+                      ? "border-primary/50 bg-card hover:scale-[1.04] hover:border-primary"
+                      : "border-border bg-card/50 opacity-60"
+                  }`}
+                >
+                  <div className="relative aspect-[3/2] w-full overflow-hidden bg-muted">
+                    <img
+                      src={g.cover}
+                      alt={`${g.title} cover art`}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+                    {!g.available && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Lock className="h-3 w-3" />
+                          <span className="font-display text-[10px] uppercase tracking-wider">
+                            Soon
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <h3 className="truncate font-display text-xs uppercase tracking-wide text-primary">
+                      {g.title}
+                    </h3>
+                    {g.available && (
+                      <span className="font-display text-[10px] uppercase tracking-wider text-primary">
+                        ▶ Play
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="p-2">
-                  <h3 className="truncate font-display text-xs uppercase tracking-wide text-primary">
-                    {g.title}
-                  </h3>
-                  {g.available && (
-                    <span className="font-display text-[10px] uppercase tracking-wider text-primary">
-                      ▶ Play
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-            return g.available && g.playUrl ? (
-              <Link key={g.id} to={g.playUrl} className="shrink-0">
-                {card}
-              </Link>
-            ) : (
-              <div key={g.id}>{card}</div>
-            );
-          })}
+              );
+              const key = `${g.id}-${idx}`;
+              return g.available && g.playUrl ? (
+                <Link key={key} to={g.playUrl} className="shrink-0">
+                  {card}
+                </Link>
+              ) : (
+                <div key={key} className="shrink-0">{card}</div>
+              );
+            })}
+          </div>
         </div>
+        {shouldAnimate && (
+          <p className="mt-1 text-center text-[10px] uppercase tracking-wider text-muted-foreground">
+            hover to pause
+          </p>
+        )}
       </div>
     </section>
   );
