@@ -154,11 +154,13 @@ const PatchNotesAdmin = () => {
                 className="flex items-start justify-between rounded-md border border-primary/40 bg-background/40 p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-sm text-primary">{n.title}</span>
+                  <div className="flex flex-wrap items-baseline gap-2">
                     {n.version && (
-                      <span className="font-mono text-xs text-destructive">v{n.version}</span>
+                      <span className="rounded border border-destructive/60 bg-destructive/10 px-1.5 py-0.5 font-mono text-xs font-bold text-destructive">
+                        v{n.version}
+                      </span>
                     )}
+                    <span className="font-display text-sm text-primary">{n.title}</span>
                   </div>
                   <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">
                     {n.content}
