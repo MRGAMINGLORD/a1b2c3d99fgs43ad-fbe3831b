@@ -149,17 +149,46 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
     const { error } = await supabase.from("tester_chat").delete().eq("id", id);
     if (error) {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Message deleted" });
+    }
+  };
+
+  const clearAll = async () => {
+    // Delete all rows the admin can see (RLS restricts to admins).
+    const { error } = await supabase
+      .from("tester_chat")
+      .delete()
+      .not("id", "is", null);
+    if (error) {
+      toast({ title: "Clear failed", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Chat cleared" });
+      setRows([]);
     }
   };
 
   return (
     <section className="mx-auto mt-10 max-w-5xl px-6 pb-12">
       <div className="rounded-lg border border-primary/40 bg-card/40 p-4 border-glow">
-        <div className="mb-3 flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-primary" />
-          <h2 className="font-display text-xl uppercase tracking-wider text-primary">
-            Tester Chat
-          </h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-xl uppercase tracking-wider text-primary">
+              Tester Chat
+            </h2>
+          </div>
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmClear(true)}
+              className="gap-1"
+            >
+              <Eraser className="h-3 w-3" />
+              Clear chat
+            </Button>
+          )}
         </div>
         <p className="mb-3 text-xs text-muted-foreground">
           Talk with other testers in real time. Be nice — admins can wipe spam.
