@@ -19,6 +19,8 @@ const toGameMeta = (row: CustomGameRow): GameMeta => ({
   title: row.title,
   description: row.description,
   cover: row.cover_url || "/placeholder.svg",
+  // `html` is either a URL to a stored file or inline HTML. Either way,
+  // a non-empty value means the game is playable.
   available: row.html.trim().length > 0,
   playUrl: `/play/${row.slug}`,
   category:

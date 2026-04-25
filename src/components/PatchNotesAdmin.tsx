@@ -4,24 +4,41 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Trash2, Pencil, Plus } from "lucide-react";
+import { useAllGames } from "@/hooks/useAllGames";
 
 interface PatchNote {
   id: string;
   version: string | null;
   title: string;
   content: string;
+  // Optional foreign key to a game (built-in id or custom slug). Null = site-wide.
+  game_id: string | null;
   created_at: string;
 }
 
+const SITE_WIDE = "__site__";
+
 const PatchNotesAdmin = () => {
+  const { games } = useAllGames();
   const [notes, setNotes] = useState<PatchNote[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [version, setVersion] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [gameId, setGameId] = useState<string>(SITE_WIDE);
   const [busy, setBusy] = useState(false);
+
+  const titleForGameId = (id: string | null): string =>
+    !id ? "Site-wide" : games.find((g) => g.id === id)?.title ?? id;
 
   const load = async () => {
     const { data, error } = await supabase
@@ -32,7 +49,7 @@ const PatchNotesAdmin = () => {
       toast({ title: "Error loading patch notes", description: error.message, variant: "destructive" });
       return;
     }
-    setNotes(data ?? []);
+    setNotes((data ?? []) as PatchNote[]);
   };
 
   useEffect(() => { load(); }, []);
@@ -42,6 +59,7 @@ const PatchNotesAdmin = () => {
     setVersion("");
     setTitle("");
     setContent("");
+    setGameId(SITE_WIDE);
   };
 
   const startEdit = (n: PatchNote) => {
@@ -49,6 +67,7 @@ const PatchNotesAdmin = () => {
     setVersion(n.version ?? "");
     setTitle(n.title);
     setContent(n.content);
+    setGameId(n.game_id ?? SITE_WIDE);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -63,6 +82,7 @@ const PatchNotesAdmin = () => {
       version: version.trim() || null,
       title: title.trim(),
       content: content.trim(),
+      game_id: gameId === SITE_WIDE ? null : gameId,
     };
     const { error } = editingId
       ? await supabase.from("patch_notes").update(payload).eq("id", editingId)
@@ -94,6 +114,22 @@ const PatchNotesAdmin = () => {
         {editingId ? "Edit Patch Note" : "New Patch Note"}
       </h2>
       <form onSubmit={submit} className="space-y-3">
+        <div>
+          <Label htmlFor="pn-game">Which game does this update?</Label>
+          <Select value={gameId} onValueChange={setGameId}>
+            <SelectTrigger id="pn-game">
+              <SelectValue placeholder="Site-wide" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={SITE_WIDE}>Site-wide (no specific game)</SelectItem>
+              {games.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <Label htmlFor="pn-version">Version (optional, e.g. 1.2.0)</Label>
           <Input
@@ -160,6 +196,9 @@ const PatchNotesAdmin = () => {
                         v{n.version}
                       </span>
                     )}
+                    <span className="rounded border border-primary/50 bg-primary/10 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
+                      {titleForGameId(n.game_id)}
+                    </span>
                     <span className="font-display text-sm text-primary">{n.title}</span>
                   </div>
                   <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">
