@@ -415,6 +415,7 @@ const TestHubCard = ({
   onEdit,
   onPost,
   onDelete,
+  onSeedAndEdit,
 }: {
   meta: GameMeta;
   testRow?: TestGameRow;
@@ -422,8 +423,8 @@ const TestHubCard = ({
   onEdit?: (g: TestGameRow) => void;
   onPost?: (g: TestGameRow) => void;
   onDelete?: (g: TestGameRow) => void;
+  onSeedAndEdit?: (meta: GameMeta) => void;
 }) => {
-  // Render same look as live hub
   return (
     <div className="relative">
       <GameCard
@@ -433,25 +434,39 @@ const TestHubCard = ({
         available={meta.available}
         playUrl={meta.playUrl}
       />
-      {manage && testRow && (
+      {manage && (
         <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-3">
           <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1 rounded-md border border-primary/60 bg-background/90 p-1 shadow-lg backdrop-blur">
-            <Button size="sm" variant="secondary" onClick={() => onEdit?.(testRow)}>
-              <Code2 className="mr-1 h-3 w-3" />
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => onPost?.(testRow)}
-              disabled={!testRow.html.trim()}
-              title={testRow.html.trim() ? "Promote to live" : "Add code first"}
-            >
-              <Send className="mr-1 h-3 w-3" />
-              Post live
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => onDelete?.(testRow)}>
-              <Trash2 className="h-3 w-3 text-destructive" />
-            </Button>
+            {testRow ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={() => onEdit?.(testRow)}>
+                  <Code2 className="mr-1 h-3 w-3" />
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => onPost?.(testRow)}
+                  disabled={!testRow.html.trim()}
+                  title={testRow.html.trim() ? "Promote to live" : "Add code first"}
+                >
+                  <Send className="mr-1 h-3 w-3" />
+                  Post live
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => onDelete?.(testRow)}>
+                  <Trash2 className="h-3 w-3 text-destructive" />
+                </Button>
+              </>
+            ) : (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => onSeedAndEdit?.(meta)}
+                title="Create a test copy of this built-in game so you can edit it"
+              >
+                <Code2 className="mr-1 h-3 w-3" />
+                Edit (built-in)
+              </Button>
+            )}
           </div>
         </div>
       )}
