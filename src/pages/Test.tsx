@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Code2, Send, Trash2, Lock, Loader2, Plus, Eye, EyeOff, Wrench, RefreshCw } from "lucide-react";
+import { Code2, Send, Trash2, Lock, Loader2, Plus, Eye, EyeOff, Wrench, RefreshCw, Undo2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
