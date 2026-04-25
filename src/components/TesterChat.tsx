@@ -193,7 +193,14 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setConfirmClear(true)}
+              onClick={() => {
+                if (isEditUnlocked()) setConfirmClear(true);
+                else {
+                  setClearPw("");
+                  setClearPwErr(false);
+                  setClearPwOpen(true);
+                }
+              }}
               className="gap-1"
             >
               <Eraser className="h-3 w-3" />
