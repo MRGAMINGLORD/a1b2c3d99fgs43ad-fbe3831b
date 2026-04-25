@@ -737,6 +737,8 @@ const Test = () => {
         </Accordion>
       </section>
 
+      <TesterChat defaultUsername={chatUsername} />
+
       <EditPasswordDialog
         open={editPwOpen}
         onOpenChange={setEditPwOpen}
