@@ -25,7 +25,7 @@ const GAMES: Record<GameId, { src: string; title: string; loadingFlavor: string 
   "neon-snake": {
     src: "/games/neon-snake/index.html",
     title: "Neon Snake",
-    loadingFlavor: "firing up the lights",
+    loadingFlavor: "Booting the neon grid...",
   },
 };
 
@@ -147,10 +147,81 @@ const MinecartLoader = () => (
   </div>
 );
 
+const NeonSnakeLoader = () => {
+  // 8 segments worth of glowing snake; staggered pulse + travel along the grid.
+  const segments = Array.from({ length: 8 });
+  return (
+    <div className="relative h-40 w-72 overflow-hidden bg-background">
+      {/* Neon grid */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage:
+            "linear-gradient(hsl(var(--primary) / 0.35) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary) / 0.35) 1px, transparent 1px)",
+          backgroundSize: "16px 16px",
+        }}
+      />
+      {/* Vignette */}
+      <div className="absolute inset-0 bg-radial-fade" style={{
+        background: "radial-gradient(ellipse at center, transparent 0%, hsl(var(--background)) 95%)",
+      }} />
+
+      {/* Snake — 8 glowing squares chasing each other on a winding S-path */}
+      <div className="absolute inset-0">
+        {segments.map((_, i) => (
+          <div
+            key={i}
+            className="absolute h-3 w-3 rounded-sm"
+            style={{
+              top: "50%",
+              left: "0%",
+              backgroundColor: "hsl(var(--primary))",
+              boxShadow:
+                "0 0 6px hsl(var(--primary)), 0 0 14px hsl(var(--primary) / 0.7), 0 0 24px hsl(var(--primary) / 0.4)",
+              animation: `snake 2.4s linear infinite`,
+              animationDelay: `${i * -0.12}s`,
+              opacity: 1 - i * 0.08,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Apple — pulsing target */}
+      <div
+        className="absolute h-3 w-3 rounded-sm"
+        style={{
+          top: "30%",
+          left: "78%",
+          backgroundColor: "hsl(var(--destructive))",
+          boxShadow:
+            "0 0 6px hsl(var(--destructive)), 0 0 16px hsl(var(--destructive) / 0.7)",
+          animation: "apple-pulse 1.2s ease-in-out infinite",
+        }}
+      />
+
+      <style>{`
+        @keyframes snake {
+          0%   { top: 70%; left: -10%; }
+          25%  { top: 30%; left: 28%; }
+          50%  { top: 70%; left: 50%; }
+          75%  { top: 30%; left: 78%; }
+          100% { top: 70%; left: 110%; }
+        }
+        @keyframes apple-pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50%      { transform: scale(1.4); opacity: 0.7; }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 const LOADERS: Partial<Record<GameId, () => JSX.Element>> = {
   "turtle-trade-co": TurtleLoader,
   "defense-of-belgium": TanksLoader,
   "waffle-craft": MinecartLoader,
+  "neon-snake": NeonSnakeLoader,
 };
 
 const BackButton = () => {
