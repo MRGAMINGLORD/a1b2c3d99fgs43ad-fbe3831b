@@ -38,6 +38,16 @@ const Admin = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/login"); return; }
 
+      // Hard restriction: only this specific email may access the admin dashboard,
+      // even if they have a valid login or admin role on other accounts.
+      const ALLOWED_ADMIN_EMAIL = "mrgaminglordfuzz@gmail.com";
+      if ((user.email ?? "").toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
+        await supabase.auth.signOut();
+        navigate("/");
+        toast({ title: "Access denied", description: "This account is not authorized.", variant: "destructive" });
+        return;
+      }
+
       const { data } = await supabase.rpc("is_admin" as never);
       if (!data) { navigate("/"); toast({ title: "Access denied", variant: "destructive" }); return; }
 
