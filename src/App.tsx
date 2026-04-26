@@ -18,10 +18,12 @@ const queryClient = new QueryClient();
 
 const ConciergeGate = () => {
   const { pathname } = useLocation();
-  // Fade Sir Wafflington out while a game is being played, but keep him
-  // mounted so chat history and draft input survive the round-trip.
+  // Fade Sir Wafflington out on full-screen game / education routes, but
+  // keep him mounted so chat history and draft input survive the round-trip.
   const inGame =
-    pathname.startsWith("/play/") || pathname.startsWith("/play-test/");
+    pathname.startsWith("/play/") ||
+    pathname.startsWith("/play-test/") ||
+    pathname.startsWith("/education/");
   return <SirWafflingtonChat hidden={inGame} />;
 };
 

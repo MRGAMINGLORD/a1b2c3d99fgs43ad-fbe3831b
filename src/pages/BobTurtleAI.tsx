@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Plus, Trash2, Send, Image as ImageIcon, 
-  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert
+  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, LogOut
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // API Key is provided by the execution environment
 const apiKey = "";
@@ -394,6 +395,14 @@ export default function App() {
               </div>
             )}
           </div>
+          <Link
+            to="/"
+            aria-label="Exit Bob the Turtle AI and return to the hub"
+            className="ml-2 flex items-center space-x-2 px-3 py-1.5 rounded-md border border-yellow-500/30 text-yellow-500 hover:bg-neutral-900 hover:border-yellow-500/60 transition-colors text-xs font-bold tracking-wide"
+          >
+            <LogOut size={14} />
+            <span className="hidden sm:inline">Exit</span>
+          </Link>
         </header>
 
         {/* Messages List */}
