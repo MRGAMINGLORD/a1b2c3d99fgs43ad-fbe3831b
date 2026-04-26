@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { fetchTestGame } from "@/hooks/useTestGames";
 import { isTestUnlocked } from "@/lib/testAuth";
+import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 
 const PlayTestGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
