@@ -1,7 +1,7 @@
 // Floating concierge button + side-sheet chat with Sir Wafflington the 67th.
 // Mounts once at app root so he greets visitors on every route.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,8 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { SirWafflingtonAvatar } from "./SirWafflingtonAvatar";
-
-type ChatMsg = { role: "user" | "assistant"; content: string };
+import { useSirWafflington, type ChatMsg } from "./SirWafflingtonContext";
 
 const STARTER_PROMPTS = [
   "What games are available?",
