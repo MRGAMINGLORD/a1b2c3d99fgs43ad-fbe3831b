@@ -284,9 +284,12 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
               <Send className="h-4 w-4" />
             </Button>
           </div>
-          {messages.length > 0 && (
+          {(messages.length > 0 || input.length > 0) && (
             <button
-              onClick={() => setMessages([])}
+              onClick={() => {
+                setMessages([]);
+                setInput("");
+              }}
               disabled={streaming}
               className="mt-2 text-xs text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
             >
