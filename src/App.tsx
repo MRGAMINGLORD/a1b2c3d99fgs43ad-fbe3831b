@@ -12,16 +12,17 @@ import Test from "./pages/Test";
 import BobTurtleAI from "./pages/BobTurtleAI";
 import NotFound from "./pages/NotFound";
 import { SirWafflingtonChat } from "./components/SirWafflingtonChat";
+import { SirWafflingtonProvider } from "./components/SirWafflingtonContext";
 
 const queryClient = new QueryClient();
 
 const ConciergeGate = () => {
   const { pathname } = useLocation();
-  // Hide Sir Wafflington while a game is being played to avoid covering controls.
+  // Fade Sir Wafflington out while a game is being played, but keep him
+  // mounted so chat history and draft input survive the round-trip.
   const inGame =
     pathname.startsWith("/play/") || pathname.startsWith("/play-test/");
-  if (inGame) return null;
-  return <SirWafflingtonChat />;
+  return <SirWafflingtonChat hidden={inGame} />;
 };
 
 const App = () => (
@@ -30,18 +31,20 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/play/:gameId" element={<PlayGame />} />
-          <Route path="/test" element={<Test />} />
-          <Route path="/play-test/:gameId" element={<PlayTestGame />} />
-          <Route path="/education/bob-turtle-ai" element={<BobTurtleAI />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <ConciergeGate />
+        <SirWafflingtonProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/play/:gameId" element={<PlayGame />} />
+            <Route path="/test" element={<Test />} />
+            <Route path="/play-test/:gameId" element={<PlayTestGame />} />
+            <Route path="/education/bob-turtle-ai" element={<BobTurtleAI />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <ConciergeGate />
+        </SirWafflingtonProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

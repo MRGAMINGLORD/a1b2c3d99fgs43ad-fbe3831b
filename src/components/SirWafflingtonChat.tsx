@@ -1,7 +1,7 @@
 // Floating concierge button + side-sheet chat with Sir Wafflington the 67th.
 // Mounts once at app root so he greets visitors on every route.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,8 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { SirWafflingtonAvatar } from "./SirWafflingtonAvatar";
-
-type ChatMsg = { role: "user" | "assistant"; content: string };
+import { useSirWafflington, type ChatMsg } from "./SirWafflingtonContext";
 
 const STARTER_PROMPTS = [
   "What games are available?",
@@ -22,12 +21,11 @@ const STARTER_PROMPTS = [
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sir-wafflington`;
 
-export const SirWafflingtonChat = () => {
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [streaming, setStreaming] = useState(false);
+export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => {
+  const { open, setOpen, input, setInput, messages, setMessages, streaming, setStreaming } =
+    useSirWafflington();
   const scrollRef = useRef<HTMLDivElement>(null);
+
 
   // Auto-scroll to bottom on new tokens
   useEffect(() => {
@@ -178,11 +176,16 @@ export const SirWafflingtonChat = () => {
       <SheetTrigger asChild>
         <button
           aria-label="Ask Sir Wafflington the 67th"
+          aria-hidden={hidden}
+          tabIndex={hidden ? -1 : 0}
           className={cn(
             "group fixed bottom-5 right-5 z-50 flex items-center gap-2",
             "rounded-full border-2 border-primary bg-card pl-1.5 pr-4 py-1.5",
             "shadow-[0_0_24px_hsl(48_100%_50%/0.35)] hover:shadow-[0_0_36px_hsl(48_100%_50%/0.55)]",
-            "transition-all hover:scale-105",
+            "transition-all duration-500 hover:scale-105",
+            hidden
+              ? "opacity-0 translate-y-4 pointer-events-none"
+              : "opacity-100 translate-y-0",
           )}
         >
           <span className="block rounded-full bg-background/40 p-0.5">
