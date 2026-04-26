@@ -85,13 +85,22 @@ const PlayTestGame = () => {
       <div className="absolute left-1/2 top-2 z-50 -translate-x-1/2 rounded-md border border-destructive bg-destructive/20 px-3 py-1 font-display text-[10px] uppercase tracking-widest text-destructive">
         ⚠ Test build — not the live game
       </div>
-      <Link
-        to="/test"
-        className="absolute left-4 top-4 z-50 flex items-center gap-2 rounded-md border border-primary/60 bg-background/80 px-3 py-2 font-display text-xs uppercase tracking-wider text-primary backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to test
-      </Link>
+      <div className="absolute left-4 top-4 z-50 flex items-center gap-2">
+        <Link
+          to="/test"
+          className="flex items-center gap-2 rounded-md border border-primary/60 bg-background/80 px-3 py-2 font-display text-xs uppercase tracking-wider text-primary backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to test
+        </Link>
+        <Link
+          to="/"
+          aria-label="Exit to hub"
+          className="flex items-center gap-2 rounded-md border border-primary/60 bg-background/80 px-3 py-2 font-display text-xs uppercase tracking-wider text-primary backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground"
+        >
+          Exit to hub
+        </Link>
+      </div>
       <div className="relative h-full w-full overflow-hidden rounded-md border border-primary/50 bg-card border-glow">
         <iframe
           src={src}
