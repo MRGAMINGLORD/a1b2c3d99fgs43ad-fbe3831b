@@ -4,6 +4,7 @@ import {
   Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, LogOut
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ConfirmExitLink } from '@/components/ConfirmExitLink';
 
 // API Key is provided by the execution environment
 const apiKey = "";
