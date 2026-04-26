@@ -297,10 +297,7 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
           </div>
           {(messages.length > 0 || input.length > 0) && (
             <button
-              onClick={() => {
-                setMessages([]);
-                setInput("");
-              }}
+              onClick={() => setConfirmClear(true)}
               disabled={streaming}
               className="mt-2 text-xs text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
             >
@@ -309,6 +306,30 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
           )}
         </div>
       </SheetContent>
+
+      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear this conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sir Wafflington shall forget every word exchanged, including your
+              current draft. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setMessages([]);
+                setInput("");
+                setConfirmClear(false);
+              }}
+            >
+              Yes, clear it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };
