@@ -21,12 +21,11 @@ const STARTER_PROMPTS = [
 
 const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sir-wafflington`;
 
-export const SirWafflingtonChat = () => {
-  const [open, setOpen] = useState(false);
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [streaming, setStreaming] = useState(false);
+export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => {
+  const { open, setOpen, input, setInput, messages, setMessages, streaming, setStreaming } =
+    useSirWafflington();
   const scrollRef = useRef<HTMLDivElement>(null);
+
 
   // Auto-scroll to bottom on new tokens
   useEffect(() => {
