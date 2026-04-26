@@ -1,13 +1,23 @@
 // Floating concierge button + side-sheet chat with Sir Wafflington the 67th.
 // Mounts once at app root so he greets visitors on every route.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Send, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { SirWafflingtonAvatar } from "./SirWafflingtonAvatar";
@@ -25,6 +35,7 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const { open, setOpen, input, setInput, messages, setMessages, streaming, setStreaming } =
     useSirWafflington();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
 
   // Auto-scroll to bottom on new tokens
@@ -286,10 +297,7 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
           </div>
           {(messages.length > 0 || input.length > 0) && (
             <button
-              onClick={() => {
-                setMessages([]);
-                setInput("");
-              }}
+              onClick={() => setConfirmClear(true)}
               disabled={streaming}
               className="mt-2 text-xs text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
             >
@@ -298,6 +306,30 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
           )}
         </div>
       </SheetContent>
+
+      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear this conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sir Wafflington shall forget every word exchanged, including your
+              current draft. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setMessages([]);
+                setInput("");
+                setConfirmClear(false);
+              }}
+            >
+              Yes, clear it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 };
