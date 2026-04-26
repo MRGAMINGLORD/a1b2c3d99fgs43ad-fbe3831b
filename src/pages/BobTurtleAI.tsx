@@ -395,6 +395,14 @@ export default function App() {
               </div>
             )}
           </div>
+          <Link
+            to="/"
+            aria-label="Exit Bob the Turtle AI and return to the hub"
+            className="ml-2 flex items-center space-x-2 px-3 py-1.5 rounded-md border border-yellow-500/30 text-yellow-500 hover:bg-neutral-900 hover:border-yellow-500/60 transition-colors text-xs font-bold tracking-wide"
+          >
+            <LogOut size={14} />
+            <span className="hidden sm:inline">Exit</span>
+          </Link>
         </header>
 
         {/* Messages List */}
