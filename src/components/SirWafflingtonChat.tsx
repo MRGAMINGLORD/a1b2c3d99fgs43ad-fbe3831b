@@ -35,6 +35,7 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const { open, setOpen, input, setInput, messages, setMessages, streaming, setStreaming } =
     useSirWafflington();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
 
   // Auto-scroll to bottom on new tokens
