@@ -4,6 +4,7 @@ import {
   Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, LogOut
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ConfirmExitLink } from '@/components/ConfirmExitLink';
 
 // API Key is provided by the execution environment
 const apiKey = "";
@@ -395,14 +396,18 @@ export default function App() {
               </div>
             )}
           </div>
-          <Link
+          <ConfirmExitLink
             to="/"
-            aria-label="Exit Bob the Turtle AI and return to the hub"
+            ariaLabel="Exit Bob the Turtle AI and return to the hub"
+            title="Leave the academy?"
+            description="Your current conversation with Bob may not be saved. Are you sure you want to return to the hub?"
+            confirmLabel="Yes, exit"
+            cancelLabel="Keep studying"
             className="ml-2 flex items-center space-x-2 px-3 py-1.5 rounded-md border border-yellow-500/30 text-yellow-500 hover:bg-neutral-900 hover:border-yellow-500/60 transition-colors text-xs font-bold tracking-wide"
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">Exit</span>
-          </Link>
+          </ConfirmExitLink>
         </header>
 
         {/* Messages List */}

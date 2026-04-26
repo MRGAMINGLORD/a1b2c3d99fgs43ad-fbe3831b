@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { fetchTestGame } from "@/hooks/useTestGames";
 import { isTestUnlocked } from "@/lib/testAuth";
+import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 
 const PlayTestGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -86,20 +87,29 @@ const PlayTestGame = () => {
         ⚠ Test build — not the live game
       </div>
       <div className="absolute left-4 top-4 z-50 flex items-center gap-2">
-        <Link
+        <ConfirmExitLink
           to="/test"
+          ariaLabel="Back to test"
+          title="Leave the test build?"
+          description="Your test session may not be saved. Are you sure you want to head back?"
+          confirmLabel="Yes, exit"
+          cancelLabel="Keep playing"
           className="flex items-center gap-2 rounded-md border border-primary/60 bg-background/80 px-3 py-2 font-display text-xs uppercase tracking-wider text-primary backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to test
-        </Link>
-        <Link
+        </ConfirmExitLink>
+        <ConfirmExitLink
           to="/"
-          aria-label="Exit to hub"
+          ariaLabel="Exit to hub"
+          title="Leave the test build?"
+          description="Your test session may not be saved. Are you sure you want to head back to the hub?"
+          confirmLabel="Yes, exit"
+          cancelLabel="Keep playing"
           className="flex items-center gap-2 rounded-md border border-primary/60 bg-background/80 px-3 py-2 font-display text-xs uppercase tracking-wider text-primary backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground"
         >
           Exit to hub
-        </Link>
+        </ConfirmExitLink>
       </div>
       <div className="relative h-full w-full overflow-hidden rounded-md border border-primary/50 bg-card border-glow">
         <iframe
