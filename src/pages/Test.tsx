@@ -375,7 +375,7 @@ const EditGameDialog = ({
             </div>
             <div>
               <div className="flex items-center justify-between">
-                <Label>Game code (HTML)</Label>
+                <Label>Game source — HTML or React/JSX</Label>
                 <div className="flex gap-1">
                   <Button type="button" size="sm" variant="outline" onClick={runPreview}>
                     {previewOpen ? <RefreshCw className="mr-1 h-3 w-3" /> : <Eye className="mr-1 h-3 w-3" />}
@@ -394,10 +394,15 @@ const EditGameDialog = ({
                 onChange={(e) => updateForm("html", e.target.value)}
                 rows={14}
                 className="mt-1 font-mono text-xs"
-                placeholder="<html>...</html>"
+                placeholder="Paste a full <html>...</html> document OR a React component (e.g. function Game() { return <div>…</div> } — with or without `export default`)."
               />
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Preview renders the HTML in a sandboxed iframe. Nothing is posted to live until you save and click "Post to live". Press <kbd className="rounded border border-border bg-muted px-1 text-[10px]">Ctrl/Cmd+Z</kbd> to undo any change (including removing the cover image).
+                Preview renders the source in a sandboxed iframe. React/JSX is auto-wrapped with React + Babel CDN before saving. Press <kbd className="rounded border border-border bg-muted px-1 text-[10px]">Ctrl/Cmd+Z</kbd> to undo any change (including removing the cover image).
+                {html.trim() && looksLikeReact(html) && (
+                  <span className="ml-2 inline-block rounded border border-primary/50 bg-primary/10 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
+                    React detected
+                  </span>
+                )}
               </p>
             </div>
           </div>
