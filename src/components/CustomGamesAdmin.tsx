@@ -271,10 +271,10 @@ const CustomGamesAdmin = () => {
           </div>
         </div>
         <div>
-          <Label htmlFor="cg-html">Game HTML (saved as a real file)</Label>
+          <Label htmlFor="cg-html">Game source — HTML or React/JSX</Label>
           <Textarea
             id="cg-html"
-            placeholder="Paste the full <html>...</html> of your game here. On save, it's uploaded to /game-files/<slug>/index.html and served the same way as the built-in games. Leave blank to publish without code; the card will say 'Coming Soon' until you fill it in."
+            placeholder="Paste either a full <html>...</html> document OR a React component (e.g. function Game() { return <div>…</div> } — with or without `export default`). React snippets are auto-wrapped with React + Babel CDN scripts so they run in the same /play/<slug> tab."
             value={html}
             onChange={(e) => setHtml(e.target.value)}
             rows={8}
@@ -283,6 +283,11 @@ const CustomGamesAdmin = () => {
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <FileCode className="h-3 w-3" />
             Saved as a real file at <span className="font-mono text-primary">/game-files/{slugify(title) || "your-slug"}/index.html</span>
+            {html.trim() && looksLikeReact(html) && (
+              <span className="ml-2 rounded border border-primary/50 bg-primary/10 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
+                React detected — will be auto-wrapped
+              </span>
+            )}
           </p>
         </div>
         <div className="flex gap-2">
