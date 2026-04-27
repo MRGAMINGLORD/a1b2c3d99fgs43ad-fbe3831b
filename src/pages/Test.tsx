@@ -303,6 +303,8 @@ const EditGameDialog = ({
   const save = async () => {
     if (!game) return;
     setSaving(true);
+    // Auto-wrap React/JSX so /play-test/<slug> can serve it as plain HTML.
+    const storedHtml = html.trim() ? prepareGameSource(html) : html;
     const { error } = await supabase
       .from("test_custom_games")
       .update({
@@ -310,7 +312,7 @@ const EditGameDialog = ({
         description: description.trim(),
         cover_url: coverUrl.trim() || null,
         category,
-        html,
+        html: storedHtml,
       })
       .eq("id", game.id);
     setSaving(false);
