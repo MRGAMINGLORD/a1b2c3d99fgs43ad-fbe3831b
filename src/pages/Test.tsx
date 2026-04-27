@@ -280,10 +280,12 @@ const EditGameDialog = ({
   const runPreview = () => {
     cleanupPreview();
     if (!html.trim()) {
-      toast({ title: "Nothing to preview", description: "Paste some HTML first.", variant: "destructive" });
+      toast({ title: "Nothing to preview", description: "Paste some HTML or React first.", variant: "destructive" });
       return;
     }
-    const blob = new Blob([html], { type: "text/html" });
+    // Auto-wrap React/JSX so the preview iframe matches what /play-test/ serves.
+    const finalSource = prepareGameSource(html);
+    const blob = new Blob([finalSource], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     setPreviewUrl(url);
     setPreviewOpen(true);
