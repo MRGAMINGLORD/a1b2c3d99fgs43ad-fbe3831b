@@ -402,7 +402,7 @@ const PlayGame = () => {
           className="h-full w-full border-0 bg-background"
           allow="fullscreen; autoplay; gamepad"
         />
-        {resolved.isCustom && <GameErrorOverlay />}
+        {resolved.isCustom && <GameErrorOverlay gameTitle={resolved.title} gameId={gameId} />}
       </div>
     </div>
   );
