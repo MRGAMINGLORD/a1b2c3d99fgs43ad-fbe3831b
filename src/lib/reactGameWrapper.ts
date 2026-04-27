@@ -235,7 +235,7 @@ ${userCode}
               }
             }
             if (!Comp) {
-              __showError('No React component found. Make sure you `export default` a component, or define a PascalCase function (e.g. function Game() { ... }).');
+              __showError('No React component found. Make sure you export default a component, or define a PascalCase function (e.g. function Game() { ... }).');
               return;
             }
             var el = window.React.createElement(Comp);
