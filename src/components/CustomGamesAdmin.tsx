@@ -145,7 +145,10 @@ const CustomGamesAdmin = () => {
     let storedValue = "";
     if (html.trim()) {
       try {
-        storedValue = await uploadGameFile(slug, html);
+        // Auto-wrap pasted React/JSX into a self-contained HTML doc so it
+        // runs in the same iframe used for built-in HTML games.
+        const finalSource = prepareGameSource(html);
+        storedValue = await uploadGameFile(slug, finalSource);
       } catch (err) {
         setSubmitting(false);
         const msg = err instanceof Error ? err.message : String(err);
