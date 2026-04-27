@@ -6,50 +6,132 @@
 // The wrapper purposefully strips ES module `import` / `export` lines because
 // the in-browser Babel standalone build cannot resolve bare module specifiers.
 // React, ReactDOM and useState/useEffect/etc. are exposed on globalThis so
-// pasted code can use them without explicit imports.
+// pasted code can use them without explicit imports. We also shim a handful
+// of common libraries (lucide-react, framer-motion, clsx) so Gemini-style
+// snippets render instead of crashing on missing imports.
 
 const HTML_DOC_RE = /<\s*(!doctype|html|head|body)\b/i;
 
-const REACT_HINTS = [
-  /\bimport\s+[^;]*from\s+['"]react['"]/i,
-  /\bfrom\s+['"]react-dom\b/i,
-  /\bexport\s+default\b/,
-  /\breact\.createelement\b/i,
-  /\bReactDOM\b/,
-  /\buseState\s*\(/,
-  /\buseEffect\s*\(/,
-  /\b(function|const)\s+[A-Z][A-Za-z0-9_]*\s*[=(]/, // PascalCase component
+// Strong signals that this is React/JSX source, not an HTML fragment.
+const STRONG_REACT_HINTS: RegExp[] = [
+  /\bimport\s+[^;]*\bfrom\s+['"]react['"]/i,
+  /\bimport\s+[^;]*\bfrom\s+['"]react-dom(\/client)?['"]/i,
+  /\bimport\s+[^;]*\bfrom\s+['"]lucide-react['"]/i,
+  /\bimport\s+[^;]*\bfrom\s+['"]framer-motion['"]/i,
+  /\bexport\s+default\s+(function|class|\(|[A-Z])/,
+  /\bReact\.createElement\s*\(/,
+  /\bReactDOM\.(render|createRoot)\s*\(/,
+  /\buse(State|Effect|Ref|Memo|Callback|Reducer|Context|LayoutEffect)\s*\(/,
+  // PascalCase function/const component declaration
+  /\b(function|const|let|var)\s+[A-Z][A-Za-z0-9_]*\s*[=(]/,
+  // className= is React-specific (HTML uses class=)
+  /\bclassName\s*=\s*["'{]/,
 ];
 
-const JSX_HINT = /<\s*[A-Za-z][A-Za-z0-9]*[^>]*>[\s\S]*<\s*\//;
+// JSX-ish tag patterns. Self-closing `<Foo />`, fragment `<>`, or PascalCase tag.
+const JSX_TAG_HINTS: RegExp[] = [
+  /<\s*[A-Z][A-Za-z0-9]*[\s/>]/, // <Component
+  /<\s*\/\s*[A-Z][A-Za-z0-9]*\s*>/, // </Component>
+  /<\s*>\s*[\s\S]*?<\s*\/\s*>/, // <>...</>
+  /\/\s*>/, // self-closing tag
+  /\{\s*[A-Za-z_$][\w$]*\s*\}/, // {expression} interpolation inside JSX
+];
+
+const looksLikeHtmlDoc = (s: string) => HTML_DOC_RE.test(s);
 
 /**
  * Best-effort heuristic: returns true when the snippet looks like React/JSX
- * source and NOT a complete HTML document.
+ * source and NOT a complete HTML document. Multi-signal scoring so a stray
+ * `<div>` in plain HTML doesn't get misclassified, and a real component
+ * without imports still gets caught.
  */
 export const looksLikeReact = (source: string): boolean => {
   const s = source.trim();
   if (!s) return false;
-  if (HTML_DOC_RE.test(s)) return false;
-  if (REACT_HINTS.some((re) => re.test(s))) return true;
-  // Treat any top-level JSX tag as React-ish too.
-  return JSX_HINT.test(s);
+  if (looksLikeHtmlDoc(s)) return false;
+
+  // Any single strong hint is enough.
+  if (STRONG_REACT_HINTS.some((re) => re.test(s))) return true;
+
+  // Otherwise require at least 2 JSX-ish signals to avoid false positives
+  // on plain HTML fragments.
+  const jsxScore = JSX_TAG_HINTS.reduce(
+    (n, re) => n + (re.test(s) ? 1 : 0),
+    0,
+  );
+  return jsxScore >= 2;
+};
+
+/**
+ * Track which common npm packages were imported so the runtime shim can
+ * resolve them to globals. We only support a small allowlist; everything
+ * else is stripped and replaced with an empty object so the code at least
+ * parses and runs.
+ */
+const KNOWN_GLOBALS: Record<string, string> = {
+  react: "React",
+  "react-dom": "ReactDOM",
+  "react-dom/client": "ReactDOM",
+  "lucide-react": "LucideReact",
+  "framer-motion": "FramerMotion",
+  clsx: "clsx",
+  classnames: "classnames",
 };
 
 /**
  * Strip ES module syntax that the in-browser Babel standalone cannot handle,
- * and try to surface the default export as a global `__GAME_ROOT` so the
- * runtime shell can mount it.
+ * and rewrite imports into destructuring from known globals. Also surfaces
+ * the default export as a global `__GAME_ROOT` so the runtime shell can
+ * mount it.
  */
 const sanitizeReactSource = (source: string): string => {
   let code = source;
 
-  // Drop all import statements (single + multi-line).
-  code = code.replace(/^\s*import\s+[^;]*;?\s*$/gm, "");
-  code = code.replace(/^\s*import\s*\(.+?\)\s*;?\s*$/gm, "");
+  // Replace `import X from 'pkg'` and `import { a, b } from 'pkg'` with
+  // destructuring/aliasing from the matching global. Unknown packages get
+  // a harmless empty-object fallback so the rest of the file still runs.
+  code = code.replace(
+    /^[ \t]*import\s+([\s\S]+?)\s+from\s+['"]([^'"]+)['"];?[ \t]*$/gm,
+    (_match, what: string, pkg: string) => {
+      const global = KNOWN_GLOBALS[pkg];
+      const src = global ? `globalThis.${global}` : "({})";
+      const cleaned = what.trim();
 
-  // Capture and rewrite default exports into a global assignment so the shell
-  // can find the root component without bundler-style exports.
+      // `import Foo` => `const Foo = src.default ?? src;`
+      if (/^[A-Za-z_$][\w$]*$/.test(cleaned)) {
+        return `const ${cleaned} = (${src} && (${src}.default ?? ${src})) || {};`;
+      }
+      // `import * as Foo` => `const Foo = src;`
+      const ns = cleaned.match(/^\*\s+as\s+([A-Za-z_$][\w$]*)$/);
+      if (ns) return `const ${ns[1]} = ${src};`;
+      // `import Foo, { a, b }` => default + named
+      const mixed = cleaned.match(/^([A-Za-z_$][\w$]*)\s*,\s*\{([\s\S]*)\}$/);
+      if (mixed) {
+        const def = mixed[1];
+        const named = mixed[2].trim();
+        return `const ${def} = (${src} && (${src}.default ?? ${src})) || {}; const { ${named} } = ${src} || {};`;
+      }
+      // `import { a, b as c }` => `const { a, b: c } = src;`
+      const named = cleaned.match(/^\{([\s\S]*)\}$/);
+      if (named) {
+        const list = named[1]
+          .split(",")
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .map((p) => p.replace(/\s+as\s+/, ": "))
+          .join(", ");
+        return `const { ${list} } = ${src} || {};`;
+      }
+      return ""; // give up — strip
+    },
+  );
+
+  // Bare `import 'foo';` (side-effect imports) — drop entirely.
+  code = code.replace(/^[ \t]*import\s+['"][^'"]+['"];?[ \t]*$/gm, "");
+  // Dynamic `import(...)` — drop.
+  code = code.replace(/^[ \t]*import\s*\([^)]*\)\s*;?[ \t]*$/gm, "");
+
+  // Default exports → assign to a known global so the shell can mount it.
   code = code.replace(
     /export\s+default\s+function\s+([A-Za-z0-9_$]+)/,
     "globalThis.__GAME_ROOT = function $1",
@@ -60,7 +142,7 @@ const sanitizeReactSource = (source: string): string => {
   );
   code = code.replace(/export\s+default\s+/g, "globalThis.__GAME_ROOT = ");
 
-  // Strip any remaining named exports (`export const Foo = ...` -> `const Foo = ...`).
+  // Strip remaining named exports.
   code = code.replace(/^\s*export\s+(const|let|var|function|class)\s+/gm, "$1 ");
   code = code.replace(/^\s*export\s*\{[^}]*\}\s*;?\s*$/gm, "");
 
@@ -69,25 +151,24 @@ const sanitizeReactSource = (source: string): string => {
 
 /**
  * Build a complete HTML document around a React/JSX snippet so it renders
- * the same way a built-in HTML game does.
+ * the same way a built-in HTML game does. Includes Tailwind via CDN (used
+ * by most Gemini-canvas snippets), lucide-react UMD, and framer-motion UMD
+ * so common imports just work.
  */
 export const wrapReactGame = (source: string): string => {
   const userCode = sanitizeReactSource(source);
 
-  // The shell does three things in order:
-  //  1. Expose React + common hooks as globals so user code doesn't need imports.
-  //  2. Compile + run the user code with Babel standalone (JSX + TS syntax).
-  //  3. If the user code didn't already render anything, mount whichever
-  //     component it left on `globalThis.__GAME_ROOT` (or the first PascalCase
-  //     function it defined) into <div id="root">.
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>React Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/lucide-react@0.460.0/dist/umd/lucide-react.min.js"></script>
+    <script crossorigin src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
     <style>
       html, body, #root { margin: 0; padding: 0; min-height: 100%; height: 100%; background: #0a0a0a; color: #fafafa; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -100,9 +181,26 @@ export const wrapReactGame = (source: string): string => {
     <script>
       // Expose React APIs as globals so pasted code can use them without imports.
       window.React = window.React || {};
-      const __R = window.React;
+      var __R = window.React;
       ['useState','useEffect','useRef','useMemo','useCallback','useReducer','useContext','useLayoutEffect','createContext','Fragment','Suspense','memo','forwardRef'].forEach(function(k){ if (__R[k] && !window[k]) window[k] = __R[k]; });
       window.ReactDOM = window.ReactDOM || {};
+      // Normalize lucide-react UMD bundle name (some versions expose 'lucide' instead).
+      window.LucideReact = window.LucideReact || window.lucideReact || window.lucide || {};
+      window.FramerMotion = window.FramerMotion || window.framerMotion || {};
+      window.clsx = window.clsx || function(){
+        var out = [];
+        for (var i = 0; i < arguments.length; i++) {
+          var a = arguments[i];
+          if (!a) continue;
+          if (typeof a === 'string' || typeof a === 'number') out.push(a);
+          else if (Array.isArray(a)) out.push(window.clsx.apply(null, a));
+          else if (typeof a === 'object') {
+            for (var k in a) if (a[k]) out.push(k);
+          }
+        }
+        return out.join(' ');
+      };
+      window.classnames = window.classnames || window.clsx;
       function __showError(err){
         var box = document.getElementById('__game_error');
         if (!box) return;
@@ -113,7 +211,7 @@ export const wrapReactGame = (source: string): string => {
       window.addEventListener('error', function(e){ __showError(e.error || e.message); });
       window.addEventListener('unhandledrejection', function(e){ __showError(e.reason); });
     </script>
-    <script type="text/babel" data-presets="env,react,typescript" data-type="module">
+    <script type="text/babel" data-presets="env,react,typescript">
 ${userCode}
     </script>
     <script>
@@ -128,14 +226,16 @@ ${userCode}
             if (!Comp) {
               // Fall back to the first PascalCase function declared on window.
               for (var k in window) {
-                if (/^[A-Z]/.test(k) && typeof window[k] === 'function' && window[k].length <= 1) {
-                  Comp = window[k];
-                  break;
-                }
+                try {
+                  if (/^[A-Z]/.test(k) && typeof window[k] === 'function' && window[k].length <= 1) {
+                    Comp = window[k];
+                    break;
+                  }
+                } catch (_) {}
               }
             }
             if (!Comp) {
-              __showError('No React component found. Make sure you export default a component, or define a PascalCase function (e.g. function Game() { ... }).');
+              __showError('No React component found. Make sure you `export default` a component, or define a PascalCase function (e.g. function Game() { ... }).');
               return;
             }
             var el = window.React.createElement(Comp);
@@ -147,7 +247,7 @@ ${userCode}
           } catch (err) {
             __showError(err);
           }
-        }, 50);
+        }, 100);
       });
     </script>
   </body>
