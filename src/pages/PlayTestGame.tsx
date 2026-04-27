@@ -119,7 +119,7 @@ const PlayTestGame = () => {
           className="h-full w-full border-0 bg-background"
           allow="fullscreen; autoplay; gamepad"
         />
-        <GameErrorOverlay />
+        <GameErrorOverlay gameTitle={title} gameId={gameId} />
       </div>
     </div>
   );
