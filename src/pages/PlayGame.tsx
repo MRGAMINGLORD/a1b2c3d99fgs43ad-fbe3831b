@@ -4,6 +4,7 @@ import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { setLastGame } from "@/lib/gameStorage";
 import { fetchCustomGame } from "@/hooks/useCustomGames";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
+import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 
 type GameId = "turtle-trade-co" | "defense-of-belgium" | "waffle-craft" | "neon-snake";
 
@@ -401,6 +402,7 @@ const PlayGame = () => {
           className="h-full w-full border-0 bg-background"
           allow="fullscreen; autoplay; gamepad"
         />
+        {resolved.isCustom && <GameErrorOverlay />}
       </div>
     </div>
   );

@@ -201,15 +201,47 @@ export const wrapReactGame = (source: string): string => {
         return out.join(' ');
       };
       window.classnames = window.classnames || window.clsx;
+      function __serializeError(err){
+        if (!err) return 'Unknown error';
+        if (typeof err === 'string') return err;
+        return (err.stack || err.message || String(err));
+      }
+      function __postError(kind, err){
+        try {
+          parent.postMessage({
+            __waffleGameError: true,
+            kind: kind,
+            message: __serializeError(err),
+            time: Date.now(),
+          }, '*');
+        } catch (_) {}
+      }
       function __showError(err){
         var box = document.getElementById('__game_error');
-        if (!box) return;
-        box.textContent = (err && (err.stack || err.message)) || String(err);
-        box.style.display = 'block';
+        if (box) {
+          box.textContent = __serializeError(err);
+          box.style.display = 'block';
+        }
         console.error(err);
+        __postError('runtime', err);
       }
       window.addEventListener('error', function(e){ __showError(e.error || e.message); });
       window.addEventListener('unhandledrejection', function(e){ __showError(e.reason); });
+      // Forward console.error too so React's own warnings/errors surface.
+      (function(){
+        var origErr = console.error.bind(console);
+        console.error = function(){
+          try {
+            var parts = [];
+            for (var i = 0; i < arguments.length; i++) {
+              var a = arguments[i];
+              parts.push(typeof a === 'string' ? a : __serializeError(a));
+            }
+            __postError('console', parts.join(' '));
+          } catch (_) {}
+          return origErr.apply(console, arguments);
+        };
+      })();
     </script>
     <script type="text/babel" data-presets="env,react,typescript">
 ${userCode}
@@ -255,13 +287,35 @@ ${userCode}
 };
 
 /**
+ * Tiny script injected into raw HTML documents so runtime errors are
+ * forwarded to the parent frame the same way React-wrapped games do.
+ */
+const HTML_ERROR_FORWARDER = `<script>(function(){
+  function ser(e){ if(!e) return 'Unknown error'; if(typeof e==='string') return e; return (e.stack||e.message||String(e)); }
+  function post(kind,e){ try{ parent.postMessage({__waffleGameError:true,kind:kind,message:ser(e),time:Date.now()},'*'); }catch(_){} }
+  window.addEventListener('error',function(e){ post('runtime', e.error||e.message); });
+  window.addEventListener('unhandledrejection',function(e){ post('runtime', e.reason); });
+  var oe=console.error.bind(console);
+  console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
+})();</script>`;
+
+const injectHtmlErrorForwarder = (html: string): string => {
+  if (html.includes("__waffleGameError")) return html;
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head[^>]*>/i, (m) => `${m}\n${HTML_ERROR_FORWARDER}`);
+  }
+  return `${HTML_ERROR_FORWARDER}\n${html}`;
+};
+
+/**
  * Convenience: return ready-to-store HTML for any pasted snippet.
- * - Full HTML docs are returned untouched.
- * - React/JSX snippets are wrapped via `wrapReactGame`.
- * - Anything else is also returned untouched (treated as raw HTML fragment).
+ * - Full HTML docs get an error-forwarder injected.
+ * - React/JSX snippets are wrapped via `wrapReactGame` (forwards errors).
+ * - Bare HTML fragments are returned untouched.
  */
 export const prepareGameSource = (source: string): string => {
   if (!source.trim()) return source;
   if (looksLikeReact(source)) return wrapReactGame(source);
+  if (looksLikeHtmlDoc(source)) return injectHtmlErrorForwarder(source);
   return source;
 };
