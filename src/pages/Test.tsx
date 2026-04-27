@@ -28,6 +28,7 @@ import {
   unlockEdit,
 } from "@/lib/testAuth";
 import CoverImagePicker from "@/components/CoverImagePicker";
+import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
 import GameCard from "@/components/GameCard";
 import TesterChat from "@/components/TesterChat";
 import TestSyncPanel from "@/components/TestSyncPanel";
