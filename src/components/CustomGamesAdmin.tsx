@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import CoverImagePicker from "@/components/CoverImagePicker";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
 import { GAMES } from "@/lib/games";
+import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
 const BUILTIN_SLUGS = new Set(GAMES.map((g) => g.id));
