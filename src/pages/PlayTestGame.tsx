@@ -4,6 +4,7 @@ import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { fetchTestGame } from "@/hooks/useTestGames";
 import { isTestUnlocked } from "@/lib/testAuth";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
+import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 
 const PlayTestGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
@@ -118,6 +119,7 @@ const PlayTestGame = () => {
           className="h-full w-full border-0 bg-background"
           allow="fullscreen; autoplay; gamepad"
         />
+        <GameErrorOverlay />
       </div>
     </div>
   );
