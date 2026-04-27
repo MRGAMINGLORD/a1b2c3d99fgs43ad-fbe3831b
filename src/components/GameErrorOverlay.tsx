@@ -27,7 +27,12 @@ const isGameErrorMessage = (data: unknown): data is GameErrorMessage => {
  * error forwarders in `reactGameWrapper.ts`) and surfaces them in a dismissible
  * overlay so pasted React/HTML failures aren't hidden inside the iframe.
  */
-export const GameErrorOverlay = () => {
+interface GameErrorOverlayProps {
+  gameTitle?: string;
+  gameId?: string;
+}
+
+export const GameErrorOverlay = ({ gameTitle, gameId }: GameErrorOverlayProps = {}) => {
   const [errors, setErrors] = useState<GameError[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -76,11 +81,17 @@ export const GameErrorOverlay = () => {
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-50 flex justify-center p-3 sm:p-4">
       <div className="pointer-events-auto w-full max-w-3xl rounded-md border border-destructive bg-background/95 shadow-lg backdrop-blur">
         <div className="flex items-center justify-between gap-2 border-b border-destructive/40 px-3 py-2">
-          <div className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="font-display text-xs uppercase tracking-wider">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-destructive">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="shrink-0 font-display text-xs uppercase tracking-wider">
               Game error{errors.length > 1 ? `s (${errors.length})` : ""}
             </span>
+            {(gameTitle || gameId) && (
+              <span className="min-w-0 truncate font-mono text-[10px] normal-case tracking-normal text-destructive/80">
+                — {gameTitle ?? "untitled"}
+                {gameId ? ` (${gameId})` : ""}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
