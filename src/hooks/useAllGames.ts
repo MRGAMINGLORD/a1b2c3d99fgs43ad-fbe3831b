@@ -1,7 +1,8 @@
 // Unified view of all games on the hub: the static built-in registry
-// PLUS any admin-created custom games from the database. Use this hook
-// (instead of importing GAMES directly) anywhere that needs to treat
-// custom games as first-class — featured carousel, admin pickers, etc.
+// PLUS any admin-created custom games from the database. Built-in games
+// can also have admin-edited overrides (title/description/credits/etc.)
+// stored in the `game_overrides` table — those are merged on top of the
+// static metadata so admin edits show up everywhere `useAllGames` is used.
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,32 @@ const customRowToMeta = (row: CustomGameRow): GameMeta => ({
   credits: row.credits ?? "",
 });
 
+export interface GameOverrideRow {
+  id: string;
+  game_id: string;
+  title: string | null;
+  description: string | null;
+  credits: string | null;
+  category: string | null;
+  cover_url: string | null;
+}
+
+const applyOverride = (g: GameMeta, o: GameOverrideRow | undefined): GameMeta => {
+  if (!o) return g;
+  const cat = o.category;
+  return {
+    ...g,
+    title: o.title?.trim() ? o.title : g.title,
+    description: o.description?.trim() ? o.description : g.description,
+    credits: o.credits ?? g.credits,
+    cover: o.cover_url?.trim() ? o.cover_url : g.cover,
+    category:
+      cat === "tycoon" || cat === "twist" || cat === "other" || cat === "education"
+        ? cat
+        : g.category,
+  };
+};
+
 export const useAllGames = () => {
   const [games, setGames] = useState<GameMeta[]>(GAMES);
   const [loading, setLoading] = useState(true);
@@ -29,16 +56,19 @@ export const useAllGames = () => {
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data, error } = await supabase
-        .from("custom_games")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const [customRes, overrideRes] = await Promise.all([
+        supabase.from("custom_games").select("*").order("created_at", { ascending: false }),
+        // game_overrides isn't in generated types yet — cast to bypass.
+        (supabase.from as unknown as (t: string) => { select: (q: string) => Promise<{ data: GameOverrideRow[] | null; error: unknown }> })("game_overrides").select("*"),
+      ]);
       if (!active) return;
-      if (!error && data) {
-        const customMetas = (data as CustomGameRow[]).map(customRowToMeta);
-        // Built-ins first so featured ordering is predictable when both exist.
-        setGames([...GAMES, ...customMetas]);
-      }
+      const overrides = (overrideRes.data ?? []) as GameOverrideRow[];
+      const overrideMap = new Map(overrides.map((o) => [o.game_id, o]));
+      const builtinsWithOverrides = GAMES.map((g) => applyOverride(g, overrideMap.get(g.id)));
+      const customMetas = !customRes.error && customRes.data
+        ? (customRes.data as CustomGameRow[]).map(customRowToMeta)
+        : [];
+      setGames([...builtinsWithOverrides, ...customMetas]);
       setLoading(false);
     })();
     return () => {
