@@ -1,0 +1,1 @@
+ALTER TABLE public.custom_games ADD COLUMN IF NOT EXISTS credits text NOT NULL DEFAULT '';
