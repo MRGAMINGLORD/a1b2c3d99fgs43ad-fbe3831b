@@ -122,6 +122,42 @@ export type Database = {
         }
         Relationships: []
       }
+      game_overrides: {
+        Row: {
+          category: string | null
+          cover_url: string | null
+          created_at: string
+          credits: string | null
+          description: string | null
+          game_id: string
+          id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          credits?: string | null
+          description?: string | null
+          game_id: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          cover_url?: string | null
+          created_at?: string
+          credits?: string | null
+          description?: string | null
+          game_id?: string
+          id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patch_notes: {
         Row: {
           content: string
