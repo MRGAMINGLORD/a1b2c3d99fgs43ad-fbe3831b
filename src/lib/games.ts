@@ -40,6 +40,7 @@ export const GAMES: GameMeta[] = [
     cover: coverWaffleWorks,
     available: false,
     category: "tycoon",
+    credits: "",
   },
   {
     id: "waffle-craft",
@@ -49,6 +50,7 @@ export const GAMES: GameMeta[] = [
     cover: coverWaffleCraft,
     available: false,
     category: "twist",
+    credits: "",
   },
   {
     id: "defense-of-belgium",
@@ -59,6 +61,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/defense-of-belgium",
     category: "other",
+    credits: "Design & code: Apocalypse Waffle team",
   },
   {
     id: "bob-turtle-ai",
@@ -69,6 +72,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/education/bob-turtle-ai",
     category: "education",
+    credits: "Powered by Google Gemini · Tutor persona by Apocalypse Waffle",
   },
 ];
 
