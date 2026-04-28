@@ -15,6 +15,9 @@ export interface GameMeta {
   available: boolean;
   playUrl?: string;
   category: "tycoon" | "twist" | "other" | "education";
+  /** Free-form credits string — author, art, music, etc. Displayed on the
+   * admin "game profile" view. Empty for games without recorded credits. */
+  credits?: string;
 }
 
 export const GAMES: GameMeta[] = [
@@ -27,6 +30,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/turtle-trade-co",
     category: "tycoon",
+    credits: "Design & code: Apocalypse Waffle team",
   },
   {
     id: "waffle-works",
