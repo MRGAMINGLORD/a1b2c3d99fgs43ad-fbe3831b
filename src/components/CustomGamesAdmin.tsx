@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode } from "lucide-react";
+import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import CoverImagePicker from "@/components/CoverImagePicker";
+import GameProfileDialog from "@/components/GameProfileDialog";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
 import { GAMES } from "@/lib/games";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
@@ -37,7 +38,10 @@ const CustomGamesAdmin = () => {
   const [coverUrl, setCoverUrl] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("other");
   const [html, setHtml] = useState("");
+  const [credits, setCredits] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Profile viewer state — shows the cover, description, location, credits, etc.
+  const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
