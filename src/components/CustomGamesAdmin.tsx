@@ -175,6 +175,7 @@ const CustomGamesAdmin = () => {
           description: description.trim(),
           cover_url: coverUrl.trim() || null,
           category,
+          credits: credits.trim(),
           html: storedValue,
         })
         .eq("id", editingId);
@@ -188,6 +189,7 @@ const CustomGamesAdmin = () => {
         description: description.trim(),
         cover_url: coverUrl.trim() || null,
         category,
+        credits: credits.trim(),
         html: storedValue,
       });
       setSubmitting(false);
