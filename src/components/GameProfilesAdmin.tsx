@@ -16,17 +16,21 @@ const GameProfilesAdmin = () => {
   const [open, setOpen] = useState<string | null>(null);
   const [customs, setCustoms] = useState<CustomGameRow[]>([]);
 
+  const reload = async () => {
+    const { data } = await supabase
+      .from("custom_games")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setCustoms(data as CustomGameRow[]);
+  };
+
   // Pull the same custom rows shape the editor uses, so the dialog can
   // resolve `custom:<id>` keys directly.
   useEffect(() => {
     let active = true;
     (async () => {
-      const { data } = await supabase
-        .from("custom_games")
-        .select("*")
-        .order("created_at", { ascending: false });
+      await reload();
       if (!active) return;
-      if (data) setCustoms(data as CustomGameRow[]);
     })();
     return () => { active = false; };
   }, []);
@@ -76,6 +80,7 @@ const GameProfilesAdmin = () => {
         gameKey={open}
         customGames={customs}
         onClose={() => setOpen(null)}
+        onSaved={reload}
       />
     </div>
   );
