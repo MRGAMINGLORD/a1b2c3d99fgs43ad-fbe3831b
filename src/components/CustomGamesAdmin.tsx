@@ -298,6 +298,20 @@ const CustomGamesAdmin = () => {
             )}
           </p>
         </div>
+        <div>
+          <Label htmlFor="cg-credits">Credits</Label>
+          <Textarea
+            id="cg-credits"
+            placeholder="Who made this game? e.g. Code: Alex · Art: Sam · Music: Jordan"
+            value={credits}
+            onChange={(e) => setCredits(e.target.value)}
+            rows={2}
+            maxLength={500}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Shown on the game profile and (eventually) in the in-game credits screen.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button type="submit" disabled={submitting}>
             <Plus className="mr-1 h-4 w-4" />
@@ -341,6 +355,14 @@ const CustomGamesAdmin = () => {
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setProfileGameKey(`custom:${r.id}`)}
+                      title="View profile"
+                    >
+                      <Eye className="h-4 w-4 text-primary" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(r)}>
                       <Pencil className="h-4 w-4 text-primary" />
                     </Button>
@@ -354,6 +376,12 @@ const CustomGamesAdmin = () => {
           </div>
         )}
       </div>
+
+      <GameProfileDialog
+        gameKey={profileGameKey}
+        customGames={rows}
+        onClose={() => setProfileGameKey(null)}
+      />
     </div>
   );
 };
