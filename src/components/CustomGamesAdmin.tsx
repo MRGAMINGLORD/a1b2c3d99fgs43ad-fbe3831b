@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode } from "lucide-react";
+import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import CoverImagePicker from "@/components/CoverImagePicker";
+import GameProfileDialog from "@/components/GameProfileDialog";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
 import { GAMES } from "@/lib/games";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
@@ -37,7 +38,10 @@ const CustomGamesAdmin = () => {
   const [coverUrl, setCoverUrl] = useState("");
   const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("other");
   const [html, setHtml] = useState("");
+  const [credits, setCredits] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Profile viewer state — shows the cover, description, location, credits, etc.
+  const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -62,6 +66,7 @@ const CustomGamesAdmin = () => {
     setCoverUrl("");
     setCategory("other");
     setHtml("");
+    setCredits("");
   };
 
   const startEdit = async (row: CustomGameRow) => {
@@ -74,6 +79,7 @@ const CustomGamesAdmin = () => {
         ? (row.category as (typeof CATEGORIES)[number])
         : "other",
     );
+    setCredits(row.credits ?? "");
 
     // If the stored value is a URL pointing at our Storage bucket, fetch the
     // actual file so the admin can edit the real source — otherwise show the
@@ -169,6 +175,7 @@ const CustomGamesAdmin = () => {
           description: description.trim(),
           cover_url: coverUrl.trim() || null,
           category,
+          credits: credits.trim(),
           html: storedValue,
         })
         .eq("id", editingId);
@@ -182,6 +189,7 @@ const CustomGamesAdmin = () => {
         description: description.trim(),
         cover_url: coverUrl.trim() || null,
         category,
+        credits: credits.trim(),
         html: storedValue,
       });
       setSubmitting(false);
@@ -290,6 +298,20 @@ const CustomGamesAdmin = () => {
             )}
           </p>
         </div>
+        <div>
+          <Label htmlFor="cg-credits">Credits</Label>
+          <Textarea
+            id="cg-credits"
+            placeholder="Who made this game? e.g. Code: Alex · Art: Sam · Music: Jordan"
+            value={credits}
+            onChange={(e) => setCredits(e.target.value)}
+            rows={2}
+            maxLength={500}
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Shown on the game profile and (eventually) in the in-game credits screen.
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button type="submit" disabled={submitting}>
             <Plus className="mr-1 h-4 w-4" />
@@ -333,6 +355,14 @@ const CustomGamesAdmin = () => {
                     </div>
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setProfileGameKey(`custom:${r.id}`)}
+                      title="View profile"
+                    >
+                      <Eye className="h-4 w-4 text-primary" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(r)}>
                       <Pencil className="h-4 w-4 text-primary" />
                     </Button>
@@ -346,6 +376,12 @@ const CustomGamesAdmin = () => {
           </div>
         )}
       </div>
+
+      <GameProfileDialog
+        gameKey={profileGameKey}
+        customGames={rows}
+        onClose={() => setProfileGameKey(null)}
+      />
     </div>
   );
 };

@@ -6,8 +6,12 @@ import { fetchCustomGame } from "@/hooks/useCustomGames";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 
-type GameId = "turtle-trade-co" | "defense-of-belgium" | "waffle-craft" | "neon-snake";
+type GameId = "turtle-trade-co" | "defense-of-belgium" | "waffle-craft";
 
+// Only games with real files in /public/games/<slug>/index.html belong here.
+// Custom admin-created games (like "neon-snake") live in the database and are
+// resolved via fetchCustomGame below — DO NOT add them here or the lookup will
+// short-circuit and load a non-existent /games/<slug>/index.html (→ 404).
 const GAMES: Record<GameId, { src: string; title: string; loadingFlavor: string }> = {
   "turtle-trade-co": {
     src: "/games/turtle-trade-co/index.html",
@@ -23,11 +27,6 @@ const GAMES: Record<GameId, { src: string; title: string; loadingFlavor: string 
     src: "/games/waffle-craft/index.html",
     title: "Waffle Craft",
     loadingFlavor: "Riding the minecart into the mines...",
-  },
-  "neon-snake": {
-    src: "/games/neon-snake/index.html",
-    title: "Neon Snake",
-    loadingFlavor: "Booting the neon grid...",
   },
 };
 
@@ -219,10 +218,13 @@ const NeonSnakeLoader = () => {
   );
 };
 
+// NeonSnakeLoader is keyed by custom-game slug below (not a built-in id).
 const LOADERS: Partial<Record<GameId, () => JSX.Element>> = {
   "turtle-trade-co": TurtleLoader,
   "defense-of-belgium": TanksLoader,
   "waffle-craft": MinecartLoader,
+};
+const CUSTOM_LOADERS: Record<string, () => JSX.Element> = {
   "neon-snake": NeonSnakeLoader,
 };
 
@@ -352,7 +354,9 @@ const PlayGame = () => {
 
   if (notFound || !resolved) return <GameNotFound gameId={gameId} />;
 
-  const Loader = builtIn ? LOADERS[gameId as GameId] : null;
+  const Loader = builtIn
+    ? LOADERS[gameId as GameId]
+    : (gameId && CUSTOM_LOADERS[gameId]) || null;
 
   return (
     <div className="fixed inset-0 bg-background p-2 sm:p-3">

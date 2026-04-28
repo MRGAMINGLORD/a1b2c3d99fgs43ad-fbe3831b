@@ -15,6 +15,9 @@ export interface GameMeta {
   available: boolean;
   playUrl?: string;
   category: "tycoon" | "twist" | "other" | "education";
+  /** Free-form credits string — author, art, music, etc. Displayed on the
+   * admin "game profile" view. Empty for games without recorded credits. */
+  credits?: string;
 }
 
 export const GAMES: GameMeta[] = [
@@ -27,6 +30,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/turtle-trade-co",
     category: "tycoon",
+    credits: "Design & code: Apocalypse Waffle team",
   },
   {
     id: "waffle-works",
@@ -36,6 +40,7 @@ export const GAMES: GameMeta[] = [
     cover: coverWaffleWorks,
     available: false,
     category: "tycoon",
+    credits: "",
   },
   {
     id: "waffle-craft",
@@ -45,6 +50,7 @@ export const GAMES: GameMeta[] = [
     cover: coverWaffleCraft,
     available: false,
     category: "twist",
+    credits: "",
   },
   {
     id: "defense-of-belgium",
@@ -55,6 +61,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/defense-of-belgium",
     category: "other",
+    credits: "Design & code: Apocalypse Waffle team",
   },
   {
     id: "bob-turtle-ai",
@@ -65,6 +72,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/education/bob-turtle-ai",
     category: "education",
+    credits: "Powered by Google Gemini · Tutor persona by Apocalypse Waffle",
   },
 ];
 

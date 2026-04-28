@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Trash2 } from "lucide-react";
 import FeaturedGamesAdmin from "@/components/FeaturedGamesAdmin";
+import GameProfilesAdmin from "@/components/GameProfilesAdmin";
 import CustomGamesAdmin from "@/components/CustomGamesAdmin";
 import PatchNotesAdmin from "@/components/PatchNotesAdmin";
 
@@ -150,6 +151,9 @@ const Admin = () => {
 
         {/* Featured Games */}
         <FeaturedGamesAdmin />
+
+        {/* Game Profiles — quick read-only inspector for any game */}
+        <GameProfilesAdmin />
 
         {/* Custom Games (admin-created) */}
         <CustomGamesAdmin />

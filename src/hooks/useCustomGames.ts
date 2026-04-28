@@ -10,6 +10,7 @@ export interface CustomGameRow {
   cover_url: string | null;
   html: string;
   category: string;
+  credits?: string;
   created_at: string;
   updated_at: string;
 }
