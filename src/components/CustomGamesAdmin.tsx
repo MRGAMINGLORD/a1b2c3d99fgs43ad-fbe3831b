@@ -66,6 +66,7 @@ const CustomGamesAdmin = () => {
     setCoverUrl("");
     setCategory("other");
     setHtml("");
+    setCredits("");
   };
 
   const startEdit = async (row: CustomGameRow) => {
@@ -78,6 +79,7 @@ const CustomGamesAdmin = () => {
         ? (row.category as (typeof CATEGORIES)[number])
         : "other",
     );
+    setCredits(row.credits ?? "");
 
     // If the stored value is a URL pointing at our Storage bucket, fetch the
     // actual file so the admin can edit the real source — otherwise show the
