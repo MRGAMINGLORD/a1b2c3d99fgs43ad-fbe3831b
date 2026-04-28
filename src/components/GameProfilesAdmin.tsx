@@ -2,15 +2,13 @@
 // from a dropdown to view its full profile (cover, description, location,
 // credits, etc.) without opening the editor.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import GameProfileDialog from "@/components/GameProfileDialog";
 import { GAMES } from "@/lib/games";
-import { useCustomGames } from "@/hooks/useCustomGames";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
 
 const GameProfilesAdmin = () => {
