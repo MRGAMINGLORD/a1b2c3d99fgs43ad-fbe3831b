@@ -381,6 +381,7 @@ const CustomGamesAdmin = () => {
         gameKey={profileGameKey}
         customGames={rows}
         onClose={() => setProfileGameKey(null)}
+        onSaved={load}
       />
     </div>
   );

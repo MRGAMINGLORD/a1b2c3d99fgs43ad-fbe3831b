@@ -96,6 +96,7 @@ const Index = () => {
                     cover={g.cover}
                     available={g.available}
                     playUrl={g.playUrl}
+                    credits={g.credits}
                   />
                 ))}
               </div>
@@ -142,6 +143,7 @@ const Index = () => {
                     cover={g.cover}
                     available={g.available}
                     playUrl={g.playUrl}
+                    credits={g.credits}
                   />
                 ))}
               </div>
@@ -172,6 +174,7 @@ const Index = () => {
                     cover={g.cover}
                     available={g.available}
                     playUrl={g.playUrl}
+                    credits={g.credits}
                   />
                 ))}
               </div>
@@ -202,6 +205,7 @@ const Index = () => {
                     cover={g.cover}
                     available={g.available}
                     playUrl={g.playUrl}
+                    credits={g.credits}
                   />
                 ))}
               </div>

@@ -19,6 +19,7 @@ const customRowToMeta = (row: CustomGameRow): GameMeta => ({
     row.category === "tycoon" || row.category === "twist"
       ? row.category
       : "other",
+  credits: row.credits ?? "",
 });
 
 export const useAllGames = () => {
