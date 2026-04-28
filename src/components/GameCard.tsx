@@ -8,10 +8,11 @@ interface GameCardProps {
   icon?: string;
   available?: boolean;
   playUrl?: string;
+  credits?: string;
   onClick?: () => void;
 }
 
-const GameCard = ({ title, description, cover, icon, available = false, playUrl, onClick }: GameCardProps) => {
+const GameCard = ({ title, description, cover, icon, available = false, playUrl, credits, onClick }: GameCardProps) => {
   const navigate = useNavigate();
   const handleClick = () => {
     if (!available) return;
@@ -51,9 +52,14 @@ const GameCard = ({ title, description, cover, icon, available = false, playUrl,
         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
       </div>
       <div className="p-5">
-        <h3 className="mb-2 font-display text-xl uppercase tracking-wide text-primary">
+        <h3 className="mb-1 font-display text-xl uppercase tracking-wide text-primary">
           {title}
         </h3>
+        {credits && credits.trim() && (
+          <p className="mb-2 font-display text-[11px] uppercase tracking-wider text-muted-foreground">
+            by <span className="text-primary/80">{credits}</span>
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">{description}</p>
         {available && (
           <span className="mt-4 inline-block font-display text-sm uppercase tracking-wider text-primary">
