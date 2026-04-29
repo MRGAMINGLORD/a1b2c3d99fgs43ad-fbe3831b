@@ -355,7 +355,7 @@ const PlayGame = () => {
           const res = await fetch(row.html, { cache: "no-store" });
           if (!res.ok) throw new Error(`Game file returned ${res.status}`);
           src = makeBlobUrl(await res.text());
-        } catch (err) {
+        } catch {
           if (!active) return;
           setNotFound(true);
           setResolving(false);
