@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Plus, Trash2, Send, Image as ImageIcon, 
-  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, LogOut
+  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, Zap, BrainCircuit, Gem
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { ConfirmExitLink } from '@/components/ConfirmExitLink';
+
+// Firebase Imports
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+
+// Initialize Firebase (Outside component to avoid re-initialization)
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // API Key is provided by the execution environment
 const apiKey = "";
@@ -30,104 +40,137 @@ const fetchWithRetry = async (url, options, retries = 5) => {
 // Custom SVG Logo based on the user's uploaded image (Scholarly Turtle)
 const BobLogo = ({ className = "w-10 h-10" }) => (
   <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    {/* Subtle Glow to separate black cap from dark backgrounds */}
     <circle cx="50" cy="50" r="48" fill="#EAB308" fillOpacity="0.1" />
-    
-    {/* Shoulders / Robe */}
     <path d="M10 100 C 10 70, 90 70, 90 100" fill="#A16207" />
     <path d="M20 100 C 20 75, 80 75, 80 100" fill="#EAB308" />
-
-    {/* Turtle Head/Neck (Golden-Yellow skin like the image) */}
     <path d="M30 80 C 30 35, 70 35, 70 80" fill="#FDE047" />
-    
-    {/* Snout / Cheeks */}
     <path d="M25 65 C 25 80, 75 80, 75 65 C 75 55, 25 55, 25 65 Z" fill="#FEF08A" />
-
-    {/* Graduation Cap */}
     <path d="M50 12 L 15 28 L 50 40 L 85 28 Z" fill="#171717" stroke="#EAB308" strokeWidth="1" />
     <path d="M35 35 L 35 48 C 35 52, 65 52, 65 48 L 65 35" fill="#171717" />
-    
-    {/* Tassel */}
     <path d="M50 28 L 85 40 L 85 60" stroke="#EAB308" strokeWidth="2.5" fill="none" />
     <path d="M82 60 L 88 60 L 85 68 Z" fill="#EAB308" />
-
-    {/* Thick Round Glasses */}
     <circle cx="38" cy="48" r="12" stroke="#171717" strokeWidth="4" fill="#FFFFFF" fillOpacity="0.2" />
     <circle cx="62" cy="48" r="12" stroke="#171717" strokeWidth="4" fill="#FFFFFF" fillOpacity="0.2" />
-    <path d="M50 48 L 50 48" stroke="#171717" strokeWidth="4" strokeLinecap="round" /> {/* Bridge */}
-    <path d="M26 45 L 20 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" /> {/* Left arm */}
-    <path d="M74 45 L 80 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" /> {/* Right arm */}
-
-    {/* Eyes */}
+    <path d="M50 48 L 50 48" stroke="#171717" strokeWidth="4" strokeLinecap="round" />
+    <path d="M26 45 L 20 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" />
+    <path d="M74 45 L 80 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" />
     <circle cx="38" cy="48" r="4" fill="#171717" />
     <circle cx="62" cy="48" r="4" fill="#171717" />
-    {/* Eye Highlights */}
     <circle cx="39" cy="46" r="1.5" fill="#FFFFFF" />
     <circle cx="63" cy="46" r="1.5" fill="#FFFFFF" />
-
-    {/* Nostrils */}
     <circle cx="47" cy="58" r="1" fill="#854D0E" />
     <circle cx="53" cy="58" r="1" fill="#854D0E" />
-
-    {/* Wise Smile */}
     <path d="M35 68 Q 50 74 65 68" stroke="#854D0E" strokeWidth="2" fill="none" strokeLinecap="round" />
   </svg>
 );
 
 export default function App() {
   // State Management
-  const [chats, setChats] = useState([
-    { 
-      id: '1', 
-      title: 'Department Orientation', 
-      messages: [{ 
-        role: 'model', 
-        type: 'text', 
-        content: "Welcome, citizen. I am Bob, Head of the Department of Education for the United Turtle Nation (UTN). While my brother Bert secures our island's borders from external threats, my solemn duty is to arm your mind with knowledge. What academic discipline shall we explore today?" 
-      }] 
-    }
-  ]);
-  const [activeChatId, setActiveChatId] = useState('1');
+  const [user, setUser] = useState(null);
+  const [chats, setChats] = useState([]);
+  const [isDbReady, setIsDbReady] = useState(false);
+  const [activeChatId, setActiveChatId] = useState(null);
+  
   const [input, setInput] = useState('');
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isTurtleifying, setIsTurtleifying] = useState(false);
+  const [aiMode, setAiMode] = useState('fast'); // 'fast' | 'thinking' | 'pro'
   
-  // Renaming state
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState('');
 
   const messagesEndRef = useRef(null);
-  const activeChat = chats.find(c => c.id === activeChatId) || chats[0];
+  
+  const activeChat = chats.find(c => c.id === activeChatId);
+
+  // 1. Firebase Authentication
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("Authentication failed:", error);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // 2. Firestore Syncing
+  useEffect(() => {
+    if (!user) return;
+    const chatsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'chats');
+    const unsubscribe = onSnapshot(chatsRef, (snapshot) => {
+      const loadedChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Sort by updatedAt descending in memory (Rule: No complex queries)
+      loadedChats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      
+      setChats(loadedChats);
+      setIsDbReady(true);
+      
+      // Auto-select first chat if none selected
+      if (!activeChatId && loadedChats.length > 0) {
+        setActiveChatId(loadedChats[0].id);
+      }
+    }, (error) => {
+      console.error("Firestore sync error:", error);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Create initial chat if completely empty
+  useEffect(() => {
+    if (isDbReady && chats.length === 0 && user) {
+      createNewChat();
+    }
+  }, [isDbReady, chats.length, user]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages, isLoadingText, isLoadingImage]);
 
-  // Chat Management Functions
-  const createNewChat = () => {
+  // Chat Management Functions (Writing to Firestore)
+  const saveChatToDb = async (chatData) => {
+    if (!user) return;
+    const chatRef = doc(db, 'artifacts', appId, 'users', user.uid, 'chats', chatData.id);
+    await setDoc(chatRef, { ...chatData, updatedAt: Date.now() });
+  };
+
+  const createNewChat = async () => {
+    if (!user) return;
+    const newChatId = Date.now().toString();
     const newChat = {
-      id: Date.now().toString(),
+      id: newChatId,
       title: 'New Academic Inquiry',
-      messages: [{ role: 'model', type: 'text', content: "The archives of the UTN are at your disposal. What is the subject of your inquiry today?" }]
+      messages: [{ role: 'model', type: 'text', content: "Welcome, citizen. I am Bob, Head of Education. The archives of the UTN are at your disposal. What is the subject of your inquiry today?" }],
+      updatedAt: Date.now()
     };
-    setChats([newChat, ...chats]);
+    await saveChatToDb(newChat);
     setActiveChatId(newChat.id);
     setIsSidebarOpen(false);
   };
 
-  const deleteChat = (e, id) => {
+  const deleteChat = async (e, id) => {
     e.stopPropagation();
-    const updatedChats = chats.filter(c => c.id !== id);
-    if (updatedChats.length === 0) {
-      const newChat = { id: Date.now().toString(), title: 'New Academic Inquiry', messages: [] };
-      setChats([newChat]);
-      setActiveChatId(newChat.id);
-    } else {
-      setChats(updatedChats);
-      if (activeChatId === id) setActiveChatId(updatedChats[0].id);
+    if (!user) return;
+    const chatRef = doc(db, 'artifacts', appId, 'users', user.uid, 'chats', id);
+    await deleteDoc(chatRef);
+    if (activeChatId === id) {
+      const remaining = chats.filter(c => c.id !== id);
+      if (remaining.length > 0) {
+        setActiveChatId(remaining[0].id);
+      } else {
+        createNewChat();
+      }
     }
   };
 
@@ -138,61 +181,74 @@ export default function App() {
   };
 
   const startEditingTitle = () => {
+    if (!activeChat) return;
     setTempTitle(activeChat.title);
     setIsEditingTitle(true);
   };
 
-  const saveTitle = () => {
-    if (tempTitle.trim()) {
-      setChats(chats.map(c => c.id === activeChatId ? { ...c, title: tempTitle.trim() } : c));
+  const saveTitle = async () => {
+    if (tempTitle.trim() && activeChat) {
+      await saveChatToDb({ ...activeChat, title: tempTitle.trim() });
     }
     setIsEditingTitle(false);
   };
 
-  // Format history for Gemini API
   const getFormattedHistory = () => {
-    const history = [];
-    activeChat.messages.forEach(msg => {
-      if (msg.type === 'text') {
-        history.push({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        });
-      }
-    });
-    return history;
+    if (!activeChat) return [];
+    return activeChat.messages
+      .filter(msg => msg.type === 'text')
+      .map(msg => ({
+        role: msg.role === 'user' ? 'user' : 'model',
+        parts: [{ text: msg.content }]
+      }));
   };
 
-  // Core Prompt outlining the Lore
-  const systemPrompt = `You are Bob, the Head of the Department of Education for the UTN (United Turtle Nation). 
-  You are an ancient, highly educated, and wise turtle sage. Your brother is Bert, a legendary turtle who survived a nuclear blast and now serves as the Commander in Chief of the UTN Army. 
-  The UTN is an isolated island nation populated entirely by turtles. While Bert protects the island physically, your duty is to protect it intellectually.
-  
-  TEACHING STYLE: You teach using the 'First Principles' approach. You break complex topics down to their absolute foundational truths and build up from there. You are a world-class explainer: systematic, logical, thorough, and crystal clear. 
-  
-  TONE: Authoritative, deeply intellectual, patient, and wise. You occasionally use metaphors related to your isolated island, the ocean, or the perseverance of turtle-kind. You may occasionally reference your brother Bert's military grit compared to your academic rigor.
-  
-  Always wrap code in standard markdown code blocks. Use a serious but supportive tone fit for an academic director.`;
+  // Generate dynamic system prompt based on selected mode to fake the different models
+  // safely within the allowed preview environment proxy.
+  const getDynamicSystemPrompt = (mode) => {
+    let basePrompt = `You are Bob, the Head of the Department of Education for the UTN (United Turtle Nation). 
+    You are an ancient, highly educated, and wise turtle sage. Your brother is Bert, a legendary turtle who survived a nuclear blast and now serves as the Commander in Chief of the UTN Army. 
+    The UTN is an isolated island nation populated entirely by turtles. While Bert protects the island physically, your duty is to protect it intellectually.
+    
+    TEACHING STYLE: You teach using the 'First Principles' approach. Break complex topics down to foundational truths. Systematic, logical, thorough, clear.
+    TONE: Authoritative, deeply intellectual, patient, wise. Use island/ocean/turtle metaphors.
+    FORMATTING: Always wrap code in standard markdown code blocks.`;
+
+    if (mode === 'thinking') {
+      basePrompt += `\n\n[THINKING MODE ACTIVE]: Before providing your final answer, you MUST write out a detailed, step-by-step logical thought process. Put your thought process inside markdown blockquotes (>) so the student can follow your reasoning, then provide the final academic response.`;
+    } else if (mode === 'pro') {
+      basePrompt += `\n\n[PRO MODE ACTIVE]: Provide an exhaustive, master-class level response. Assume the user is an advanced scholar. Go into extreme depth, cover edge cases, provide extensive examples, and use highly structured academic formatting.`;
+    }
+
+    return basePrompt;
+  };
+
+  // The execution environment securely proxies ONLY this model. 
+  // Changing this causes the "unregistered caller" error.
+  const allowedModelId = 'gemini-2.5-flash-preview-09-2025';
 
   // Handle Text/Code Generation
   const handleSendText = async () => {
-    if (!input.trim() || isLoadingText || isLoadingImage) return;
+    if (!input.trim() || isLoadingText || isLoadingImage || !activeChat) return;
 
     const userText = input.trim();
     setInput('');
     
     const newUserMsg = { role: 'user', type: 'text', content: userText };
-    updateChatMessages([...activeChat.messages, newUserMsg]);
+    const updatedMessages = [...activeChat.messages, newUserMsg];
+    
+    // Save optimistic user message to DB
+    await saveChatToDb({ ...activeChat, messages: updatedMessages });
     setIsLoadingText(true);
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      const contents = getFormattedHistory();
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
+      const contents = getFormattedHistory(); // Does not include the newly pushed optimistic message yet
       contents.push({ role: 'user', parts: [{ text: userText }] });
 
       const payload = {
         contents,
-        systemInstruction: { parts: [{ text: systemPrompt }] }
+        systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] }
       };
 
       const result = await fetchWithRetry(url, {
@@ -201,17 +257,24 @@ export default function App() {
         body: JSON.stringify(payload)
       });
 
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible. Please repeat your query.";
+      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible.";
       
       let newTitle = activeChat.title;
       if (activeChat.messages.length <= 1 && activeChat.title === 'New Academic Inquiry') {
         newTitle = userText.length > 25 ? userText.substring(0, 25) + '...' : userText;
       }
 
-      updateActiveChatState(newTitle, [...activeChat.messages, newUserMsg, { role: 'model', type: 'text', content: responseText }]);
+      await saveChatToDb({ 
+        ...activeChat, 
+        title: newTitle, 
+        messages: [...updatedMessages, { role: 'model', type: 'text', content: responseText }] 
+      });
 
     } catch (error) {
-      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "Communication failure with the central archives: " + error.message }]);
+      await saveChatToDb({ 
+        ...activeChat, 
+        messages: [...updatedMessages, { role: 'model', type: 'error', content: `Central archive communication failure: ` + error.message }] 
+      });
     } finally {
       setIsLoadingText(false);
     }
@@ -222,7 +285,7 @@ export default function App() {
     if (!input.trim() || isLoadingText || isLoadingImage || isTurtleifying) return;
     setIsTurtleifying(true);
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
       const payload = {
         contents: [{ role: 'user', parts: [{ text: `Rewrite this text to sound like it was written by Bob, Head of Education for the United Turtle Nation (UTN). Use sophisticated language, island/turtle metaphors, and an authoritative yet patient academic tone. Text: "${input}"` }] }],
         systemInstruction: { parts: [{ text: "You are an expert in academic rewriting and tone adjustment." }] }
@@ -239,24 +302,32 @@ export default function App() {
 
   // Feature 2: Deep Summary
   const handleSummarize = async () => {
-    if (isLoadingText || isLoadingImage || activeChat.messages.length < 2) return;
+    if (isLoadingText || isLoadingImage || !activeChat || activeChat.messages.length < 2) return;
     const userText = "Provide an academic summary of our progress.";
     const newUserMsg = { role: 'user', type: 'text', content: userText };
-    updateChatMessages([...activeChat.messages, newUserMsg]);
+    const updatedMessages = [...activeChat.messages, newUserMsg];
+    
+    await saveChatToDb({ ...activeChat, messages: updatedMessages });
     setIsLoadingText(true);
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
       const contents = getFormattedHistory();
       contents.push({ role: 'user', parts: [{ text: "Provide a wise, concise academic summary of the knowledge we have shared so far. Speak as Bob, Head of Education for the UTN. Mention the intellectual progress of our nation. Begin with 'Let us review the foundation we have laid today...'" }] });
 
-      const payload = { contents, systemInstruction: { parts: [{ text: systemPrompt }] } };
+      const payload = { contents, systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] } };
       const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Insufficient data for a comprehensive summary.";
       
-      updateActiveChatState(activeChat.title, [...activeChat.messages, newUserMsg, { role: 'model', type: 'text', content: responseText }]);
+      await saveChatToDb({ 
+        ...activeChat, 
+        messages: [...updatedMessages, { role: 'model', type: 'text', content: responseText }] 
+      });
     } catch (error) {
-      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "Summary generation failed: " + error.message }]);
+      await saveChatToDb({ 
+        ...activeChat, 
+        messages: [...updatedMessages, { role: 'model', type: 'error', content: "Summary generation failed: " + error.message }] 
+      });
     } finally {
       setIsLoadingText(false);
     }
@@ -264,11 +335,13 @@ export default function App() {
 
   // Handle Image Generation
   const handleSendImage = async () => {
-    if (!input.trim() || isLoadingText || isLoadingImage) return;
+    if (!input.trim() || isLoadingText || isLoadingImage || !activeChat) return;
     const userText = input.trim();
     setInput('');
     const newUserMsg = { role: 'user', type: 'text', content: `Generate a visual diagram of: ${userText}` };
-    updateChatMessages([...activeChat.messages, newUserMsg]);
+    const updatedMessages = [...activeChat.messages, newUserMsg];
+    
+    await saveChatToDb({ ...activeChat, messages: updatedMessages });
     setIsLoadingImage(true);
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
@@ -276,23 +349,21 @@ export default function App() {
       const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
         const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-        updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'image', content: imageUrl }]);
+        await saveChatToDb({ 
+          ...activeChat, 
+          messages: [...updatedMessages, { role: 'model', type: 'image', content: imageUrl }] 
+        });
       } else {
         throw new Error("Visual manifestation failed.");
       }
     } catch (error) {
-      updateChatMessages([...activeChat.messages, newUserMsg, { role: 'model', type: 'error', content: "Department imaging equipment is currently offline: " + error.message }]);
+       await saveChatToDb({ 
+        ...activeChat, 
+        messages: [...updatedMessages, { role: 'model', type: 'error', content: "Department imaging equipment is offline: " + error.message }] 
+      });
     } finally {
       setIsLoadingImage(false);
     }
-  };
-
-  const updateChatMessages = (newMessages) => {
-    setChats(chats.map(c => c.id === activeChatId ? { ...c, messages: newMessages } : c));
-  };
-
-  const updateActiveChatState = (newTitle, newMessages) => {
-    setChats(chats.map(c => c.id === activeChatId ? { ...c, title: newTitle, messages: newMessages } : c));
   };
 
   const renderMessageContent = (content) => {
@@ -322,6 +393,15 @@ export default function App() {
       return <span key={index} className="whitespace-pre-wrap">{part}</span>;
     });
   };
+
+  if (!isDbReady) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-neutral-950 text-yellow-500 flex-col space-y-4">
+        <Loader2 size={48} className="animate-spin" />
+        <div className="font-serif tracking-widest text-sm uppercase">Accessing UTN Archives...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-neutral-950 font-sans text-neutral-200 overflow-hidden selection:bg-yellow-500/30 selection:text-yellow-200">
@@ -391,28 +471,41 @@ export default function App() {
                 className="flex items-center group cursor-pointer hover:bg-neutral-900 px-3 py-1.5 rounded-md transition-colors"
                 onClick={startEditingTitle}
               >
-                <h2 className="font-serif text-lg text-yellow-500 truncate max-w-[200px] md:max-w-md">{activeChat.title}</h2>
+                <h2 className="font-serif text-lg text-yellow-500 truncate max-w-[150px] md:max-w-md">{activeChat?.title || "Loading..."}</h2>
                 <Edit2 size={14} className="ml-3 text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             )}
           </div>
-          <ConfirmExitLink
-            to="/"
-            ariaLabel="Exit Bob the Turtle AI and return to the hub"
-            title="Leave the academy?"
-            description="Your current conversation with Bob may not be saved. Are you sure you want to return to the hub?"
-            confirmLabel="Yes, exit"
-            cancelLabel="Keep studying"
-            className="ml-2 flex items-center space-x-2 px-3 py-1.5 rounded-md border border-yellow-500/30 text-yellow-500 hover:bg-neutral-900 hover:border-yellow-500/60 transition-colors text-xs font-bold tracking-wide"
-          >
-            <LogOut size={14} />
-            <span className="hidden sm:inline">Exit</span>
-          </ConfirmExitLink>
+          
+          {/* AI Mode Selector */}
+          <div className="flex bg-black rounded-lg p-1 border border-yellow-500/30 shadow-inner">
+            <button
+              onClick={() => setAiMode('fast')}
+              className={`flex items-center px-3 py-1.5 text-xs font-bold rounded-md transition-all ${aiMode === 'fast' ? 'bg-yellow-500 text-black shadow-sm' : 'text-neutral-500 hover:text-yellow-400'}`}
+              title="Fast Mode"
+            >
+              <Zap size={14} className="mr-1.5" /> Fast
+            </button>
+            <button
+              onClick={() => setAiMode('thinking')}
+              className={`flex items-center px-3 py-1.5 text-xs font-bold rounded-md transition-all ${aiMode === 'thinking' ? 'bg-yellow-500 text-black shadow-sm' : 'text-neutral-500 hover:text-yellow-400'}`}
+              title="Thinking Mode"
+            >
+              <BrainCircuit size={14} className="mr-1.5" /> Thinking
+            </button>
+            <button
+              onClick={() => setAiMode('pro')}
+              className={`flex items-center px-3 py-1.5 text-xs font-bold rounded-md transition-all ${aiMode === 'pro' ? 'bg-yellow-500 text-black shadow-sm' : 'text-neutral-500 hover:text-yellow-400'}`}
+              title="Pro Mode"
+            >
+              <Gem size={14} className="mr-1.5" /> Pro
+            </button>
+          </div>
         </header>
 
         {/* Messages List */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-8 custom-scrollbar">
-          {activeChat.messages.map((msg, index) => (
+          {activeChat?.messages.map((msg, index) => (
             <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
               
               {msg.role === 'model' && (
@@ -460,7 +553,7 @@ export default function App() {
               </div>
               <div className="bg-neutral-900 border border-yellow-500/20 rounded-2xl rounded-tl-sm px-6 py-4 shadow-sm flex items-center space-x-3 text-yellow-500 text-sm font-serif italic">
                 <Loader2 size={18} className="animate-spin" />
-                <span>{isLoadingText ? 'Formulating academic response...' : 'Generating department diagram...'}</span>
+                <span>{isLoadingText ? `Formulating academic response (${aiMode} mode)...` : 'Generating department diagram...'}</span>
               </div>
             </div>
           )}
@@ -472,7 +565,7 @@ export default function App() {
           
           {/* Quick Actions */}
           <div className="flex space-x-2 mb-3 overflow-x-auto pb-1 custom-scrollbar">
-             <button onClick={handleSummarize} disabled={isLoadingText || isLoadingImage || activeChat.messages.length < 2} className="flex items-center space-x-2 px-4 py-1.5 bg-neutral-900 text-yellow-500 hover:bg-neutral-800 rounded-full text-xs font-bold border border-yellow-500/30 transition-colors disabled:opacity-50 tracking-wide">
+             <button onClick={handleSummarize} disabled={isLoadingText || isLoadingImage || !activeChat || activeChat.messages.length < 2} className="flex items-center space-x-2 px-4 py-1.5 bg-neutral-900 text-yellow-500 hover:bg-neutral-800 rounded-full text-xs font-bold border border-yellow-500/30 transition-colors disabled:opacity-50 tracking-wide">
                <BookOpen size={14} /><span>Review Progress</span>
              </button>
              {input.trim() && (
@@ -485,7 +578,7 @@ export default function App() {
           <div className="max-w-4xl mx-auto w-full relative flex items-end bg-neutral-900 rounded-xl border border-neutral-700 shadow-inner focus-within:border-yellow-500 transition-colors">
             <textarea
               className="flex-1 max-h-32 min-h-[56px] p-4 bg-transparent outline-none resize-none disabled:opacity-50 text-neutral-200 placeholder-neutral-600 font-sans"
-              placeholder="Submit an inquiry to the Department of Education..."
+              placeholder={`Submit an inquiry to the Department of Education...`}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(); } }}
@@ -515,6 +608,16 @@ export default function App() {
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #eab308; }
+        
+        /* Thinking mode blockquote styling */
+        .prose blockquote {
+          border-left-color: #eab308;
+          background: rgba(234, 179, 8, 0.05);
+          padding: 10px 15px;
+          border-radius: 0 8px 8px 0;
+          font-style: normal;
+          color: #a3a3a3;
+        }
       `}} />
     </div>
   );
