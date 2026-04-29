@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){
+  function ser(e){ if(!e) return 'Unknown error'; if(typeof e==='string') return e; return (e.stack||e.message||String(e)); }
+  function post(kind,e){ try{ parent.postMessage({__waffleGameError:true,kind:kind,message:ser(e),time:Date.now()},'*'); }catch(_){} }
+  window.addEventListener('error',function(e){ post('runtime', e.error||e.message); });
+  window.addEventListener('unhandledrejection',function(e){ post('runtime', e.reason); });
+  var oe=console.error.bind(console);
+  console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Snake Royale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Inter', system-ui, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        canvas {
+            image-rendering: pixelated;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.15);
+            border: 2px solid #334155;
+            border-radius: 12px;
+            background-color: #020617;
+            max-width: 100%;
+            max-height: 55vh;
+        }
+        .retro-text {
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+        .teleport-glow {
+            animation: teleport-pulse 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes teleport-pulse {
+            0% { box-shadow: 0 0 0px #38bdf8; border-color: #334155; }
+            50% { box-shadow: 0 0 50px #38bdf8; border-color: #38bdf8; }
+            100% { box-shadow: 0 0 0px #38bdf8; border-color: #334155; }
+        }
+        .btn-press {
+            transition: transform 0.1s;
+        }
+        .btn-press:active {
+            transform: scale(0.92);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Header & Economy -->
+    <div class="text-center mb-4 w-full max-w-md">
+        <h1 class="text-3xl md:text-4xl font-black mb-2 tracking-tighter retro-text text-green-500 uppercase italic">Neon Snake Pro</h1>
+        <div class="flex justify-between items-center bg-slate-800/80 backdrop-blur p-2 px-4 rounded-xl border border-slate-700 shadow-xl">
+            <div class="flex flex-col items-start">
+                <span class="text-[10px] uppercase text-slate-400 font-bold">Score</span>
+                <span id="score" class="text-xl text-green-400 font-black leading-none">0</span>
+            </div>
+            <div class="bg-slate-900/50 px-4 py-1 rounded-full border border-slate-700 flex items-center gap-2">
+                <span class="text-lg">💰</span>
+                <span id="coins" class="text-lg font-bold text-yellow-400">0</span>
+            </div>
+            <div class="flex flex-col items-end">
+                <span class="text-[10px] uppercase text-slate-400 font-bold">Best</span>
+                <span id="highScore" class="text-xl text-blue-400 font-black leading-none">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div class="relative group">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Overlays -->
+        <div id="overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center rounded-xl p-6 z-10 transition-all duration-300">
+            <h2 id="overlayTitle" class="text-5xl font-black mb-8 text-white italic tracking-tighter uppercase">READY?</h2>
+            
+            <div class="flex flex-col gap-4 w-full max-w-[240px]">
+                <button id="startBtn" class="bg-green-600 hover:bg-green-500 text-white py-4 rounded-2xl font-black transition-all shadow-[0_0_20px_rgba(22,163,74,0.4)] uppercase tracking-widest text-lg btn-press">
+                    Play Now
+                </button>
+                <div class="flex gap-3">
+                    <button id="shopBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-bold transition-all uppercase text-xs btn-press">
+                        👕 Skins
+                    </button>
+                    <button id="settingsBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-bold transition-all uppercase text-xs btn-press">
+                        ⚙️ Modes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="shopOverlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-xl hidden flex-col rounded-xl p-4 z-20">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                <h3 class="text-xl font-black text-yellow-500 italic uppercase">Animal Kingdom</h3>
+                <button onclick="closeAllOverlays()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white">✕</button>
+            </div>
+            <div id="skinList" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-2"></div>
+        </div>
+
+        <div id="settingsOverlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-xl hidden flex-col rounded-xl p-4 z-20 overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                <h3 class="text-xl font-black text-blue-400 italic uppercase">Game Config</h3>
+                <button onclick="closeAllOverlays()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-800 text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div class="mb-6">
+                <label class="text-[10px] uppercase text-slate-500 font-black mb-2 block tracking-widest">Difficulty & Mechanics</label>
+                <select id="modeSelect" class="w-full bg-slate-800 text-white font-bold p-4 rounded-xl border border-slate-700 appearance-none cursor-pointer">
+                    <option value="classic">Classic (Relaxed)</option>
+                    <option value="pro">Pro (Fast Paced)</option>
+                    <option value="insane">Insane (Speed Demon)</option>
+                    <option value="peace">Peace (Invincible Borders)</option>
+                    <option value="magnet">Magnet (Fruit Attraction)</option>
+                    <option value="portals" selected>Portals (Wrap-Around Walls)</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="text-[10px] uppercase text-slate-500 font-black mb-2 block tracking-widest">Fruit Selection</label>
+                <div id="fruitChoices" class="grid grid-cols-2 gap-2 mb-4"></div>
+                
+                <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 flex items-center justify-between cursor-pointer" onclick="document.getElementById('fruitBowlToggle').click()">
+                    <div>
+                        <div class="text-sm font-black text-white">FRUIT BOWL</div>
+                        <div class="text-[10px] text-slate-400 font-medium uppercase tracking-tight">Spawn multiple targets</div>
+                    </div>
+                    <input type="checkbox" id="fruitBowlToggle" class="w-6 h-6 accent-green-500 cursor-pointer" onclick="event.stopPropagation()">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="mt-6 flex flex-col items-center gap-4 w-full max-w-md">
+        <div class="grid grid-cols-3 gap-2 md:hidden">
+            <div></div>
+            <button id="upBtn" class="bg-slate-800 w-16 h-16 rounded-2xl border-b-4 border-slate-950 flex items-center justify-center text-xl btn-press">▲</button>
+            <div></div>
+            <button id="leftBtn" class="bg-slate-800 w-16 h-16 rounded-2xl border-b-4 border-slate-950 flex items-center justify-center text-xl btn-press">◀</button>
+            <button id="downBtn" class="bg-slate-800 w-16 h-16 rounded-2xl border-b-4 border-slate-950 flex items-center justify-center text-xl btn-press">▼</button>
+            <button id="rightBtn" class="bg-slate-800 w-16 h-16 rounded-2xl border-b-4 border-slate-950 flex items-center justify-center text-xl btn-press">▶</button>
+        </div>
+        <button id="teleportBtn" class="hidden bg-sky-600 hover:bg-sky-500 text-white px-10 py-4 rounded-full font-black uppercase tracking-widest shadow-[0_0_20px_rgba(2,132,199,0.4)] border-b-4 border-sky-900 btn-press">
+            🌀 Phase Jump
+        </button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const highScoreEl = document.getElementById('highScore');
+        const coinsEl = document.getElementById('coins');
+        const overlay = document.getElementById('overlay');
+        const shopOverlay = document.getElementById('shopOverlay');
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const skinList = document.getElementById('skinList');
+        const fruitChoices = document.getElementById('fruitChoices');
+        const modeSelect = document.getElementById('modeSelect');
+        const fruitBowlToggle = document.getElementById('fruitBowlToggle');
+        const teleportBtn = document.getElementById('teleportBtn');
+
+        const GRID_SIZE = 20;
+        let tileCountX, tileCountY;
+        
+        let coins = parseInt(localStorage.getItem('snakeCoins_v3')) || 0;
+        let ownedSkins = JSON.parse(localStorage.getItem('ownedSkins_v3')) || ['Classic'];
+        let activeSkin = localStorage.getItem('activeSkin_v3') || 'Classic';
+
+        const skins = [
+            { name: 'Classic', color: '#22c55e', alt: '#14532d', price: 0, species: 'snake' },
+            { name: 'Tiger', color: '#fb923c', alt: '#000000', price: 100, pattern: 'stripes', species: 'tiger' },
+            { name: 'Zebra', color: '#ffffff', alt: '#1e293b', price: 100, pattern: 'stripes', species: 'zebra' },
+            { name: 'Panda', color: '#ffffff', alt: '#111827', price: 150, pattern: 'spots', species: 'panda' },
+            { name: 'Cyberpunk', color: '#f472b6', alt: '#4c1d95', price: 150, species: 'snake' },
+            { name: 'Dragon', color: '#ef4444', alt: '#fbbf24', price: 300, pattern: 'scales', species: 'dragon' },
+            { name: 'Gold Rush', color: '#fbbf24', alt: '#854d0e', price: 500, species: 'snake' },
+            { name: 'Ghost', color: '#f8fafc', alt: '#475569', price: 750, alpha: 0.6, species: 'snake' }
+        ];
+
+        const fruitTypes = [
+            { id: 'apple', name: 'Apple', color: '#ef4444', leaf: '#22c55e' },
+            { id: 'orange', name: 'Orange', color: '#f97316', leaf: '#166534' },
+            { id: 'grapes', name: 'Grapes', color: '#a855f7', leaf: '#4c1d95' },
+            { id: 'cherry', name: 'Cherry', color: '#e11d48', leaf: '#166534' },
+            { id: 'blueberry', name: 'Blue', color: '#3b82f6', leaf: '#166534' }
+        ];
+
+        let activeFruits = JSON.parse(localStorage.getItem('activeFruits_v3')) || ['apple', 'orange', 'grapes', 'cherry', 'blueberry'];
+        let snake = [];
+        let foods = [];
+        let dx = 0; let dy = 0;
+        let nextDx = 0; let nextDy = -1;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('snakeHighScore_v3')) || 0;
+        let gameRunning = false;
+        let gameLoop;
+        let currentMode = 'portals';
+        let teleportCooldown = false;
+
+        function initCanvas() {
+            const size = Math.min(window.innerWidth - 48, 400);
+            const gridMultiple = Math.floor(size / GRID_SIZE);
+            canvas.width = gridMultiple * GRID_SIZE;
+            canvas.height = gridMultiple * GRID_SIZE;
+            tileCountX = canvas.width / GRID_SIZE;
+            tileCountY = canvas.height / GRID_SIZE;
+        }
+
+        function updateUI() {
+            coinsEl.innerText = coins;
+            highScoreEl.innerText = highScore;
+            localStorage.setItem('snakeCoins_v3', coins);
+            localStorage.setItem('snakeHighScore_v3', highScore);
+            localStorage.setItem('activeFruits_v3', JSON.stringify(activeFruits));
+        }
+
+        function closeAllOverlays() {
+            shopOverlay.classList.add('hidden');
+            settingsOverlay.classList.add('hidden');
+        }
+
+        function renderShop() {
+            skinList.innerHTML = '';
+            skins.forEach(skin => {
+                const isOwned = ownedSkins.includes(skin.name);
+                const isActive = activeSkin === skin.name;
+                const card = document.createElement('div');
+                card.className = `flex items-center justify-between p-4 rounded-2xl border transition-all ${isActive ? 'border-green-500 bg-green-500/10' : 'border-slate-800 bg-slate-800/40'}`;
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg relative overflow-hidden border border-slate-700" style="background: ${skin.color}">
+                             <div class="absolute inset-0 opacity-40" style="background: repeating-linear-gradient(45deg, transparent, transparent 4px, ${skin.alt} 4px, ${skin.alt} 8px);"></div>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-black text-sm uppercase italic tracking-tight">${skin.name}</span>
+                            <span class="text-[9px] text-slate-500 font-bold uppercase">${isOwned ? 'Collected' : `Price: ${skin.price}`}</span>
+                        </div>
+                    </div>
+                    <button class="px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-md ${
+                        isActive ? 'bg-green-600 text-white cursor-default' : 
+                        isOwned ? 'bg-blue-600 hover:bg-blue-500 text-white' : 
+                        coins >= skin.price ? 'bg-yellow-500 hover:bg-yellow-400 text-slate-900' : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    }">${isActive ? 'Active' : isOwned ? 'Use' : `💰 Buy`}</button>
+                `;
+                card.querySelector('button').onclick = () => {
+                    if (isActive) return;
+                    if (isOwned) { activeSkin = skin.name; localStorage.setItem('activeSkin_v3', activeSkin); renderShop(); }
+                    else if (coins >= skin.price) {
+                        coins -= skin.price; ownedSkins.push(skin.name); activeSkin = skin.name;
+                        localStorage.setItem('ownedSkins_v3', JSON.stringify(ownedSkins));
+                        localStorage.setItem('activeSkin_v3', activeSkin);
+                        updateUI(); renderShop();
+                    }
+                };
+                skinList.appendChild(card);
+            });
+        }
+
+        function renderSettings() {
+            fruitChoices.innerHTML = '';
+            fruitTypes.forEach(fruit => {
+                const isChecked = activeFruits.includes(fruit.id);
+                const div = document.createElement('div');
+                div.className = `flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isChecked ? 'bg-slate-800 border-green-500' : 'bg-slate-800/40 border-slate-700 opacity-60'}`;
+                div.innerHTML = `<div class="w-5 h-5 rounded-full" style="background:${fruit.color}"></div><span class="text-xs font-black uppercase tracking-tight">${fruit.name}</span>`;
+                div.onclick = () => {
+                    if (isChecked && activeFruits.length > 1) activeFruits = activeFruits.filter(id => id !== fruit.id);
+                    else if (!isChecked) activeFruits.push(fruit.id);
+                    updateUI(); renderSettings();
+                };
+                fruitChoices.appendChild(div);
+            });
+        }
+
+        function startGame() {
+            snake = [
+                { x: Math.floor(tileCountX/2), y: Math.floor(tileCountY/2) },
+                { x: Math.floor(tileCountX/2), y: Math.floor(tileCountY/2) + 1 },
+                { x: Math.floor(tileCountX/2), y: Math.floor(tileCountY/2) + 2 }
+            ];
+            dx = 0; dy = -1; nextDx = 0; nextDy = -1;
+            score = 0; scoreEl.innerText = score;
+            gameRunning = true; overlay.classList.add('hidden'); closeAllOverlays();
+            currentMode = modeSelect.value;
+            teleportBtn.classList.toggle('hidden', currentMode !== 'portals');
+            let tick = 110;
+            if (currentMode === 'pro') tick = 75;
+            if (currentMode === 'insane') tick = 50;
+            if (gameLoop) clearInterval(gameLoop);
+            gameLoop = setInterval(draw, tick);
+            foods = [];
+            const count = fruitBowlToggle.checked ? 5 : (currentMode === 'magnet' ? 6 : 1);
+            for(let i=0; i < count; i++) createFood();
+        }
+
+        function createFood() {
+            const avail = fruitTypes.filter(f => activeFruits.includes(f.id));
+            const f = avail[Math.floor(Math.random() * avail.length)];
+            const food = { x: Math.floor(Math.random() * tileCountX), y: Math.floor(Math.random() * tileCountY), type: f };
+            if (snake.some(p => p.x === food.x && p.y === food.y) || foods.some(f => f.x === food.x && f.y === food.y)) return createFood();
+            foods.push(food);
+        }
+
+        function handleTeleport() {
+            if (!gameRunning || currentMode !== 'portals' || teleportCooldown) return;
+            const j = 3;
+            let nx = (snake[0].x + nextDx * j) % tileCountX;
+            let ny = (snake[0].y + nextDy * j) % tileCountY;
+            if (nx < 0) nx += tileCountX; if (ny < 0) ny += tileCountY;
+            snake[0].x = nx; snake[0].y = ny;
+            canvas.classList.add('teleport-glow');
+            setTimeout(() => canvas.classList.remove('teleport-glow'), 600);
+            teleportCooldown = true; teleportBtn.classList.add('opacity-40');
+            setTimeout(() => { teleportCooldown = false; teleportBtn.classList.remove('opacity-40'); }, 1200);
+        }
+
+        function drawHead(x, y, w, h, skin) {
+            ctx.save();
+            ctx.translate(x + w/2, y + h/2);
+            // Rotate based on direction
+            const angle = dx === 1 ? 0 : dx === -1 ? Math.PI : dy === -1 ? -Math.PI/2 : Math.PI/2;
+            ctx.rotate(angle);
+
+            ctx.fillStyle = skin.color;
+            ctx.shadowBlur = 10; ctx.shadowColor = skin.color;
+
+            if (skin.species === 'tiger' || skin.species === 'zebra') {
+                // Main head shape
+                ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, [4, 10, 10, 4]); ctx.fill();
+                // Stripes on head
+                ctx.fillStyle = skin.alt;
+                ctx.fillRect(-w/4, -h/2, 2, h); ctx.fillRect(0, -h/2, 2, h);
+                // Ears
+                ctx.fillStyle = skin.color;
+                ctx.beginPath(); ctx.arc(0, -h/2, 4, 0, Math.PI, true); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, h/2, 4, 0, Math.PI, false); ctx.fill();
+                // Snout
+                ctx.fillStyle = skin.species === 'tiger' ? 'rgba(0,0,0,0.2)' : '#eee';
+                ctx.fillRect(w/4, -h/4, w/4, h/2);
+                // Eyes
+                ctx.fillStyle = skin.species === 'tiger' ? '#facc15' : '#000';
+                ctx.beginPath(); ctx.arc(w/6, -h/4, 2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(w/6, h/4, 2, 0, Math.PI*2); ctx.fill();
+            } else if (skin.species === 'panda') {
+                ctx.beginPath(); ctx.arc(0, 0, w/2, 0, Math.PI*2); ctx.fill();
+                // Panda Ears
+                ctx.fillStyle = skin.alt;
+                ctx.beginPath(); ctx.arc(-w/4, -h/2, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-w/4, h/2, 5, 0, Math.PI*2); ctx.fill();
+                // Panda Eye Patches
+                ctx.beginPath(); ctx.ellipse(w/6, -h/4, 4, 3, Math.PI/4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(w/6, h/4, 4, 3, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+                // Pupils
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(w/6 + 1, -h/4, 1, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(w/6 + 1, h/4, 1, 0, Math.PI*2); ctx.fill();
+            } else {
+                // Classic Snake Head
+                ctx.beginPath(); ctx.roundRect(-w/2, -h/2, w, h, 8); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(w/4, -h/4, 2, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(w/4, h/4, 2, 0, Math.PI*2); ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function draw() {
+            if (!gameRunning) return;
+            update();
+            if (!gameRunning) return;
+            ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            foods.forEach(f => {
+                const cx = f.x * GRID_SIZE + GRID_SIZE/2, cy = f.y * GRID_SIZE + GRID_SIZE/2, r = GRID_SIZE/2.6;
+                ctx.shadowBlur = 12; ctx.shadowColor = f.type.color; ctx.fillStyle = f.type.color;
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0; ctx.fillStyle = f.type.leaf;
+                ctx.beginPath(); ctx.ellipse(cx+1, cy-r+1, r/2, r/5, Math.PI/3, 0, Math.PI*2); ctx.fill();
+            });
+            const skin = skins.find(s => s.name === activeSkin);
+            ctx.globalAlpha = skin.alpha || 1;
+            snake.forEach((p, i) => {
+                const x = p.x * GRID_SIZE + 2, y = p.y * GRID_SIZE + 2, w = GRID_SIZE - 4, h = GRID_SIZE - 4;
+                if (i === 0) {
+                    drawHead(x, y, w, h, skin);
+                } else {
+                    ctx.fillStyle = i % 2 === 0 ? skin.color : skin.alt;
+                    ctx.beginPath(); ctx.roundRect(x, y, w, h, 4); ctx.fill();
+                    if (skin.pattern === 'stripes') {
+                        ctx.fillStyle = skin.alt; ctx.fillRect(x + w/3, y, 2, h);
+                    }
+                }
+            });
+            ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+        }
+
+        function update() {
+            dx = nextDx; dy = nextDy;
+            let nx = snake[0].x + dx, ny = snake[0].y + dy;
+            if (currentMode === 'peace' || currentMode === 'portals') {
+                nx = (nx + tileCountX) % tileCountX; ny = (ny + tileCountY) % tileCountY;
+            } else if (nx < 0 || nx >= tileCountX || ny < 0 || ny >= tileCountY) return gameOver();
+            if (currentMode !== 'peace' && snake.some(p => p.x === nx && p.y === ny)) return gameOver();
+            const head = { x: nx, y: ny };
+            snake.unshift(head);
+            let ate = false;
+            foods = foods.filter(f => {
+                if (head.x === f.x && head.y === f.y) { score += 10; coins += 1; ate = true; return false; }
+                return true;
+            });
+            if (ate) {
+                updateUI(); if (score > highScore) highScore = score;
+                const target = fruitBowlToggle.checked ? 5 : (currentMode === 'magnet' ? 6 : 1);
+                while(foods.length < target) createFood();
+            } else snake.pop();
+        }
+
+        function gameOver() {
+            gameRunning = false; clearInterval(gameLoop);
+            document.getElementById('overlayTitle').innerText = "WASTED";
+            overlay.classList.remove('hidden');
+        }
+
+        function handleInput(key) {
+            if (!gameRunning) return;
+            if (key === 'ArrowUp' && dy !== 1) { nextDx = 0; nextDy = -1; }
+            if (key === 'ArrowDown' && dy !== -1) { nextDx = 0; nextDy = 1; }
+            if (key === 'ArrowLeft' && dx !== 1) { nextDx = -1; nextDy = 0; }
+            if (key === 'ArrowRight' && dx !== -1) { nextDx = 1; nextDy = 0; }
+            if (key === ' ') handleTeleport();
+        }
+
+        window.addEventListener('resize', initCanvas);
+        window.addEventListener('keydown', e => { if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault(); handleInput(e.key); });
+        document.getElementById('startBtn').onclick = startGame;
+        document.getElementById('shopBtn').onclick = () => { closeAllOverlays(); shopOverlay.classList.remove('hidden'); renderShop(); };
+        document.getElementById('settingsBtn').onclick = () => { closeAllOverlays(); settingsOverlay.classList.remove('hidden'); renderSettings(); };
+        document.getElementById('upBtn').onclick = () => handleInput('ArrowUp');
+        document.getElementById('downBtn').onclick = () => handleInput('ArrowDown');
+        document.getElementById('leftBtn').onclick = () => handleInput('ArrowLeft');
+        document.getElementById('rightBtn').onclick = () => handleInput('ArrowRight');
+        teleportBtn.onclick = handleTeleport;
+
+        window.onload = () => { initCanvas(); updateUI(); renderSettings(); };
+    </script>
+</body>
+</html>
