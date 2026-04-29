@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye, Github } from "lucide-react";
-import ExportToRepoDialog from "@/components/ExportToRepoDialog";
+import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +42,6 @@ const CustomGamesAdmin = () => {
   const [submitting, setSubmitting] = useState(false);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
-  // Game currently being exported to the repo (null = dialog closed).
-  const [exportGame, setExportGame] = useState<CustomGameRow | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -217,7 +214,7 @@ const CustomGamesAdmin = () => {
       toast({
         title: "Game posted",
         description: storedValue
-          ? `File created at /game-files/${slug}/index.html — playable at /play/${slug}`
+          ? `Game saved and playable at /play/${slug}`
           : `Created at /play/${slug} (no code yet).`,
       });
     }
@@ -301,7 +298,7 @@ const CustomGamesAdmin = () => {
           />
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <FileCode className="h-3 w-3" />
-            Saved as a real file at <span className="font-mono text-primary">/game-files/{slugify(title) || "your-slug"}/index.html</span>
+            Saved automatically when you post; playable at <span className="font-mono text-primary">/play/{slugify(title) || "your-slug"}</span>
             {html.trim() && looksLikeReact(html) && (
               <span className="ml-2 rounded border border-primary/50 bg-primary/10 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-wider text-primary">
                 React detected — will be auto-wrapped
@@ -374,15 +371,6 @@ const CustomGamesAdmin = () => {
                     >
                       <Eye className="h-4 w-4 text-primary" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setExportGame(r)}
-                      title="Export to repo (GitHub)"
-                      disabled={!hasCode}
-                    >
-                      <Github className="h-4 w-4 text-primary" />
-                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(r)}>
                       <Pencil className="h-4 w-4 text-primary" />
                     </Button>
@@ -403,7 +391,6 @@ const CustomGamesAdmin = () => {
         onClose={() => setProfileGameKey(null)}
         onSaved={load}
       />
-      <ExportToRepoDialog game={exportGame} onClose={() => setExportGame(null)} />
     </div>
   );
 };

@@ -276,6 +276,13 @@ interface ResolvedGame {
   isCustom: boolean;
 }
 
+const isProbablyAppShell = (html: string) =>
+  html.includes('/src/main.tsx') ||
+  (html.includes('<div id="root"></div>') && html.includes('<title>Waffle</title>'));
+
+const isStoredGameFileUrl = (url: string) =>
+  /^https?:\/\//i.test(url.trim()) && url.includes('/game-files/');
+
 const PlayGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const builtIn = gameId && (gameId in GAMES) ? GAMES[gameId as GameId] : undefined;
@@ -296,14 +303,23 @@ const PlayGame = () => {
     setResolving(true);
     setNotFound(false);
     (async () => {
-      // Prefer a real file at /games/<slug>/index.html if it exists. Admins
-      // can "Export to repo" a custom game and have it committed to GitHub
-      // alongside Turtle Trade Co — once that file lands in the repo, we
-      // serve it directly and no longer depend on Storage or the DB row.
+      const makeBlobUrl = (source: string) => {
+        if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+        const blob = new Blob([source], { type: "text/html; charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        return url;
+      };
+
+      // Prefer a real repo file only when the response is actually that file.
+      // The dev server can SPA-fallback missing /games/<slug>/index.html paths
+      // to the app shell, which then renders the NotFound page inside the iframe.
       const repoUrl = `/games/${gameId}/index.html`;
       try {
-        const head = await fetch(repoUrl, { method: "HEAD" });
-        if (active && head.ok) {
+        const repoResponse = await fetch(repoUrl, { cache: "no-store" });
+        const repoHtml = repoResponse.ok ? await repoResponse.text() : "";
+        if (!active) return;
+        if (active && repoResponse.ok && repoHtml.trim() && !isProbablyAppShell(repoHtml)) {
           // Try to enrich the title from the DB row, but don't block on it.
           let title = gameId;
           try {
@@ -329,17 +345,26 @@ const PlayGame = () => {
         setResolving(false);
         return;
       }
-      // New behavior: `html` is a URL to a real file in the game-files
-      // Storage bucket — load it directly, exactly like a built-in game.
-      // Legacy fallback: if it's still raw HTML, render via a Blob URL.
+      // Storage-hosted custom games can be served with stale text/plain headers.
+      // Fetch them and render a local text/html Blob so HTML games run instead
+      // of showing source code or a false 404 page.
       const isUrl = /^https?:\/\//i.test(row.html.trim());
       let src: string;
-      if (isUrl) {
+      if (isStoredGameFileUrl(row.html)) {
+        try {
+          const res = await fetch(row.html, { cache: "no-store" });
+          if (!res.ok) throw new Error(`Game file returned ${res.status}`);
+          src = makeBlobUrl(await res.text());
+        } catch {
+          if (!active) return;
+          setNotFound(true);
+          setResolving(false);
+          return;
+        }
+      } else if (isUrl) {
         src = row.html.trim();
       } else {
-        const blob = new Blob([row.html], { type: "text/html" });
-        src = URL.createObjectURL(blob);
-        blobUrlRef.current = src;
+        src = makeBlobUrl(row.html);
       }
       setResolved({
         src,
