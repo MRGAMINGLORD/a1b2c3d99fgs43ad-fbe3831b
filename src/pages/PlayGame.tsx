@@ -319,6 +319,7 @@ const PlayGame = () => {
       try {
         const repoResponse = await fetch(repoUrl, { cache: "no-store" });
         const repoHtml = repoResponse.ok ? await repoResponse.text() : "";
+        if (!active) return;
         if (active && repoResponse.ok && repoHtml.trim() && !isProbablyAppShell(repoHtml)) {
           // Try to enrich the title from the DB row, but don't block on it.
           let title = gameId;
