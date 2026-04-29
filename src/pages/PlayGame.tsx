@@ -296,6 +296,32 @@ const PlayGame = () => {
     setResolving(true);
     setNotFound(false);
     (async () => {
+      // Prefer a real file at /games/<slug>/index.html if it exists. Admins
+      // can "Export to repo" a custom game and have it committed to GitHub
+      // alongside Turtle Trade Co — once that file lands in the repo, we
+      // serve it directly and no longer depend on Storage or the DB row.
+      const repoUrl = `/games/${gameId}/index.html`;
+      try {
+        const head = await fetch(repoUrl, { method: "HEAD" });
+        if (active && head.ok) {
+          // Try to enrich the title from the DB row, but don't block on it.
+          let title = gameId;
+          try {
+            const row = await fetchCustomGame(gameId);
+            if (row?.title) title = row.title;
+          } catch {/* ignore */}
+          if (!active) return;
+          setResolved({
+            src: repoUrl,
+            title,
+            loadingFlavor: "Loading custom game...",
+            isCustom: true,
+          });
+          setResolving(false);
+          return;
+        }
+      } catch {/* fall through to DB lookup */}
+
       const row = await fetchCustomGame(gameId);
       if (!active) return;
       if (!row || !row.html.trim()) {
