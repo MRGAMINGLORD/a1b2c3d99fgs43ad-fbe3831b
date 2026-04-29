@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
+import { Trash2, Plus, Pencil, FileCode, Eye, Github } from "lucide-react";
+import ExportToRepoDialog from "@/components/ExportToRepoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
