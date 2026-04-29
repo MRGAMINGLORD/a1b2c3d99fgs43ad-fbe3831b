@@ -278,7 +278,6 @@ interface ResolvedGame {
 
 const isProbablyAppShell = (html: string) =>
   html.includes('/src/main.tsx') ||
-  html.includes('cdn.gpteng.co/lovable.js') ||
   (html.includes('<div id="root"></div>') && html.includes('<title>Waffle</title>'));
 
 const isStoredGameFileUrl = (url: string) =>
