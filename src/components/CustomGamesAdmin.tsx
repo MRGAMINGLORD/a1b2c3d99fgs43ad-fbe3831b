@@ -43,6 +43,8 @@ const CustomGamesAdmin = () => {
   const [submitting, setSubmitting] = useState(false);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
+  // Game currently being exported to the repo (null = dialog closed).
+  const [exportGame, setExportGame] = useState<CustomGameRow | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -372,6 +374,15 @@ const CustomGamesAdmin = () => {
                     >
                       <Eye className="h-4 w-4 text-primary" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setExportGame(r)}
+                      title="Export to repo (GitHub)"
+                      disabled={!hasCode}
+                    >
+                      <Github className="h-4 w-4 text-primary" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(r)}>
                       <Pencil className="h-4 w-4 text-primary" />
                     </Button>
@@ -392,6 +403,7 @@ const CustomGamesAdmin = () => {
         onClose={() => setProfileGameKey(null)}
         onSaved={load}
       />
+      <ExportToRepoDialog game={exportGame} onClose={() => setExportGame(null)} />
     </div>
   );
 };
