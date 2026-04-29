@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, Plus, Trash2, Send, Image as ImageIcon, 
-  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, Zap, BrainCircuit, Gem
+  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, Zap, BrainCircuit, Gem, StopCircle
 } from 'lucide-react';
 
 // Firebase Imports
@@ -19,7 +19,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 // API Key is provided by the execution environment
 const apiKey = "";
 
-// Exponential backoff retry logic for API calls
+// Exponential backoff retry logic for API calls, with AbortController support
 const fetchWithRetry = async (url, options, retries = 5) => {
   const delays = [1000, 2000, 4000, 8000, 16000];
   for (let i = 0; i < retries; i++) {
@@ -31,6 +31,10 @@ const fetchWithRetry = async (url, options, retries = 5) => {
       }
       return await response.json();
     } catch (e) {
+      // Immediately throw if the user aborted the request
+      if (e.name === 'AbortError' || options.signal?.aborted) {
+        throw new Error('AbortError');
+      }
       if (i === retries - 1) throw e;
       await new Promise(res => setTimeout(res, delays[i]));
     }
@@ -82,6 +86,7 @@ export default function App() {
   const [tempTitle, setTempTitle] = useState('');
 
   const messagesEndRef = useRef(null);
+  const abortControllerRef = useRef(null); // Reference for stopping API calls
   
   const activeChat = chats.find(c => c.id === activeChatId);
 
@@ -138,6 +143,14 @@ export default function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages, isLoadingText, isLoadingImage]);
 
+  // Stop Generation Function
+  const stopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  };
+
   // Chat Management Functions (Writing to Firestore)
   const saveChatToDb = async (chatData) => {
     if (!user) return;
@@ -178,6 +191,7 @@ export default function App() {
     setActiveChatId(id);
     setIsSidebarOpen(false);
     setIsEditingTitle(false);
+    stopGeneration(); // Stop any active generation when switching chats
   };
 
   const startEditingTitle = () => {
@@ -223,10 +237,6 @@ export default function App() {
     return basePrompt;
   };
 
-  // The execution environment securely proxies ONLY this model. 
-  // Changing this causes the "unregistered caller" error.
-  const allowedModelId = 'gemini-2.5-flash-preview-09-2025';
-
   // Handle Text/Code Generation
   const handleSendText = async () => {
     if (!input.trim() || isLoadingText || isLoadingImage || !activeChat) return;
@@ -240,10 +250,14 @@ export default function App() {
     // Save optimistic user message to DB
     await saveChatToDb({ ...activeChat, messages: updatedMessages });
     setIsLoadingText(true);
+    
+    // Initialize Abort Controller for this request
+    abortControllerRef.current = new AbortController();
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
-      const contents = getFormattedHistory(); // Does not include the newly pushed optimistic message yet
+      // NOTE: Using the exact literal string ensures the proxy intercepts the key for ALL users.
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const contents = getFormattedHistory(); 
       contents.push({ role: 'user', parts: [{ text: userText }] });
 
       const payload = {
@@ -254,7 +268,8 @@ export default function App() {
       const result = await fetchWithRetry(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: abortControllerRef.current.signal
       });
 
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible.";
@@ -271,12 +286,24 @@ export default function App() {
       });
 
     } catch (error) {
-      await saveChatToDb({ 
-        ...activeChat, 
-        messages: [...updatedMessages, { role: 'model', type: 'error', content: `Central archive communication failure: ` + error.message }] 
-      });
+      if (error.message === 'AbortError' || error.name === 'AbortError') {
+         await saveChatToDb({ 
+          ...activeChat, 
+          messages: [...updatedMessages, { role: 'model', type: 'error', content: "[Inquiry halted by user]" }] 
+        });
+      } else {
+         let errorMsg = error.message;
+         if (errorMsg.includes("unregistered callers") || errorMsg.includes("API key")) {
+             errorMsg += " (Platform Proxy Error: Please ensure you are logged in to the environment.)";
+         }
+         await saveChatToDb({ 
+          ...activeChat, 
+          messages: [...updatedMessages, { role: 'model', type: 'error', content: `Central archive communication failure: ` + errorMsg }] 
+        });
+      }
     } finally {
       setIsLoadingText(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -284,17 +311,24 @@ export default function App() {
   const handleTurtleify = async () => {
     if (!input.trim() || isLoadingText || isLoadingImage || isTurtleifying) return;
     setIsTurtleifying(true);
+    abortControllerRef.current = new AbortController();
+    
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       const payload = {
         contents: [{ role: 'user', parts: [{ text: `Rewrite this text to sound like it was written by Bob, Head of Education for the United Turtle Nation (UTN). Use sophisticated language, island/turtle metaphors, and an authoritative yet patient academic tone. Text: "${input}"` }] }],
         systemInstruction: { parts: [{ text: "You are an expert in academic rewriting and tone adjustment." }] }
       };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await fetchWithRetry(url, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload),
+        signal: abortControllerRef.current.signal
+      });
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (responseText) setInput(responseText.trim());
     } catch (error) {
-      console.error("Transcription failed:", error);
+      if (error.message !== 'AbortError') console.error("Transcription failed:", error);
     } finally {
       setIsTurtleifying(false);
     }
@@ -309,14 +343,20 @@ export default function App() {
     
     await saveChatToDb({ ...activeChat, messages: updatedMessages });
     setIsLoadingText(true);
+    abortControllerRef.current = new AbortController();
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       const contents = getFormattedHistory();
       contents.push({ role: 'user', parts: [{ text: "Provide a wise, concise academic summary of the knowledge we have shared so far. Speak as Bob, Head of Education for the UTN. Mention the intellectual progress of our nation. Begin with 'Let us review the foundation we have laid today...'" }] });
 
       const payload = { contents, systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] } };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await fetchWithRetry(url, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload),
+        signal: abortControllerRef.current.signal
+      });
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Insufficient data for a comprehensive summary.";
       
       await saveChatToDb({ 
@@ -324,10 +364,11 @@ export default function App() {
         messages: [...updatedMessages, { role: 'model', type: 'text', content: responseText }] 
       });
     } catch (error) {
-      await saveChatToDb({ 
-        ...activeChat, 
-        messages: [...updatedMessages, { role: 'model', type: 'error', content: "Summary generation failed: " + error.message }] 
-      });
+      if (error.message === 'AbortError') {
+         await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "[Summary generation halted]" }] });
+      } else {
+         await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "Summary generation failed: " + error.message }] });
+      }
     } finally {
       setIsLoadingText(false);
     }
@@ -343,10 +384,18 @@ export default function App() {
     
     await saveChatToDb({ ...activeChat, messages: updatedMessages });
     setIsLoadingImage(true);
+    abortControllerRef.current = new AbortController();
+    
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
       const payload = { instances: { prompt: userText }, parameters: { sampleCount: 1 } };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await fetchWithRetry(url, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload),
+        signal: abortControllerRef.current.signal
+      });
+      
       if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
         const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
         await saveChatToDb({ 
@@ -357,10 +406,11 @@ export default function App() {
         throw new Error("Visual manifestation failed.");
       }
     } catch (error) {
-       await saveChatToDb({ 
-        ...activeChat, 
-        messages: [...updatedMessages, { role: 'model', type: 'error', content: "Department imaging equipment is offline: " + error.message }] 
-      });
+       if (error.message === 'AbortError') {
+          await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "[Diagram generation halted]" }] });
+       } else {
+          await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "Department imaging equipment is offline: " + error.message }] });
+       }
     } finally {
       setIsLoadingImage(false);
     }
@@ -586,14 +636,27 @@ export default function App() {
               rows={1}
             />
             <div className="flex p-2 space-x-1">
-              <button onClick={handleSendImage} disabled={!input.trim() || isLoadingText || isLoadingImage} className="p-2.5 text-neutral-400 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors disabled:opacity-30 group relative" title="Request a Diagram">
-                <ImageIcon size={22} />
-                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Generate Diagram</span>
-              </button>
-              <button onClick={handleSendText} disabled={!input.trim() || isLoadingText || isLoadingImage} className="p-2.5 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg transition-all disabled:opacity-30 shadow-md transform active:scale-95 group relative">
-                <Send size={22} />
-                <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Submit Inquiry</span>
-              </button>
+              {isLoadingText || isLoadingImage ? (
+                <button 
+                  onClick={stopGeneration} 
+                  className="p-2.5 bg-red-900/50 hover:bg-red-800 text-red-400 border border-red-500/50 rounded-lg transition-all shadow-md group relative" 
+                  title="Halt Generation"
+                >
+                  <StopCircle size={22} />
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-red-500/50 text-red-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Halt Inquiry</span>
+                </button>
+              ) : (
+                <>
+                  <button onClick={handleSendImage} disabled={!input.trim()} className="p-2.5 text-neutral-400 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors disabled:opacity-30 group relative" title="Request a Diagram">
+                    <ImageIcon size={22} />
+                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Generate Diagram</span>
+                  </button>
+                  <button onClick={handleSendText} disabled={!input.trim()} className="p-2.5 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg transition-all disabled:opacity-30 shadow-md transform active:scale-95 group relative">
+                    <Send size={22} />
+                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Submit Inquiry</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <div className="text-center mt-3 text-[10px] uppercase tracking-widest text-neutral-600 font-bold">
