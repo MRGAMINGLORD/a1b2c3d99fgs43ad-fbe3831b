@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
+import { Trash2, Plus, Pencil, FileCode, Eye, Github } from "lucide-react";
+import ExportToRepoDialog from "@/components/ExportToRepoDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,8 @@ const CustomGamesAdmin = () => {
   const [submitting, setSubmitting] = useState(false);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
+  // Game currently being exported to the repo (null = dialog closed).
+  const [exportGame, setExportGame] = useState<CustomGameRow | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -105,8 +108,16 @@ const CustomGamesAdmin = () => {
 
   // Upload the HTML as /<slug>/index.html in the public game-files bucket
   // and return the public URL — same shape as the built-in /games/<slug>/index.html.
+  //
+  // We REMOVE any existing object first, then upload fresh. Supabase Storage
+  // caches the original `Content-Type` from the first insert at a path; an
+  // upsert won't update it. Without a clean re-insert, files end up served
+  // as `text/plain` + `nosniff`, which makes the browser display raw source
+  // in the iframe instead of rendering the HTML game.
   const uploadGameFile = async (slug: string, source: string): Promise<string> => {
     const path = `${slug}/index.html`;
+    // Best-effort cleanup; ignore "not found" errors.
+    await supabase.storage.from(GAME_FILES_BUCKET).remove([path]).catch(() => {});
     const blob = new Blob([source], { type: "text/html; charset=utf-8" });
     const { error } = await supabase.storage
       .from(GAME_FILES_BUCKET)
@@ -363,6 +374,15 @@ const CustomGamesAdmin = () => {
                     >
                       <Eye className="h-4 w-4 text-primary" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setExportGame(r)}
+                      title="Export to repo (GitHub)"
+                      disabled={!hasCode}
+                    >
+                      <Github className="h-4 w-4 text-primary" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(r)}>
                       <Pencil className="h-4 w-4 text-primary" />
                     </Button>
@@ -383,6 +403,7 @@ const CustomGamesAdmin = () => {
         onClose={() => setProfileGameKey(null)}
         onSaved={load}
       />
+      <ExportToRepoDialog game={exportGame} onClose={() => setExportGame(null)} />
     </div>
   );
 };
