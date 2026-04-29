@@ -105,8 +105,16 @@ const CustomGamesAdmin = () => {
 
   // Upload the HTML as /<slug>/index.html in the public game-files bucket
   // and return the public URL — same shape as the built-in /games/<slug>/index.html.
+  //
+  // We REMOVE any existing object first, then upload fresh. Supabase Storage
+  // caches the original `Content-Type` from the first insert at a path; an
+  // upsert won't update it. Without a clean re-insert, files end up served
+  // as `text/plain` + `nosniff`, which makes the browser display raw source
+  // in the iframe instead of rendering the HTML game.
   const uploadGameFile = async (slug: string, source: string): Promise<string> => {
     const path = `${slug}/index.html`;
+    // Best-effort cleanup; ignore "not found" errors.
+    await supabase.storage.from(GAME_FILES_BUCKET).remove([path]).catch(() => {});
     const blob = new Blob([source], { type: "text/html; charset=utf-8" });
     const { error } = await supabase.storage
       .from(GAME_FILES_BUCKET)
