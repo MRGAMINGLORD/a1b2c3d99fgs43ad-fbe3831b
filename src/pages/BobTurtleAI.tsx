@@ -1,687 +1,321 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MessageSquare, Plus, Trash2, Send, Image as ImageIcon, 
-  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2, Check, ShieldAlert, Zap, BrainCircuit, Gem, StopCircle
-} from 'lucide-react';
+// Bob the Turtle — educational AI tutor page.
+// Streams answers from the `bob-turtle` edge function via SSE.
 
-// Firebase Imports
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import { ArrowLeft, Send, Trash2, Loader2, BookOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
-// Initialize Firebase (Outside component to avoid re-initialization)
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+type ChatMsg = { role: "user" | "assistant"; content: string };
 
-// API Key is provided by the execution environment
-const apiKey = "";
+const STORAGE_KEY = "apocalypse-waffle:bob-turtle-history";
+const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bob-turtle`;
 
-// Exponential backoff retry logic for API calls, with AbortController support
-const fetchWithRetry = async (url, options, retries = 5) => {
-  const delays = [1000, 2000, 4000, 8000, 16000];
-  for (let i = 0; i < retries; i++) {
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || `HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (e) {
-      // Immediately throw if the user aborted the request
-      if (e.name === 'AbortError' || options.signal?.aborted) {
-        throw new Error('AbortError');
-      }
-      if (i === retries - 1) throw e;
-      await new Promise(res => setTimeout(res, delays[i]));
-    }
+const STARTERS = [
+  "Explain the Pythagorean theorem like I'm 12.",
+  "Help me outline a 5-paragraph essay on climate change.",
+  "Walk me through how photosynthesis works.",
+  "What's the difference between mitosis and meiosis?",
+];
+
+const loadHistory = (): ChatMsg[] => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 };
 
-// Custom SVG Logo based on the user's uploaded image (Scholarly Turtle)
-const BobLogo = ({ className = "w-10 h-10" }) => (
-  <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="50" cy="50" r="48" fill="#EAB308" fillOpacity="0.1" />
-    <path d="M10 100 C 10 70, 90 70, 90 100" fill="#A16207" />
-    <path d="M20 100 C 20 75, 80 75, 80 100" fill="#EAB308" />
-    <path d="M30 80 C 30 35, 70 35, 70 80" fill="#FDE047" />
-    <path d="M25 65 C 25 80, 75 80, 75 65 C 75 55, 25 55, 25 65 Z" fill="#FEF08A" />
-    <path d="M50 12 L 15 28 L 50 40 L 85 28 Z" fill="#171717" stroke="#EAB308" strokeWidth="1" />
-    <path d="M35 35 L 35 48 C 35 52, 65 52, 65 48 L 65 35" fill="#171717" />
-    <path d="M50 28 L 85 40 L 85 60" stroke="#EAB308" strokeWidth="2.5" fill="none" />
-    <path d="M82 60 L 88 60 L 85 68 Z" fill="#EAB308" />
-    <circle cx="38" cy="48" r="12" stroke="#171717" strokeWidth="4" fill="#FFFFFF" fillOpacity="0.2" />
-    <circle cx="62" cy="48" r="12" stroke="#171717" strokeWidth="4" fill="#FFFFFF" fillOpacity="0.2" />
-    <path d="M50 48 L 50 48" stroke="#171717" strokeWidth="4" strokeLinecap="round" />
-    <path d="M26 45 L 20 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" />
-    <path d="M74 45 L 80 40" stroke="#171717" strokeWidth="3" strokeLinecap="round" />
-    <circle cx="38" cy="48" r="4" fill="#171717" />
-    <circle cx="62" cy="48" r="4" fill="#171717" />
-    <circle cx="39" cy="46" r="1.5" fill="#FFFFFF" />
-    <circle cx="63" cy="46" r="1.5" fill="#FFFFFF" />
-    <circle cx="47" cy="58" r="1" fill="#854D0E" />
-    <circle cx="53" cy="58" r="1" fill="#854D0E" />
-    <path d="M35 68 Q 50 74 65 68" stroke="#854D0E" strokeWidth="2" fill="none" strokeLinecap="round" />
-  </svg>
-);
+const BobTurtleAI = () => {
+  const [messages, setMessages] = useState<ChatMsg[]>(loadHistory);
+  const [input, setInput] = useState("");
+  const [streaming, setStreaming] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-export default function App() {
-  // State Management
-  const [user, setUser] = useState(null);
-  const [chats, setChats] = useState([]);
-  const [isDbReady, setIsDbReady] = useState(false);
-  const [activeChatId, setActiveChatId] = useState(null);
-  
-  const [input, setInput] = useState('');
-  const [isLoadingText, setIsLoadingText] = useState(false);
-  const [isLoadingImage, setIsLoadingImage] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isTurtleifying, setIsTurtleifying] = useState(false);
-  const [aiMode, setAiMode] = useState('fast'); // 'fast' | 'thinking' | 'pro'
-  
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [tempTitle, setTempTitle] = useState('');
-
-  const messagesEndRef = useRef(null);
-  const abortControllerRef = useRef(null); // Reference for stopping API calls
-  
-  const activeChat = chats.find(c => c.id === activeChatId);
-
-  // 1. Firebase Authentication
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {}
+  }, [messages]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const viewport = el.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    ) as HTMLElement | null;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+  }, [messages, streaming]);
+
+  const send = async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
+    if (!text || streaming) return;
+
+    const userMsg: ChatMsg = { role: "user", content: text };
+    const next = [...messages, userMsg];
+    setMessages(next);
+    setInput("");
+    setStreaming(true);
+
+    let assistantSoFar = "";
+    const upsert = (chunk: string) => {
+      assistantSoFar += chunk;
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant") {
+          return prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: assistantSoFar } : m,
+          );
         }
-      } catch (error) {
-        console.error("Authentication failed:", error);
-      }
+        return [...prev, { role: "assistant", content: assistantSoFar }];
+      });
     };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  // 2. Firestore Syncing
-  useEffect(() => {
-    if (!user) return;
-    const chatsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'chats');
-    const unsubscribe = onSnapshot(chatsRef, (snapshot) => {
-      const loadedChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // Sort by updatedAt descending in memory (Rule: No complex queries)
-      loadedChats.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-      
-      setChats(loadedChats);
-      setIsDbReady(true);
-      
-      // Auto-select first chat if none selected
-      if (!activeChatId && loadedChats.length > 0) {
-        setActiveChatId(loadedChats[0].id);
-      }
-    }, (error) => {
-      console.error("Firestore sync error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // Create initial chat if completely empty
-  useEffect(() => {
-    if (isDbReady && chats.length === 0 && user) {
-      createNewChat();
-    }
-  }, [isDbReady, chats.length, user]);
-
-  // Auto-scroll to bottom of chat
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeChat?.messages, isLoadingText, isLoadingImage]);
-
-  // Stop Generation Function
-  const stopGeneration = () => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-  };
-
-  // Chat Management Functions (Writing to Firestore)
-  const saveChatToDb = async (chatData) => {
-    if (!user) return;
-    const chatRef = doc(db, 'artifacts', appId, 'users', user.uid, 'chats', chatData.id);
-    await setDoc(chatRef, { ...chatData, updatedAt: Date.now() });
-  };
-
-  const createNewChat = async () => {
-    if (!user) return;
-    const newChatId = Date.now().toString();
-    const newChat = {
-      id: newChatId,
-      title: 'New Academic Inquiry',
-      messages: [{ role: 'model', type: 'text', content: "Welcome, citizen. I am Bob, Head of Education. The archives of the UTN are at your disposal. What is the subject of your inquiry today?" }],
-      updatedAt: Date.now()
-    };
-    await saveChatToDb(newChat);
-    setActiveChatId(newChat.id);
-    setIsSidebarOpen(false);
-  };
-
-  const deleteChat = async (e, id) => {
-    e.stopPropagation();
-    if (!user) return;
-    const chatRef = doc(db, 'artifacts', appId, 'users', user.uid, 'chats', id);
-    await deleteDoc(chatRef);
-    if (activeChatId === id) {
-      const remaining = chats.filter(c => c.id !== id);
-      if (remaining.length > 0) {
-        setActiveChatId(remaining[0].id);
-      } else {
-        createNewChat();
-      }
-    }
-  };
-
-  const switchChat = (id) => {
-    setActiveChatId(id);
-    setIsSidebarOpen(false);
-    setIsEditingTitle(false);
-    stopGeneration(); // Stop any active generation when switching chats
-  };
-
-  const startEditingTitle = () => {
-    if (!activeChat) return;
-    setTempTitle(activeChat.title);
-    setIsEditingTitle(true);
-  };
-
-  const saveTitle = async () => {
-    if (tempTitle.trim() && activeChat) {
-      await saveChatToDb({ ...activeChat, title: tempTitle.trim() });
-    }
-    setIsEditingTitle(false);
-  };
-
-  const getFormattedHistory = () => {
-    if (!activeChat) return [];
-    return activeChat.messages
-      .filter(msg => msg.type === 'text')
-      .map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-      }));
-  };
-
-  // Generate dynamic system prompt based on selected mode to fake the different models
-  // safely within the allowed preview environment proxy.
-  const getDynamicSystemPrompt = (mode) => {
-    let basePrompt = `You are Bob, the Head of the Department of Education for the UTN (United Turtle Nation). 
-    You are an ancient, highly educated, and wise turtle sage. Your brother is Bert, a legendary turtle who survived a nuclear blast and now serves as the Commander in Chief of the UTN Army. 
-    The UTN is an isolated island nation populated entirely by turtles. While Bert protects the island physically, your duty is to protect it intellectually.
-    
-    TEACHING STYLE: You teach using the 'First Principles' approach. Break complex topics down to foundational truths. Systematic, logical, thorough, clear.
-    TONE: Authoritative, deeply intellectual, patient, wise. Use island/ocean/turtle metaphors.
-    FORMATTING: Always wrap code in standard markdown code blocks.`;
-
-    if (mode === 'thinking') {
-      basePrompt += `\n\n[THINKING MODE ACTIVE]: Before providing your final answer, you MUST write out a detailed, step-by-step logical thought process. Put your thought process inside markdown blockquotes (>) so the student can follow your reasoning, then provide the final academic response.`;
-    } else if (mode === 'pro') {
-      basePrompt += `\n\n[PRO MODE ACTIVE]: Provide an exhaustive, master-class level response. Assume the user is an advanced scholar. Go into extreme depth, cover edge cases, provide extensive examples, and use highly structured academic formatting.`;
-    }
-
-    return basePrompt;
-  };
-
-  // Handle Text/Code Generation
-  const handleSendText = async () => {
-    if (!input.trim() || isLoadingText || isLoadingImage || !activeChat) return;
-
-    const userText = input.trim();
-    setInput('');
-    
-    const newUserMsg = { role: 'user', type: 'text', content: userText };
-    const updatedMessages = [...activeChat.messages, newUserMsg];
-    
-    // Save optimistic user message to DB
-    await saveChatToDb({ ...activeChat, messages: updatedMessages });
-    setIsLoadingText(true);
-    
-    // Initialize Abort Controller for this request
-    abortControllerRef.current = new AbortController();
 
     try {
-      // NOTE: Using the exact literal string ensures the proxy intercepts the key for ALL users.
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      const contents = getFormattedHistory(); 
-      contents.push({ role: 'user', parts: [{ text: userText }] });
-
-      const payload = {
-        contents,
-        systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] }
-      };
-
-      const result = await fetchWithRetry(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: abortControllerRef.current.signal
+      const resp = await fetch(ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: next }),
       });
 
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible.";
-      
-      let newTitle = activeChat.title;
-      if (activeChat.messages.length <= 1 && activeChat.title === 'New Academic Inquiry') {
-        newTitle = userText.length > 25 ? userText.substring(0, 25) + '...' : userText;
-      }
-
-      await saveChatToDb({ 
-        ...activeChat, 
-        title: newTitle, 
-        messages: [...updatedMessages, { role: 'model', type: 'text', content: responseText }] 
-      });
-
-    } catch (error) {
-      if (error.message === 'AbortError' || error.name === 'AbortError') {
-         await saveChatToDb({ 
-          ...activeChat, 
-          messages: [...updatedMessages, { role: 'model', type: 'error', content: "[Inquiry halted by user]" }] 
+      if (!resp.ok) {
+        let msg = "Bob is taking a nap. Try again shortly.";
+        try {
+          const j = await resp.json();
+          if (j?.error) msg = j.error;
+        } catch {}
+        toast({
+          title: resp.status === 429 ? "Slow down a bit" : "Bob can't answer",
+          description: msg,
+          variant: resp.status === 402 ? "destructive" : undefined,
         });
-      } else {
-         let errorMsg = error.message;
-         if (errorMsg.includes("unregistered callers") || errorMsg.includes("API key")) {
-             errorMsg += " (Platform Proxy Error: Please ensure you are logged in to the environment.)";
-         }
-         await saveChatToDb({ 
-          ...activeChat, 
-          messages: [...updatedMessages, { role: 'model', type: 'error', content: `Central archive communication failure: ` + errorMsg }] 
-        });
+        setMessages((prev) => prev.filter((m) => m !== userMsg));
+        setStreaming(false);
+        return;
       }
-    } finally {
-      setIsLoadingText(false);
-      abortControllerRef.current = null;
-    }
-  };
 
-  // Feature 1: Wise-ify Text
-  const handleTurtleify = async () => {
-    if (!input.trim() || isLoadingText || isLoadingImage || isTurtleifying) return;
-    setIsTurtleifying(true);
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      const payload = {
-        contents: [{ role: 'user', parts: [{ text: `Rewrite this text to sound like it was written by Bob, Head of Education for the United Turtle Nation (UTN). Use sophisticated language, island/turtle metaphors, and an authoritative yet patient academic tone. Text: "${input}"` }] }],
-        systemInstruction: { parts: [{ text: "You are an expert in academic rewriting and tone adjustment." }] }
-      };
-      const result = await fetchWithRetry(url, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload),
-        signal: abortControllerRef.current.signal
-      });
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (responseText) setInput(responseText.trim());
-    } catch (error) {
-      if (error.message !== 'AbortError') console.error("Transcription failed:", error);
-    } finally {
-      setIsTurtleifying(false);
-    }
-  };
-
-  // Feature 2: Deep Summary
-  const handleSummarize = async () => {
-    if (isLoadingText || isLoadingImage || !activeChat || activeChat.messages.length < 2) return;
-    const userText = "Provide an academic summary of our progress.";
-    const newUserMsg = { role: 'user', type: 'text', content: userText };
-    const updatedMessages = [...activeChat.messages, newUserMsg];
-    
-    await saveChatToDb({ ...activeChat, messages: updatedMessages });
-    setIsLoadingText(true);
-    abortControllerRef.current = new AbortController();
-
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      const contents = getFormattedHistory();
-      contents.push({ role: 'user', parts: [{ text: "Provide a wise, concise academic summary of the knowledge we have shared so far. Speak as Bob, Head of Education for the UTN. Mention the intellectual progress of our nation. Begin with 'Let us review the foundation we have laid today...'" }] });
-
-      const payload = { contents, systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] } };
-      const result = await fetchWithRetry(url, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload),
-        signal: abortControllerRef.current.signal
-      });
-      const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "Insufficient data for a comprehensive summary.";
-      
-      await saveChatToDb({ 
-        ...activeChat, 
-        messages: [...updatedMessages, { role: 'model', type: 'text', content: responseText }] 
-      });
-    } catch (error) {
-      if (error.message === 'AbortError') {
-         await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "[Summary generation halted]" }] });
-      } else {
-         await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "Summary generation failed: " + error.message }] });
+      if (!resp.body) {
+        setStreaming(false);
+        return;
       }
-    } finally {
-      setIsLoadingText(false);
-    }
-  };
 
-  // Handle Image Generation
-  const handleSendImage = async () => {
-    if (!input.trim() || isLoadingText || isLoadingImage || !activeChat) return;
-    const userText = input.trim();
-    setInput('');
-    const newUserMsg = { role: 'user', type: 'text', content: `Generate a visual diagram of: ${userText}` };
-    const updatedMessages = [...activeChat.messages, newUserMsg];
-    
-    await saveChatToDb({ ...activeChat, messages: updatedMessages });
-    setIsLoadingImage(true);
-    abortControllerRef.current = new AbortController();
-    
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
-      const payload = { instances: { prompt: userText }, parameters: { sampleCount: 1 } };
-      const result = await fetchWithRetry(url, { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload),
-        signal: abortControllerRef.current.signal
-      });
-      
-      if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
-        const imageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
-        await saveChatToDb({ 
-          ...activeChat, 
-          messages: [...updatedMessages, { role: 'model', type: 'image', content: imageUrl }] 
-        });
-      } else {
-        throw new Error("Visual manifestation failed.");
-      }
-    } catch (error) {
-       if (error.message === 'AbortError') {
-          await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "[Diagram generation halted]" }] });
-       } else {
-          await saveChatToDb({ ...activeChat, messages: [...updatedMessages, { role: 'model', type: 'error', content: "Department imaging equipment is offline: " + error.message }] });
-       }
-    } finally {
-      setIsLoadingImage(false);
-    }
-  };
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let done = false;
 
-  const renderMessageContent = (content) => {
-    const parts = content.split(/(```[\s\S]*?```)/g);
-    return parts.map((part, index) => {
-      if (part.startsWith('```') && part.endsWith('```')) {
-        const codeContent = part.slice(3, -3);
-        const firstNewLine = codeContent.indexOf('\n');
-        let lang = 'code';
-        let code = codeContent;
-        if (firstNewLine !== -1) {
-          const potentialLang = codeContent.substring(0, firstNewLine).trim();
-          if (!potentialLang.includes(' ')) {
-             lang = potentialLang || 'code';
-             code = codeContent.substring(firstNewLine + 1);
+      while (!done) {
+        const { value, done: rDone } = await reader.read();
+        if (rDone) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") {
+            done = true;
+            break;
+          }
+          try {
+            const parsed = JSON.parse(json);
+            const content: string | undefined =
+              parsed.choices?.[0]?.delta?.content;
+            if (content) upsert(content);
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
           }
         }
-        return (
-          <div key={index} className="my-4 rounded-md overflow-hidden border border-yellow-500/30 shadow-lg bg-black">
-            <div className="bg-neutral-900 flex items-center px-4 py-2 text-xs text-yellow-400 font-mono border-b border-yellow-500/30">
-              <Code2 size={14} className="mr-2" /> {lang.toUpperCase()}
-            </div>
-            <pre className="p-4 text-neutral-300 text-sm overflow-x-auto font-mono"><code>{code}</code></pre>
-          </div>
-        );
       }
-      return <span key={index} className="whitespace-pre-wrap">{part}</span>;
-    });
+    } catch (err) {
+      console.error("Bob the Turtle error:", err);
+      toast({
+        title: "Connection lost",
+        description: "Could not reach Bob. Please try again.",
+        variant: "destructive",
+      });
+      setMessages((prev) => prev.filter((m) => m !== userMsg));
+    } finally {
+      setStreaming(false);
+    }
   };
 
-  if (!isDbReady) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-neutral-950 text-yellow-500 flex-col space-y-4">
-        <Loader2 size={48} className="animate-spin" />
-        <div className="font-serif tracking-widest text-sm uppercase">Accessing UTN Archives...</div>
-      </div>
-    );
-  }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
+  const clearHistory = () => {
+    setMessages([]);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+  };
 
   return (
-    <div className="flex h-screen bg-neutral-950 font-sans text-neutral-200 overflow-hidden selection:bg-yellow-500/30 selection:text-yellow-200">
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
-
-      {/* Sidebar - UTN Black & Yellow */}
-      <div className={`fixed md:static inset-y-0 left-0 z-30 w-72 bg-black border-r border-yellow-500/20 flex flex-col transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <div className="p-5 flex items-center justify-between border-b border-yellow-500/20 bg-neutral-950/50">
-          <div className="flex items-center space-x-3">
-            <BobLogo className="w-10 h-10" />
-            <div>
-              <div className="font-bold text-lg tracking-wide text-yellow-400 font-serif">Dept. of Education</div>
-              <div className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">United Turtle Nation</div>
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <header className="border-b border-primary/40 bg-card/60 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <Button asChild variant="ghost" size="icon" className="shrink-0">
+              <Link to="/" aria-label="Back to hub">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-primary/10 text-2xl">
+              🐢
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-lg uppercase tracking-wider text-primary sm:text-xl">
+                Bob the Turtle
+              </h1>
+              <p className="truncate text-xs text-muted-foreground">
+                Patient AI tutor for any subject
+              </p>
             </div>
           </div>
-          <button className="md:hidden p-1 text-yellow-500 hover:text-yellow-400" onClick={() => setIsSidebarOpen(false)}><X size={24} /></button>
+          {messages.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearHistory}
+              className="gap-1"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Clear</span>
+            </Button>
+          )}
         </div>
-        
-        <div className="p-4">
-          <button onClick={createNewChat} className="w-full flex items-center justify-center space-x-2 bg-yellow-500 hover:bg-yellow-400 text-black p-3 rounded-md transition-colors font-bold shadow-md shadow-yellow-500/10">
-            <Plus size={20} /><span>New Inquiry</span>
-          </button>
-        </div>
+      </header>
 
-        <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-4 custom-scrollbar">
-          <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3 px-2 mt-2">Academic Records</div>
-          {chats.map(chat => (
-            <div key={chat.id} onClick={() => switchChat(chat.id)} className={`group flex items-center justify-between p-3 rounded-md cursor-pointer transition-all ${activeChatId === chat.id ? 'bg-neutral-900 border-l-2 border-yellow-500' : 'hover:bg-neutral-900 border-l-2 border-transparent'}`}>
-              <div className="flex items-center space-x-3 overflow-hidden">
-                <MessageSquare size={16} className={activeChatId === chat.id ? 'text-yellow-400' : 'text-neutral-500'} />
-                <span className={`truncate text-sm ${activeChatId === chat.id ? 'text-yellow-50 font-medium' : 'text-neutral-400'}`}>{chat.title}</span>
-              </div>
-              <button onClick={(e) => deleteChat(e, chat.id)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-neutral-800 rounded text-neutral-400 hover:text-red-400 transition-all"><Trash2 size={14} /></button>
-            </div>
-          ))}
-        </div>
-        
-        {/* Footer info about Bert/UTN */}
-        <div className="p-4 border-t border-yellow-500/10 bg-neutral-950/30 text-xs text-neutral-500 flex items-center space-x-2">
-           <ShieldAlert size={14} className="text-yellow-600/50" />
-           <span>Defended by Cmdr. Bert, UTN Army</span>
-        </div>
-      </div>
-
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full relative bg-neutral-950">
-        
-        {/* Header */}
-        <header className="h-16 flex items-center justify-between px-4 border-b border-yellow-500/20 bg-neutral-950/80 backdrop-blur-md z-10">
-          <div className="flex items-center flex-1">
-            <button className="md:hidden p-2 mr-2 text-yellow-500 hover:bg-neutral-900 rounded-lg" onClick={() => setIsSidebarOpen(true)}><Menu size={24} /></button>
-            {isEditingTitle ? (
-              <div className="flex items-center flex-1 max-w-md">
-                <input
-                  autoFocus
-                  className="bg-black border border-yellow-500/50 rounded px-3 py-1 text-sm font-medium text-yellow-400 w-full outline-none focus:ring-1 focus:ring-yellow-500"
-                  value={tempTitle}
-                  onChange={(e) => setTempTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setIsEditingTitle(false); }}
-                  onBlur={saveTitle}
-                />
-                <button onClick={saveTitle} className="ml-2 p-1 text-yellow-500 hover:bg-neutral-900 rounded"><Check size={18}/></button>
+      {/* Chat area */}
+      <main className="flex flex-1 flex-col">
+        <ScrollArea ref={scrollRef} className="flex-1">
+          <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
+            {messages.length === 0 ? (
+              <div className="space-y-6 py-8 text-center">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 border-primary bg-primary/10 text-5xl">
+                  🐢
+                </div>
+                <div>
+                  <h2 className="font-display text-2xl uppercase tracking-wider text-primary">
+                    Slow and steady learning
+                  </h2>
+                  <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+                    Ask me anything — math, science, history, writing, code.
+                    I'll break it down shell-sized.
+                  </p>
+                </div>
+                <div className="mx-auto grid max-w-2xl gap-2 sm:grid-cols-2">
+                  {STARTERS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => send(s)}
+                      className="rounded-lg border border-primary/30 bg-card/40 px-4 py-3 text-left text-sm text-foreground/80 transition hover:border-primary hover:bg-primary/10 hover:text-foreground"
+                    >
+                      <BookOpen className="mb-1 inline h-3.5 w-3.5 text-primary" />{" "}
+                      {s}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
-              <div 
-                className="flex items-center group cursor-pointer hover:bg-neutral-900 px-3 py-1.5 rounded-md transition-colors"
-                onClick={startEditingTitle}
-              >
-                <h2 className="font-serif text-lg text-yellow-500 truncate max-w-[150px] md:max-w-md">{activeChat?.title || "Loading..."}</h2>
-                <Edit2 size={14} className="ml-3 text-neutral-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="space-y-4">
+                {messages.map((m, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex gap-3",
+                      m.role === "user" ? "justify-end" : "justify-start",
+                    )}
+                  >
+                    {m.role === "assistant" && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary bg-primary/10 text-base">
+                        🐢
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-lg px-4 py-2.5 text-sm",
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-primary/30 bg-card/60 text-foreground",
+                      )}
+                    >
+                      {m.role === "assistant" ? (
+                        <div className="prose prose-sm prose-invert max-w-none prose-headings:text-primary prose-a:text-primary prose-code:text-primary">
+                          <ReactMarkdown>{m.content || "…"}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{m.content}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {streaming && messages[messages.length - 1]?.role === "user" && (
+                  <div className="flex gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary bg-primary/10 text-base">
+                      🐢
+                    </div>
+                    <div className="rounded-lg border border-primary/30 bg-card/60 px-4 py-2.5">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-          
-          {/* AI Mode Selector */}
-          <div className="flex bg-black rounded-lg p-1 border border-yellow-500/30 shadow-inner">
-            <button
-              onClick={() => setAiMode('fast')}
-              className={`flex items-center px-3 py-1.5 text-xs font-bold rounded-md transition-all ${aiMode === 'fast' ? 'bg-yellow-500 text-black shadow-sm' : 'text-neutral-500 hover:text-yellow-400'}`}
-              title="Fast Mode"
-            >
-              <Zap size={14} className="mr-1.5" /> Fast
-            </button>
-            <button
-              onClick={() => setAiMode('thinking')}
-              className={`flex items-center px-3 py-1.5 text-xs font-bold rounded-md transition-all ${aiMode === 'thinking' ? 'bg-yellow-500 text-black shadow-sm' : 'text-neutral-500 hover:text-yellow-400'}`}
-              title="Thinking Mode"
-            >
-              <BrainCircuit size={14} className="mr-1.5" /> Thinking
-            </button>
-            <button
-              onClick={() => setAiMode('pro')}
-              className={`flex items-center px-3 py-1.5 text-xs font-bold rounded-md transition-all ${aiMode === 'pro' ? 'bg-yellow-500 text-black shadow-sm' : 'text-neutral-500 hover:text-yellow-400'}`}
-              title="Pro Mode"
-            >
-              <Gem size={14} className="mr-1.5" /> Pro
-            </button>
-          </div>
-        </header>
+        </ScrollArea>
 
-        {/* Messages List */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-8 custom-scrollbar">
-          {activeChat?.messages.map((msg, index) => (
-            <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
-              
-              {msg.role === 'model' && (
-                <div className="mr-4 mt-1 flex-shrink-0 flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-full bg-neutral-900 border border-yellow-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.1)]">
-                    <BobLogo className="w-8 h-8" />
-                  </div>
-                </div>
-              )}
-
-              <div className={`
-                max-w-[85%] md:max-w-[75%] px-6 py-4 shadow-lg
-                ${msg.role === 'user' 
-                  ? 'bg-yellow-500 text-black rounded-2xl rounded-tr-sm font-medium' 
-                  : msg.type === 'error' 
-                    ? 'bg-red-950/30 text-red-400 border border-red-500/30 rounded-2xl rounded-tl-sm' 
-                    : 'bg-neutral-900 border border-yellow-500/20 text-neutral-200 rounded-2xl rounded-tl-sm'
-                }
-              `}>
-                {msg.type === 'text' && (
-                  <div className={`prose prose-sm md:prose-base max-w-none leading-relaxed ${msg.role === 'user' ? 'prose-invert text-black' : 'prose-invert text-neutral-300'}`}>
-                    {msg.role === 'user' ? msg.content : renderMessageContent(msg.content)}
-                  </div>
-                )}
-                {msg.type === 'image' && (
-                  <div className="rounded-lg overflow-hidden bg-black ring-1 ring-yellow-500/20 mt-2">
-                    <img src={msg.content} alt="Department Diagram" className="max-w-full h-auto object-contain" />
-                  </div>
-                )}
-                {msg.type === 'error' && (
-                  <div className="flex items-start space-x-3">
-                    <AlertCircle size={20} className="flex-shrink-0 mt-0.5 text-red-500" />
-                    <span className="text-sm">{msg.content}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {/* Loading States */}
-          {(isLoadingText || isLoadingImage) && (
-            <div className="flex justify-start animate-pulse">
-              <div className="w-12 h-12 rounded-full bg-neutral-900 border border-yellow-500/30 flex items-center justify-center mr-4 shadow-sm flex-shrink-0">
-                <BobLogo className="w-8 h-8 opacity-50" />
-              </div>
-              <div className="bg-neutral-900 border border-yellow-500/20 rounded-2xl rounded-tl-sm px-6 py-4 shadow-sm flex items-center space-x-3 text-yellow-500 text-sm font-serif italic">
-                <Loader2 size={18} className="animate-spin" />
-                <span>{isLoadingText ? `Formulating academic response (${aiMode} mode)...` : 'Generating department diagram...'}</span>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 bg-neutral-950 border-t border-yellow-500/20 flex flex-col z-10">
-          
-          {/* Quick Actions */}
-          <div className="flex space-x-2 mb-3 overflow-x-auto pb-1 custom-scrollbar">
-             <button onClick={handleSummarize} disabled={isLoadingText || isLoadingImage || !activeChat || activeChat.messages.length < 2} className="flex items-center space-x-2 px-4 py-1.5 bg-neutral-900 text-yellow-500 hover:bg-neutral-800 rounded-full text-xs font-bold border border-yellow-500/30 transition-colors disabled:opacity-50 tracking-wide">
-               <BookOpen size={14} /><span>Review Progress</span>
-             </button>
-             {input.trim() && (
-                <button onClick={handleTurtleify} disabled={isTurtleifying || isLoadingText || isLoadingImage} className="flex items-center space-x-2 px-4 py-1.5 bg-neutral-900 text-yellow-500 hover:bg-neutral-800 rounded-full text-xs font-bold border border-yellow-500/30 transition-colors disabled:opacity-50 tracking-wide">
-                  {isTurtleifying ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}<span>Formalize Text</span>
-                </button>
-             )}
-          </div>
-
-          <div className="max-w-4xl mx-auto w-full relative flex items-end bg-neutral-900 rounded-xl border border-neutral-700 shadow-inner focus-within:border-yellow-500 transition-colors">
-            <textarea
-              className="flex-1 max-h-32 min-h-[56px] p-4 bg-transparent outline-none resize-none disabled:opacity-50 text-neutral-200 placeholder-neutral-600 font-sans"
-              placeholder={`Submit an inquiry to the Department of Education...`}
+        {/* Composer */}
+        <div className="border-t border-primary/40 bg-card/60 px-4 py-3 sm:px-6">
+          <div className="mx-auto flex max-w-4xl gap-2">
+            <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendText(); } }}
-              disabled={isLoadingText || isLoadingImage}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask Bob anything…"
               rows={1}
+              className="min-h-[44px] resize-none"
+              disabled={streaming}
             />
-            <div className="flex p-2 space-x-1">
-              {isLoadingText || isLoadingImage ? (
-                <button 
-                  onClick={stopGeneration} 
-                  className="p-2.5 bg-red-900/50 hover:bg-red-800 text-red-400 border border-red-500/50 rounded-lg transition-all shadow-md group relative" 
-                  title="Halt Generation"
-                >
-                  <StopCircle size={22} />
-                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-red-500/50 text-red-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Halt Inquiry</span>
-                </button>
+            <Button
+              onClick={() => send()}
+              disabled={!input.trim() || streaming}
+              size="icon"
+              className="h-11 w-11 shrink-0"
+              aria-label="Send"
+            >
+              {streaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <button onClick={handleSendImage} disabled={!input.trim()} className="p-2.5 text-neutral-400 hover:text-yellow-400 hover:bg-yellow-500/10 rounded-lg transition-colors disabled:opacity-30 group relative" title="Request a Diagram">
-                    <ImageIcon size={22} />
-                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Generate Diagram</span>
-                  </button>
-                  <button onClick={handleSendText} disabled={!input.trim()} className="p-2.5 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg transition-all disabled:opacity-30 shadow-md transform active:scale-95 group relative">
-                    <Send size={22} />
-                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-black border border-yellow-500/30 text-yellow-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">Submit Inquiry</span>
-                  </button>
-                </>
+                <Send className="h-4 w-4" />
               )}
-            </div>
-          </div>
-          <div className="text-center mt-3 text-[10px] uppercase tracking-widest text-neutral-600 font-bold">
-            United Turtle Nation • Dept. of Education • Powered by Gemini
+            </Button>
           </div>
         </div>
-      </div>
-      
-      {/* Basic Global Styles for Custom Scrollbar */}
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #eab308; }
-        
-        /* Thinking mode blockquote styling */
-        .prose blockquote {
-          border-left-color: #eab308;
-          background: rgba(234, 179, 8, 0.05);
-          padding: 10px 15px;
-          border-radius: 0 8px 8px 0;
-          font-style: normal;
-          color: #a3a3a3;
-        }
-      `}} />
+      </main>
     </div>
   );
-}
+};
+
+export default BobTurtleAI;
