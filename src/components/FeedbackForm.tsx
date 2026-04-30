@@ -147,7 +147,12 @@ const FeedbackForm = () => {
           maxLength={1000}
           required
         />
-        <Button type="submit" className="w-full" disabled={loading}>
+        {defcon === 3 && cooldownLeft > 0 && (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" /> DEFCON 3 cooldown: {Math.ceil(cooldownLeft / 60000)} min remaining
+          </p>
+        )}
+        <Button type="submit" className="w-full" disabled={loading || (defcon === 3 && cooldownLeft > 0)}>
           {loading ? "Sending..." : "Submit Feedback"}
         </Button>
       </form>
