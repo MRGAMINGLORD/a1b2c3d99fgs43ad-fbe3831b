@@ -39,9 +39,38 @@ const FeedbackForm = () => {
   const [message, setMessage] = useState("");
   const [category, setCategory] = useState("website");
   const [loading, setLoading] = useState(false);
+  const { level: defcon } = useDefcon();
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+
+  useEffect(() => {
+    if (defcon !== 3) {
+      setCooldownLeft(0);
+      return;
+    }
+    const tick = () => {
+      try {
+        const last = parseInt(localStorage.getItem(THROTTLE_KEY) || "0", 10);
+        setCooldownLeft(Math.max(0, last + THROTTLE_MS - Date.now()));
+      } catch {
+        setCooldownLeft(0);
+      }
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [defcon]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (defcon === 3 && cooldownLeft > 0) {
+      toast({
+        title: "Slow down",
+        description: `DEFCON 3: please wait ${Math.ceil(cooldownLeft / 60000)} more minute(s) before sending feedback again.`,
+        variant: "destructive",
+      });
+      return;
+    }
 
     const parsed = feedbackSchema.safeParse({ name, message, category });
     if (!parsed.success) {
@@ -59,7 +88,6 @@ const FeedbackForm = () => {
     });
     setLoading(false);
 
-    // Edge function returns 429 / 400 / 500 with an error payload
     const errMsg =
       (error as { message?: string } | null)?.message ||
       (data as { error?: string } | null)?.error;
@@ -73,6 +101,10 @@ const FeedbackForm = () => {
       return;
     }
 
+    try {
+      localStorage.setItem(THROTTLE_KEY, String(Date.now()));
+    } catch {}
+    if (defcon === 3) setCooldownLeft(THROTTLE_MS);
     toast({ title: "Thanks!", description: "Your feedback has been submitted." });
     setName("");
     setMessage("");
