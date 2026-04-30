@@ -13,7 +13,12 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Clock } from "lucide-react";
+import { useDefcon } from "@/hooks/useDefcon";
+import { useEffect } from "react";
+
+const THROTTLE_KEY = "apocalypse-waffle:feedback-last-sent";
+const THROTTLE_MS = 10 * 60 * 1000; // 10 minutes
 
 const CATEGORIES = [
   { value: "website", label: "The website" },
