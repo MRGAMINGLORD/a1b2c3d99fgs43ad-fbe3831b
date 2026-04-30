@@ -34,9 +34,17 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, mode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Mode → Gemini model mapping.
+    const MODELS: Record<string, string> = {
+      fast: "google/gemini-2.5-flash-lite",
+      thinking: "google/gemini-3-flash-preview",
+      pro: "google/gemini-2.5-pro",
+    };
+    const model = MODELS[mode as string] ?? MODELS.thinking;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -45,7 +53,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...(Array.isArray(messages) ? messages : []),
