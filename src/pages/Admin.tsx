@@ -10,6 +10,7 @@ import FeaturedGamesAdmin from "@/components/FeaturedGamesAdmin";
 import GameProfilesAdmin from "@/components/GameProfilesAdmin";
 import CustomGamesAdmin from "@/components/CustomGamesAdmin";
 import PatchNotesAdmin from "@/components/PatchNotesAdmin";
+import DefconAdmin from "@/components/DefconAdmin";
 
 interface Feedback {
   id: string;
@@ -148,6 +149,9 @@ const Admin = () => {
           <h1 className="font-display text-3xl text-primary">Admin Dashboard</h1>
           <Button variant="outline" onClick={handleLogout}>Logout</Button>
         </div>
+
+        {/* DEFCON system */}
+        <DefconAdmin />
 
         {/* Featured Games */}
         <FeaturedGamesAdmin />
