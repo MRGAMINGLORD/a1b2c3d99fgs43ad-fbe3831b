@@ -6,14 +6,24 @@
 const TEST_PASSWORD = "TESTER";
 const EDIT_CODE_PASSWORD = "LATTEISCUTE";
 
+// Allowed tester usernames (case-sensitive — exactly as written).
+export const ALLOWED_TEST_USERNAMES = [
+  "THEADMIN",
+  "TURTLES RULE!!!",
+  "67'er",
+] as const;
+
+export const isAllowedTestUsername = (input: string): boolean =>
+  (ALLOWED_TEST_USERNAMES as readonly string[]).includes(input);
+
 const TEST_KEY = "apocalypse-waffle:test-unlocked";
 const EDIT_KEY = "apocalypse-waffle:edit-unlocked";
 
 export const isTestUnlocked = (): boolean => {
   try { return sessionStorage.getItem(TEST_KEY) === "1"; } catch { return false; }
 };
-export const unlockTest = (input: string): boolean => {
-  if (input === TEST_PASSWORD) {
+export const unlockTest = (username: string, password: string): boolean => {
+  if (password === TEST_PASSWORD && isAllowedTestUsername(username)) {
     try { sessionStorage.setItem(TEST_KEY, "1"); } catch {}
     return true;
   }

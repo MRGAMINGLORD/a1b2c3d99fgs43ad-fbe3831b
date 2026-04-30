@@ -48,15 +48,18 @@ const TestGate = ({
 }) => {
   const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const tryUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlockTest(pw)) {
-      setError(false);
-      onUnlock(username.trim());
+    const name = username.trim();
+    if (unlockTest(name, pw)) {
+      setError(null);
+      onUnlock(name);
     } else {
-      setError(true);
+      setError(
+        "Wrong username or password. Username is case-sensitive and must be one of the approved tester names.",
+      );
       setPw("");
     }
   };
@@ -74,18 +77,22 @@ const TestGate = ({
           </h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Enter the test password to access the staging environment.
+          Enter an approved tester username <span className="text-primary">and</span> the
+          test password to access the staging environment.
         </p>
         <div>
           <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
-            Username <span className="text-muted-foreground/60">(optional)</span>
+            Username <span className="text-destructive">(case-sensitive)</span>
           </label>
           <Input
-            placeholder="Pick a name for tester chat"
+            placeholder="Approved tester username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             maxLength={40}
             autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
           />
         </div>
         <div>
@@ -100,7 +107,7 @@ const TestGate = ({
             className={error ? "border-destructive" : ""}
           />
         </div>
-        {error && <p className="text-xs text-destructive">Wrong password.</p>}
+        {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
           <Button type="submit" className="flex-1">
             Unlock
