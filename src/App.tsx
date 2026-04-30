@@ -13,6 +13,7 @@ import BobTurtleAI from "./pages/BobTurtleAI";
 import NotFound from "./pages/NotFound";
 import { SirWafflingtonChat } from "./components/SirWafflingtonChat";
 import { SirWafflingtonProvider } from "./components/SirWafflingtonContext";
+import { DefconGate } from "./components/DefconGate";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SirWafflingtonProvider>
+         <DefconGate>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -46,6 +48,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <ConciergeGate />
+         </DefconGate>
         </SirWafflingtonProvider>
       </BrowserRouter>
     </TooltipProvider>
