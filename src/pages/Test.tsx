@@ -33,6 +33,7 @@ import GameCard from "@/components/GameCard";
 import TesterChat from "@/components/TesterChat";
 import TestSyncPanel from "@/components/TestSyncPanel";
 import { GAMES, type GameMeta } from "@/lib/games";
+import { useDefcon } from "@/hooks/useDefcon";
 import heroBg from "@/assets/hero-bg.png";
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
@@ -603,6 +604,26 @@ const Test = () => {
   const [editingGame, setEditingGame] = useState<TestGameRow | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [manageMode, setManageMode] = useState(false);
+  const { level: defcon } = useDefcon();
+
+  if (defcon <= 2) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-md rounded-lg border-2 border-destructive bg-card p-8 text-center">
+          <Lock className="mx-auto mb-4 h-10 w-10 text-destructive" />
+          <h1 className="font-display text-2xl uppercase tracking-wider text-destructive">
+            Tester area closed
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            DEFCON {defcon} is in effect. The testing bay has been sealed by command.
+          </p>
+          <Button asChild variant="outline" className="mt-5">
+            <Link to="/">Back to hub</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!unlocked)
     return (
@@ -613,6 +634,7 @@ const Test = () => {
         }}
       />
     );
+
 
   const requestEdit = (g: TestGameRow) => {
     setEditingGame(g);

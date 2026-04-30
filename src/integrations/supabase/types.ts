@@ -122,6 +122,21 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_rate_limits: {
+        Row: {
+          ip: string
+          last_submitted_at: string
+        }
+        Insert: {
+          ip: string
+          last_submitted_at?: string
+        }
+        Update: {
+          ip?: string
+          last_submitted_at?: string
+        }
+        Relationships: []
+      }
       game_overrides: {
         Row: {
           category: string | null
@@ -185,6 +200,24 @@ export type Database = {
           title?: string
           updated_at?: string
           version?: string | null
+        }
+        Relationships: []
+      }
+      site_settings: {
+        Row: {
+          defcon_level: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          defcon_level?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          defcon_level?: number
+          id?: string
+          updated_at?: string
         }
         Relationships: []
       }
