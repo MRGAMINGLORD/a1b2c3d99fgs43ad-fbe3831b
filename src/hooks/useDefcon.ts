@@ -29,7 +29,9 @@ export const unlockDefconGate = (input: string): boolean => {
   if (input === DEFCON_PASSWORD) {
     try {
       sessionStorage.setItem(GATE_KEY, "1");
-    } catch {}
+    } catch {
+      return true;
+    }
     return true;
   }
   return false;
