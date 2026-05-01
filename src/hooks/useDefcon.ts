@@ -54,19 +54,18 @@ export const useDefcon = () => {
     };
     load();
 
-    const channel = supabase
-      .channel("site-settings-defcon")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "site_settings" },
-        (payload) => {
-          const row = payload.new as { defcon_level?: number } | null;
-          if (row && typeof row.defcon_level === "number") {
-            setLevel(row.defcon_level as DefconLevel);
-          }
-        },
-      )
-      .subscribe();
+    const channel = supabase.channel("site-settings-defcon");
+    channel.on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "site_settings" },
+      (payload) => {
+        const row = payload.new as { defcon_level?: number } | null;
+        if (row && typeof row.defcon_level === "number") {
+          setLevel(row.defcon_level as DefconLevel);
+        }
+      },
+    );
+    channel.subscribe();
 
     return () => {
       mounted = false;
