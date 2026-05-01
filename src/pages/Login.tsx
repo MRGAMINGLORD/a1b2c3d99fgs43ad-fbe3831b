@@ -4,11 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { useConfusingInput } from "@/hooks/useConfusingInput";
 
 const Login = () => {
-  const emailInput = useConfusingInput();
-  const passwordInput = useConfusingInput();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const navigate = useNavigate();
@@ -16,9 +15,6 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    const email = emailInput.getRealValue();
-    const password = passwordInput.getRealValue();
 
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({
@@ -36,6 +32,7 @@ const Login = () => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
       if (error) {
+        // Surface the specific reason so admins know exactly what's wrong.
         const code = (error as { code?: string }).code;
         if (code === "email_not_confirmed" || error.message.toLowerCase().includes("email not confirmed")) {
           toast({
@@ -56,32 +53,25 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-8">
         <h1 className="text-center font-display text-2xl text-primary">
-          {isSignUp ? "Create Account" : "Command Center"}
+          {isSignUp ? "Create Account" : "Admin Login"}
         </h1>
-        <div>
-          <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
-            Clearance ID
-          </label>
-          <Input
-            placeholder=""
-            value={emailInput.display}
-            onChange={emailInput.handleChange}
-            autoComplete="off"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
-            Access Code
-          </label>
-          <Input
-            placeholder=""
-            value={passwordInput.display}
-            onChange={passwordInput.handleChange}
-            autoComplete="off"
-          />
-        </div>
+        <Input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        <Input
+          type="password"
+          placeholder="Password (min 6 characters)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          minLength={6}
+          required
+        />
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Please wait..." : isSignUp ? "Register" : "Authenticate"}
+          {loading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}
         </Button>
         <Button
           type="button"
@@ -89,10 +79,10 @@ const Login = () => {
           className="w-full"
           onClick={() => setIsSignUp(!isSignUp)}
         >
-          {isSignUp ? "Already registered? Authenticate" : "Need clearance? Register"}
+          {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up"}
         </Button>
         <Button type="button" variant="ghost" className="w-full" onClick={() => navigate("/")}>
-          Back to Hub
+          Back to Home
         </Button>
       </form>
     </div>
