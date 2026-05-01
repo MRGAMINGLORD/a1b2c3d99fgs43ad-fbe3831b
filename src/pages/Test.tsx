@@ -34,6 +34,7 @@ import TesterChat from "@/components/TesterChat";
 import TestSyncPanel from "@/components/TestSyncPanel";
 import { GAMES, type GameMeta } from "@/lib/games";
 import { useDefcon } from "@/hooks/useDefcon";
+import { useConfusingInput } from "@/hooks/useConfusingInput";
 import heroBg from "@/assets/hero-bg.png";
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
@@ -47,21 +48,20 @@ const TestGate = ({
 }: {
   onUnlock: (username: string) => void;
 }) => {
-  const [username, setUsername] = useState("");
-  const [pw, setPw] = useState("");
+  const usernameInput = useConfusingInput();
+  const pwInput = useConfusingInput();
   const [error, setError] = useState<string | null>(null);
 
   const tryUnlock = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = username.trim();
-    if (unlockTest(name, pw)) {
+    const name = usernameInput.getRealValue().trim();
+    const pass = pwInput.getRealValue();
+    if (unlockTest(name, pass)) {
       setError(null);
       onUnlock(name);
     } else {
-      setError(
-        "Wrong username or password. Username is case-sensitive and must be one of the approved tester names.",
-      );
-      setPw("");
+      setError("Access denied.");
+      pwInput.reset();
     }
   };
 
@@ -74,22 +74,21 @@ const TestGate = ({
         <div className="flex items-center gap-2">
           <Lock className="h-5 w-5 text-primary" />
           <h1 className="font-display text-xl uppercase tracking-wider text-primary">
-            Test Mode Locked
+            Authorized Access Only
           </h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Enter an approved tester username <span className="text-primary">and</span> the
-          test password to access the staging environment.
+          If you know, you know.
         </p>
         <div>
           <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
-            Username <span className="text-destructive">(case-sensitive)</span>
+            Field A
           </label>
           <Input
-            placeholder="Approved tester username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            maxLength={40}
+            placeholder=""
+            value={usernameInput.display}
+            onChange={usernameInput.handleChange}
+            maxLength={120}
             autoComplete="off"
             autoCapitalize="off"
             autoCorrect="off"
@@ -98,20 +97,21 @@ const TestGate = ({
         </div>
         <div>
           <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
-            Password
+            Field B
           </label>
           <Input
-            type="password"
-            placeholder="Password"
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
+            placeholder=""
+            value={pwInput.display}
+            onChange={pwInput.handleChange}
+            maxLength={120}
+            autoComplete="off"
             className={error ? "border-destructive" : ""}
           />
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <div className="flex gap-2">
           <Button type="submit" className="flex-1">
-            Unlock
+            Enter
           </Button>
           <Button type="button" variant="outline" asChild>
             <Link to="/">Back</Link>
