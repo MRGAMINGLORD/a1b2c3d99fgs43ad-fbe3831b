@@ -43,7 +43,7 @@ const FeedbackForm = () => {
   const [cooldownLeft, setCooldownLeft] = useState(0);
 
   useEffect(() => {
-    if (defcon !== 3) {
+    if (defcon > 3) {
       setCooldownLeft(0);
       return;
     }
@@ -63,7 +63,7 @@ const FeedbackForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (defcon === 3 && cooldownLeft > 0) {
+    if (defcon <= 3 && cooldownLeft > 0) {
       toast({
         title: "Slow down",
         description: `DEFCON 3: please wait ${Math.ceil(cooldownLeft / 60000)} more minute(s) before sending feedback again.`,
@@ -104,7 +104,7 @@ const FeedbackForm = () => {
     try {
       localStorage.setItem(THROTTLE_KEY, String(Date.now()));
     } catch {}
-    if (defcon === 3) setCooldownLeft(THROTTLE_MS);
+    if (defcon <= 3) setCooldownLeft(THROTTLE_MS);
     toast({ title: "Thanks!", description: "Your feedback has been submitted." });
     setName("");
     setMessage("");
@@ -147,12 +147,12 @@ const FeedbackForm = () => {
           maxLength={1000}
           required
         />
-        {defcon === 3 && cooldownLeft > 0 && (
+        {defcon <= 3 && cooldownLeft > 0 && (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" /> DEFCON 3 cooldown: {Math.ceil(cooldownLeft / 60000)} min remaining
+            <Clock className="h-3 w-3" /> DEFCON {defcon} cooldown: {Math.ceil(cooldownLeft / 60000)} min remaining
           </p>
         )}
-        <Button type="submit" className="w-full" disabled={loading || (defcon === 3 && cooldownLeft > 0)}>
+        <Button type="submit" className="w-full" disabled={loading || (defcon <= 3 && cooldownLeft > 0)}>
           {loading ? "Sending..." : "Submit Feedback"}
         </Button>
       </form>
