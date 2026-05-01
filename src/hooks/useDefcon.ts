@@ -8,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 export type DefconLevel = 0 | 1 | 2 | 3 | 4;
 
 export const DEFCON_LABELS: Record<DefconLevel, string> = {
-  0: "0 — Lockdown (admin only)",
-  1: "1 — Password gate (WAFFLE)",
-  2: "2 — Tester area closed",
-  3: "3 — Feedback throttled",
+  0: "0 — Full lockdown (admin only)",
+  1: "1 — Password gate + testing closed + feedback throttled",
+  2: "2 — Testing closed + feedback throttled",
+  3: "3 — Feedback throttled (10 min)",
   4: "4 — All systems normal",
 };
 
