@@ -41,6 +41,10 @@ export const useDefcon = () => {
 
   useEffect(() => {
     let mounted = true;
+    const channelId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const load = async () => {
       const { data } = await supabase
         .from("site_settings" as never)
@@ -54,7 +58,7 @@ export const useDefcon = () => {
     };
     load();
 
-    const channel = supabase.channel("site-settings-defcon");
+    const channel = supabase.channel(`site-settings-defcon-${channelId}`);
     channel.on(
       "postgres_changes",
       { event: "*", schema: "public", table: "site_settings" },
