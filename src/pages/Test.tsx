@@ -34,6 +34,7 @@ import TesterChat from "@/components/TesterChat";
 import TestSyncPanel from "@/components/TestSyncPanel";
 import { GAMES, type GameMeta } from "@/lib/games";
 import { useDefcon } from "@/hooks/useDefcon";
+import { useConfusingInput } from "@/hooks/useConfusingInput";
 import heroBg from "@/assets/hero-bg.png";
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
