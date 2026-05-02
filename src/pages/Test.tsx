@@ -3,6 +3,7 @@ import { Code2, Send, Trash2, Lock, Loader2, Plus, Eye, EyeOff, Wrench, RefreshC
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/ui/secret-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -85,26 +86,21 @@ const TestGate = ({
           <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
             Username <span className="text-destructive">(case-sensitive)</span>
           </label>
-          <Input
+          <SecretInput
             placeholder="Approved tester username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={setUsername}
             maxLength={40}
-            autoComplete="off"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
           />
         </div>
         <div>
           <label className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground">
             Password
           </label>
-          <Input
-            type="password"
+          <SecretInput
             placeholder="Password"
             value={pw}
-            onChange={(e) => setPw(e.target.value)}
+            onChange={setPw}
             className={error ? "border-destructive" : ""}
           />
         </div>
@@ -156,11 +152,17 @@ const EditPasswordDialog = ({
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <Input
-            type="password"
+            type="hidden"
+            tabIndex={-1}
+            aria-hidden
+            value=""
+            onChange={() => {}}
+          />
+          <SecretInput
             autoFocus
             placeholder="Password"
             value={pw}
-            onChange={(e) => setPw(e.target.value)}
+            onChange={setPw}
             className={err ? "border-destructive" : ""}
           />
           {err && <p className="text-xs text-destructive">Wrong password.</p>}
