@@ -151,13 +151,6 @@ const EditPasswordDialog = ({
           <DialogTitle>Edit code — password required</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <Input
-            type="hidden"
-            tabIndex={-1}
-            aria-hidden
-            value=""
-            onChange={() => {}}
-          />
           <SecretInput
             autoFocus
             placeholder="Password"

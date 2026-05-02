@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/ui/secret-input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -257,10 +258,10 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
         </div>
 
         <form onSubmit={send} className="space-y-2">
-          <Input
+          <SecretInput
             placeholder="Username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={setUsername}
             maxLength={40}
             aria-label="Tester username"
           />
@@ -365,12 +366,11 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
             }}
             className="space-y-3"
           >
-            <Input
-              type="password"
+            <SecretInput
               autoFocus
               placeholder="Password"
               value={clearPw}
-              onChange={(e) => setClearPw(e.target.value)}
+              onChange={setClearPw}
               className={clearPwErr ? "border-destructive" : ""}
             />
             {clearPwErr && (
