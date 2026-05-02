@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/ui/secret-input";
 import { toast } from "@/hooks/use-toast";
 
 const Login = () => {
@@ -62,13 +63,10 @@ const Login = () => {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <Input
-          type="password"
+        <SecretInput
           placeholder="Password (min 6 characters)"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          minLength={6}
-          required
+          onChange={setPassword}
         />
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Please wait..." : isSignUp ? "Sign Up" : "Sign In"}

@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Loader2, Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/ui/secret-input";
 import { useDefcon, isDefconGateUnlocked, unlockDefconGate, DEFCON_LABELS } from "@/hooks/useDefcon";
 
 const ADMIN_ALLOWED_PREFIXES = ["/admin", "/login"];
@@ -72,9 +72,9 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
           <p className="mt-2 text-center text-xs text-muted-foreground">
             Restricted access. Enter the bunker passphrase to continue.
           </p>
-          <Input
+          <SecretInput
             value={pwInput}
-            onChange={(e) => setPwInput(e.target.value)}
+            onChange={setPwInput}
             placeholder="Passphrase"
             className="mt-5"
             autoFocus

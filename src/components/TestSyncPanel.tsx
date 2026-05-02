@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SecretInput } from "@/components/ui/secret-input";
 import {
   Dialog,
   DialogContent,
@@ -258,12 +259,11 @@ const TestSyncPanel = ({ onSynced }: Props) => {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={submitPw} className="space-y-3">
-            <Input
-              type="password"
+            <SecretInput
               autoFocus
               placeholder="Password"
               value={pw}
-              onChange={(e) => setPw(e.target.value)}
+              onChange={setPw}
               className={pwErr ? "border-destructive" : ""}
             />
             {pwErr && <p className="text-xs text-destructive">Wrong password.</p>}
