@@ -239,7 +239,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
       e.preventDefault();
       if (lockedOut) return;
       const result = unlockDefconGate(pwInput);
-      if (result.ok) {
+      if (result.ok === true) {
         setErr(null);
         setDoorState("opening");
         window.setTimeout(() => setUnlocked(true), 950);
