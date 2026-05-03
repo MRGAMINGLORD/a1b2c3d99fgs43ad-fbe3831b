@@ -242,19 +242,18 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
       if (result.ok) {
         setErr(null);
         setDoorState("opening");
-        // Allow door animation to play before swapping in the app.
         window.setTimeout(() => setUnlocked(true), 950);
-      } else {
-        setDoorState("shake");
-        window.setTimeout(() => setDoorState("closed"), 500);
-        if (result.lockedOut) {
-          setLockoutUntil(result.lockoutUntil);
-          setErr(`Too many failed attempts. Locked out for 24 hours.`);
-        } else {
-          setErr(`Incorrect passphrase. ${result.remaining} attempt${result.remaining === 1 ? "" : "s"} remaining.`);
-        }
-        setPwInput("");
+        return;
       }
+      setDoorState("shake");
+      window.setTimeout(() => setDoorState("closed"), 500);
+      if (result.lockedOut) {
+        setLockoutUntil(result.lockoutUntil);
+        setErr(`Too many failed attempts. Locked out for 24 hours.`);
+      } else {
+        setErr(`Incorrect passphrase. ${result.remaining} attempt${result.remaining === 1 ? "" : "s"} remaining.`);
+      }
+      setPwInput("");
     };
 
     return (
