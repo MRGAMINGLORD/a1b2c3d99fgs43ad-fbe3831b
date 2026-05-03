@@ -100,4 +100,35 @@
     -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
             mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
   }
+
+  /* Blast door animations */
+  @keyframes door-open-left {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-110%); }
+  }
+  @keyframes door-open-right {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(110%); }
+  }
+  @keyframes door-shake {
+    0%, 100% { transform: translateX(0); }
+    20%      { transform: translateX(-6px); }
+    40%      { transform: translateX(6px); }
+    60%      { transform: translateX(-4px); }
+    80%      { transform: translateX(4px); }
+  }
+  @keyframes vault-spin-fast {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(720deg); }
+  }
+  @keyframes flash-clear {
+    0%, 100% { opacity: 0; }
+    50%      { opacity: 0.6; }
+  }
+
+  .animate-door-open-left  { animation: door-open-left  0.9s cubic-bezier(0.6, 0, 0.4, 1) forwards; }
+  .animate-door-open-right { animation: door-open-right 0.9s cubic-bezier(0.6, 0, 0.4, 1) forwards; }
+  .animate-door-shake      { animation: door-shake      0.45s ease-in-out; }
+  .animate-vault-spin-fast { animation: vault-spin-fast 0.9s ease-out forwards; }
+  .animate-flash-clear     { animation: flash-clear     0.7s ease-out forwards; }
 }

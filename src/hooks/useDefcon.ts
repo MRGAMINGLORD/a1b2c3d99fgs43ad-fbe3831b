@@ -17,6 +17,10 @@ export const DEFCON_LABELS: Record<DefconLevel, string> = {
 
 const DEFCON_PASSWORD = "WAFFLE";
 const GATE_KEY = "apocalypse-waffle:defcon1-unlocked";
+const ATTEMPTS_KEY = "apocalypse-waffle:defcon1-attempts";
+const LOCKOUT_KEY = "apocalypse-waffle:defcon1-lockout-until";
+const MAX_ATTEMPTS = 3;
+const LOCKOUT_MS = 24 * 60 * 60 * 1000; // 1 day
 
 export const isDefconGateUnlocked = (): boolean => {
   try {
@@ -25,16 +29,66 @@ export const isDefconGateUnlocked = (): boolean => {
     return false;
   }
 };
-export const unlockDefconGate = (input: string): boolean => {
+
+export const getDefconLockoutUntil = (): number => {
+  try {
+    const v = Number(localStorage.getItem(LOCKOUT_KEY) ?? "0");
+    return Number.isFinite(v) ? v : 0;
+  } catch {
+    return 0;
+  }
+};
+export const isDefconLockedOut = (): boolean => getDefconLockoutUntil() > Date.now();
+export const getDefconAttempts = (): number => {
+  try {
+    return Number(localStorage.getItem(ATTEMPTS_KEY) ?? "0") || 0;
+  } catch {
+    return 0;
+  }
+};
+export const remainingDefconAttempts = (): number =>
+  Math.max(0, 3 - getDefconAttempts());
+
+export type UnlockResult =
+  | { ok: true }
+  | { ok: false; lockedOut: boolean; remaining: number; lockoutUntil: number };
+
+export const unlockDefconGate = (input: string): UnlockResult => {
+  if (isDefconLockedOut()) {
+    return {
+      ok: false,
+      lockedOut: true,
+      remaining: 0,
+      lockoutUntil: getDefconLockoutUntil(),
+    };
+  }
   if (input === DEFCON_PASSWORD) {
     try {
       sessionStorage.setItem(GATE_KEY, "1");
+      localStorage.removeItem(ATTEMPTS_KEY);
+      localStorage.removeItem(LOCKOUT_KEY);
     } catch {
-      return true;
+      /* ignore */
     }
-    return true;
+    return { ok: true };
   }
-  return false;
+  const attempts = getDefconAttempts() + 1;
+  let lockoutUntil = 0;
+  try {
+    localStorage.setItem(ATTEMPTS_KEY, String(attempts));
+    if (attempts >= MAX_ATTEMPTS) {
+      lockoutUntil = Date.now() + LOCKOUT_MS;
+      localStorage.setItem(LOCKOUT_KEY, String(lockoutUntil));
+    }
+  } catch {
+    /* ignore */
+  }
+  return {
+    ok: false,
+    lockedOut: attempts >= MAX_ATTEMPTS,
+    remaining: Math.max(0, MAX_ATTEMPTS - attempts),
+    lockoutUntil,
+  };
 };
 
 export const useDefcon = () => {

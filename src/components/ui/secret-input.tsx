@@ -19,19 +19,19 @@ export interface SecretInputProps
 const randDots = () => Math.floor(Math.random() * 3); // 0, 1, or 2
 
 export const SecretInput = React.forwardRef<HTMLInputElement, SecretInputProps>(
-  ({ value, onChange, className, placeholder, onKeyDown, ...props }, ref) => {
-    // dots[i] = number of dots rendered for character i of `value`
+  ({ value, onChange, className, placeholder, onKeyDown, disabled, ...props }, ref) => {
+    const innerRef = React.useRef<HTMLInputElement | null>(null);
+    React.useImperativeHandle(ref, () => innerRef.current as HTMLInputElement);
+
     const [dots, setDots] = React.useState<number[]>(() =>
       Array.from({ length: value.length }, () => 1),
     );
 
-    // Keep dots array length in sync if `value` is reset externally (e.g. cleared on submit).
     React.useEffect(() => {
       setDots((prev) => {
         if (prev.length === value.length) return prev;
         if (value.length === 0) return [];
         if (value.length < prev.length) return prev.slice(0, value.length);
-        // External growth (rare) — pad with 1 dot each.
         return [...prev, ...Array.from({ length: value.length - prev.length }, () => 1)];
       });
     }, [value.length]);
@@ -39,34 +39,22 @@ export const SecretInput = React.forwardRef<HTMLInputElement, SecretInputProps>(
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       onKeyDown?.(e);
       if (e.defaultPrevented) return;
-
-      // Allow tab / arrows / modifiers to pass through.
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-      if (e.key === "Backspace") {
+      if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
         if (value.length === 0) return;
         onChange(value.slice(0, -1));
         setDots((prev) => prev.slice(0, -1));
         return;
       }
-      if (e.key === "Delete") {
-        e.preventDefault();
-        if (value.length === 0) return;
-        onChange(value.slice(0, -1));
-        setDots((prev) => prev.slice(0, -1));
-        return;
-      }
-      // Single printable character.
       if (e.key.length === 1) {
         e.preventDefault();
         onChange(value + e.key);
         setDots((prev) => [...prev, randDots()]);
       }
-      // Any other key (Enter, Shift, etc.) falls through.
     };
 
-    // Block paste / drop / cut / native input so length never leaks.
     const swallow = (e: React.SyntheticEvent) => {
       e.preventDefault();
     };
@@ -74,15 +62,21 @@ export const SecretInput = React.forwardRef<HTMLInputElement, SecretInputProps>(
     const totalDots = dots.reduce((a, b) => a + b, 0);
 
     return (
-      <div className={cn("relative", className)}>
+      <div
+        className={cn("relative cursor-text", className)}
+        onMouseDown={(e) => {
+          // Make the entire visible box click-to-focus, including the dot overlay.
+          if (e.target !== innerRef.current) {
+            e.preventDefault();
+            innerRef.current?.focus();
+          }
+        }}
+      >
         <input
-          ref={ref}
-          // Use text type but render nothing visible; we draw our own dots.
+          ref={innerRef}
           type="text"
           value=""
-          onChange={() => {
-            /* controlled by keydown */
-          }}
+          onChange={() => {}}
           onKeyDown={handleKeyDown}
           onPaste={swallow}
           onCut={swallow}
@@ -91,13 +85,14 @@ export const SecretInput = React.forwardRef<HTMLInputElement, SecretInputProps>(
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
-          className="absolute inset-0 h-full w-full cursor-text rounded-md bg-transparent px-3 py-2 text-transparent caret-transparent outline-none"
+          disabled={disabled}
+          className="absolute inset-0 z-10 h-full w-full cursor-text rounded-md bg-transparent px-3 py-2 text-transparent caret-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label={placeholder}
           {...props}
         />
         <div
           className={cn(
-            "pointer-events-none flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background md:text-sm",
+            "pointer-events-none flex h-11 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background md:text-sm",
             "tracking-[0.25em]",
           )}
         >
