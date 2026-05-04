@@ -31,7 +31,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/turtle-trade-co",
     category: "tycoon",
-    credits: "Design & code: Apocalypse Waffle team",
+    credits: "BY Impossible Games",
   },
   {
     id: "waffle-works",
@@ -39,9 +39,9 @@ export const GAMES: GameMeta[] = [
     description:
       "A cookie clicker-style idle game. Keep the batter flowing and the iron hot!",
     cover: coverWaffleWorks,
-    available: false,
+    available: true,
     category: "tycoon",
-    credits: "",
+    credits: "By Impossible Games",
   },
   {
     id: "turtle-lm",
@@ -72,7 +72,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/defense-of-belgium",
     category: "other",
-    credits: "Design & code: Apocalypse Waffle team",
+    credits: "By Graham, A WW2 historian",
   },
   {
     id: "bob-turtle-ai",
