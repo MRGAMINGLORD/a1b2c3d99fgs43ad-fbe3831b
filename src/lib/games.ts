@@ -39,8 +39,7 @@ export const GAMES: GameMeta[] = [
     description:
       "A cookie clicker-style idle game. Keep the batter flowing and the iron hot!",
     cover: coverWaffleWorks,
-    available: true,
-    playUrl: "/play/waffle-works",
+    available: false,
     category: "tycoon",
     credits: "",
   },
@@ -49,9 +48,8 @@ export const GAMES: GameMeta[] = [
     title: "Turtle LM",
     description:
       "A turtle-flavored language model playground for learning. Slow, steady, and surprisingly clever.",
-    cover: coverBobTurtleAI,
-    available: true,
-    playUrl: "/education/turtle-lm",
+    cover: coverTurtleLM,
+    available: false,
     category: "education",
     credits: "Design: Apocalypse Waffle team",
   },
