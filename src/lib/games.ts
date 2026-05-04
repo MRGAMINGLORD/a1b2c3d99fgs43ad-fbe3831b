@@ -6,7 +6,6 @@ import coverWaffleWorks from "@/assets/cover-waffle-works.jpg";
 import coverWaffleCraft from "@/assets/cover-waffle-craft.jpg";
 import coverDefenseOfBelgium from "@/assets/cover-defense-of-belgium.jpg";
 import coverBobTurtleAI from "@/assets/cover-bob-turtle-ai.jpg";
-import coverTurtleLM from "@/assets/cover-turtle-lm.jpg";
 
 export interface GameMeta {
   id: string;
@@ -31,7 +30,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/turtle-trade-co",
     category: "tycoon",
-    credits: " Impossible Games",
+    credits: "Design & code: Apocalypse Waffle team",
   },
   {
     id: "waffle-works",
@@ -40,17 +39,18 @@ export const GAMES: GameMeta[] = [
       "A cookie clicker-style idle game. Keep the batter flowing and the iron hot!",
     cover: coverWaffleWorks,
     available: true,
-    playURL:"/play/waffle-works",
+    playUrl: "/play/waffle-works",
     category: "tycoon",
-    credits: " Impossible Games",
+    credits: "",
   },
   {
     id: "turtle-lm",
     title: "Turtle LM",
     description:
       "A turtle-flavored language model playground for learning. Slow, steady, and surprisingly clever.",
-    cover: coverTurtleLM,
-    available: false,
+    cover: coverBobTurtleAI,
+    available: true,
+    playUrl: "/education/turtle-lm",
     category: "education",
     credits: "Design: Apocalypse Waffle team",
   },
@@ -73,7 +73,7 @@ export const GAMES: GameMeta[] = [
     available: true,
     playUrl: "/play/defense-of-belgium",
     category: "other",
-    credits: " Graham, A WW2 historian",
+    credits: "Design & code: Apocalypse Waffle team",
   },
   {
     id: "bob-turtle-ai",
