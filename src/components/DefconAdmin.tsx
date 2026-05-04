@@ -50,10 +50,10 @@ const DefconAdmin = () => {
   };
 
   return (
-    <div className="mb-10 rounded-lg border-2 border-destructive/60 bg-card p-6">
+    <div className="mb-10 rounded-lg border-2 border-foreground/60 bg-card p-6">
       <div className="mb-4 flex items-center gap-2">
-        <ShieldAlert className="h-5 w-5 text-destructive" />
-        <h2 className="font-display text-xl text-destructive">DEFCON Control</h2>
+        <ShieldAlert className="h-5 w-5 text-foreground" />
+        <h2 className="font-display text-xl text-foreground">DEFCON Control</h2>
       </div>
       {loading ? (
         <Loader2 className="h-5 w-5 animate-spin text-primary" />
