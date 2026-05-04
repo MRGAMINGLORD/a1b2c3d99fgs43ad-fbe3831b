@@ -1,28 +1,1017 @@
-<!--
-  ─────────────────────────────────────────────────────────────
-  WAFFLE WORKS — paste your full game code below.
-
-  This file is served at /play/waffle-works once
-  GAMES[] in src/lib/games.ts has `available: true` and
-  `playUrl: "/play/waffle-works"` for this entry.
-
-  Replace this entire file with your <!doctype html>… document.
-  ─────────────────────────────────────────────────────────────
--->
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Waffle Works — placeholder</title>
-    <style>
-      body { font-family: system-ui, sans-serif; background:#111; color:#fc0; display:grid; place-items:center; min-height:100vh; margin:0; text-align:center; padding:2rem; }
-      code { background:#222; padding:.2rem .4rem; border-radius:4px; }
-    </style>
-  </head>
-  <body>
-    <div>
-      <h1>Waffle Works</h1>
-      <p>Drop your game code into <code>public/games/waffle-works/index.html</code>.</p>
-    </div>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waffle Works</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+body { font-family: 'Nunito', sans-serif; user-select: none; }
+@keyframes flyOut {
+0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+100% { transform: translate(var(--tx), var(--ty)) scale(0.5) rotate(var(--rot)); opacity: 0; }
+}
+.particle { position: absolute; pointer-events: none; animation: flyOut 1s ease-out forwards; font-size: 2rem; z-index: 50; }
+#main-waffle { transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; filter: drop-shadow(0 15px 15px rgba(0,0,0,0.3)); }
+@keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+.toast-enter { animation: slideDown 0.3s ease-out forwards; }
+.toast-exit { animation: fadeOut 0.5s ease-out forwards; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #fef3c7; }
+::-webkit-scrollbar-thumb { background: #d97706; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #b45309; }
+#field-canvas { image-rendering: pixelated; }
+.tutorial-highlight { position: relative !important; z-index: 170 !important; pointer-events: auto !important; box-shadow: 0 0 0 10px rgba(250, 204, 21, 0.5), 0 0 30px rgba(250, 204, 21, 0.8) !important; border-radius: 1rem; transition: all 0.3s ease; background-color: rgba(255, 255, 255, 0.95); }
+#waffle-container.tutorial-highlight { box-shadow: none !important; filter: drop-shadow(0 0 40px rgba(250, 204, 21, 1)) !important; background-color: transparent; }
+</style>
+</head>
+<body class="bg-amber-50 h-screen w-screen overflow-hidden flex flex-col md:flex-row">
+<div id="screen-main-menu" class="fixed inset-0 z-[100] bg-amber-100 flex flex-col items-center justify-center">
+<div class="text-8xl mb-6 drop-shadow-lg">🧇</div>
+<h1 class="text-5xl md:text-7xl font-black text-amber-900 drop-shadow-md mb-10 text-center leading-tight">Waffle<br>Works</h1>
+<button onclick="showScreen('screen-companies')" class="bg-amber-500 hover:bg-amber-600 text-white font-black py-4 px-12 rounded-full text-2xl shadow-[0_10px_0_0_#b45309] hover:shadow-[0_5px_0_0_#b45309] hover:translate-y-[5px] transition-all">Play Game</button>
+<p class="absolute bottom-4 right-4 text-amber-700/50 font-black tracking-widest uppercase text-sm">By Impossible Games</p>
+</div>
+<div id="screen-companies" class="hidden fixed inset-0 z-[100] bg-amber-100 flex flex-col items-center justify-start pt-20">
+<h2 class="text-4xl font-black text-amber-900 mb-8 drop-shadow-sm">Your Companies</h2>
+<div id="companies-list" class="flex flex-col gap-4 w-full max-w-md mb-8 px-4 overflow-y-auto max-h-[50vh]"></div>
+<button onclick="showScreen('screen-new-company')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full text-xl shadow-md transition-transform hover:scale-105 mb-6">Start New Company</button>
+<button onclick="showScreen('screen-main-menu')" class="text-amber-700 hover:text-amber-900 font-bold underline transition-colors">Back to Main Menu</button>
+</div>
+<div id="screen-new-company" class="hidden fixed inset-0 z-[100] bg-amber-100 flex flex-col items-center justify-start pt-10 md:pt-20 px-4 pb-10">
+<h2 class="text-4xl font-black text-amber-900 mb-6 drop-shadow-sm shrink-0">New Company</h2>
+<div class="bg-white p-6 md:p-8 rounded-2xl shadow-xl w-full max-w-md flex flex-col gap-6 border-4 border-amber-200 overflow-y-auto max-h-[75vh]">
+<div class="shrink-0">
+<label class="block text-amber-900 font-black mb-2 uppercase tracking-wide text-sm">Company Name</label>
+<input type="text" id="company-name-input" maxlength="15" placeholder="My Waffle Co." class="w-full border-2 border-amber-200 rounded-xl p-3 focus:outline-none focus:border-amber-500 text-lg bg-amber-50 placeholder-amber-700/30">
+<p class="text-xs text-amber-600 mt-1">Max 15 characters.</p>
+</div>
+<div class="shrink-0">
+<label class="block text-amber-900 font-black mb-2 uppercase tracking-wide text-sm">Game Mode</label>
+<button type="button" id="btn-game-mode" onclick="toggleGameMode()" data-mode="normal" class="w-full bg-amber-50 hover:bg-amber-100 text-amber-900 font-black py-4 px-8 rounded-xl border-4 border-amber-500 text-xl shadow-[0_4px_0_0_#d97706] hover:shadow-[0_2px_0_0_#d97706] hover:translate-y-[2px] transition-all relative overflow-hidden flex flex-col items-center justify-center gap-1">
+<span id="game-mode-text" class="text-2xl">Normal</span>
+<span id="game-mode-desc" class="text-sm font-bold text-amber-700">Standard endless clicking</span>
+</button>
+</div>
+<button onclick="startNewGame()" class="bg-amber-500 hover:bg-amber-600 text-white font-black py-4 px-8 rounded-xl text-xl shadow-[0_6px_0_0_#b45309] hover:shadow-[0_3px_0_0_#b45309] hover:translate-y-[3px] transition-all mt-2 uppercase tracking-wider shrink-0">Start Playing</button>
+<button onclick="showScreen('screen-companies')" class="text-amber-700 hover:text-amber-900 font-bold underline text-center shrink-0">Cancel</button>
+</div>
+</div>
+<div id="screen-pause-menu" class="hidden fixed inset-0 z-[110] bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center px-4">
+<div class="bg-amber-50 p-8 rounded-3xl shadow-2xl w-full max-w-sm flex flex-col gap-4 border-4 border-amber-200 text-center">
+<h2 class="text-4xl font-black text-amber-900 mb-4 drop-shadow-sm">Paused</h2>
+<p class="text-amber-700/80 font-bold mb-4">Take a quick break?</p>
+<button onclick="togglePauseMenu()" class="bg-amber-500 hover:bg-amber-600 text-white font-black py-3 px-8 rounded-xl text-xl shadow-[0_4px_0_0_#b45309] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_#b45309] transition-all uppercase">Resume Game</button>
+<button onclick="togglePauseMenu(); document.getElementById('screen-help-menu').classList.remove('hidden');" class="bg-blue-500 hover:bg-blue-600 text-white font-black py-3 px-8 rounded-xl text-xl shadow-[0_4px_0_0_#1e3a8a] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_#1e3a8a] transition-all uppercase mt-2">Help & Instructions</button>
+<button id="btn-quiet-mode" onclick="toggleQuietMode()" class="bg-amber-300 hover:bg-amber-400 text-amber-900 font-black py-3 px-8 rounded-xl text-xl shadow-[0_4px_0_0_#d97706] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_#d97706] transition-all uppercase mt-2">Quiet Mode: OFF</button>
+<button onclick="saveAndExit()" class="bg-red-500 hover:bg-red-600 text-white font-black py-3 px-8 rounded-xl text-xl shadow-[0_4px_0_0_#991b1b] hover:translate-y-[2px] hover:shadow-[0_2px_0_0_#991b1b] transition-all uppercase mt-2">Save & Exit</button>
+</div>
+</div>
+<div id="screen-help-menu" class="hidden fixed inset-0 z-[180] bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center px-4">
+<div class="bg-amber-50 p-6 md:p-8 rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col gap-4 border-4 border-amber-200 text-left relative max-h-[85vh] overflow-y-auto">
+<button onclick="closeHelpMenu()" class="absolute top-4 right-6 text-amber-900/50 hover:text-amber-900 font-black text-2xl">✕</button>
+<h2 class="text-3xl font-black text-amber-900 mb-2 border-b-2 border-amber-200 pb-2">Waffle Works Manual</h2>
+<details class="bg-white p-4 rounded-xl border-2 border-amber-200 shadow-sm group">
+<summary class="font-black text-amber-900 cursor-pointer list-none flex justify-between"><span>🧇 Basic Baking</span><span class="group-open:rotate-180 transition-transform">▼</span></summary>
+<p class="text-amber-800 font-semibold mt-3 text-sm">Click the giant waffle on the left to manually bake waffles. Spacebar and the 'B' key also work! Accumulate waffles to build your empire.</p>
+</details>
+<details class="bg-white p-4 rounded-xl border-2 border-amber-200 shadow-sm group">
+<summary class="font-black text-amber-900 cursor-pointer list-none flex justify-between"><span>🏭 Facilities & Upgrades</span><span class="group-open:rotate-180 transition-transform">▼</span></summary>
+<p class="text-amber-800 font-semibold mt-3 text-sm">Purchase Facilities from the right panel to automate your Waffles Per Second (WPS) and boost your Waffles Per Click (WPC). Switch to the Upgrades tab to improve their production efficiency or fortify them against disasters.</p>
+</details>
+<details class="bg-white p-4 rounded-xl border-2 border-amber-200 shadow-sm group">
+<summary class="font-black text-amber-900 cursor-pointer list-none flex justify-between"><span>🐢 Barrier Mode</span><span class="group-open:rotate-180 transition-transform">▼</span></summary>
+<p class="text-amber-800 font-semibold mt-3 text-sm">Hungry turtles will invade your field to steal your waffles! Click the grid to perform a Smash Attack and blow them away. Build walls and traps to protect your stash! Your buildings will be placed on the field and turtles can slowly destroy them, dropping their efficiency.</p>
+</details>
+<details class="bg-white p-4 rounded-xl border-2 border-amber-200 shadow-sm group">
+<summary class="font-black text-amber-900 cursor-pointer list-none flex justify-between"><span>✨ Rebirth System</span><span class="group-open:rotate-180 transition-transform">▼</span></summary>
+<p class="text-amber-800 font-semibold mt-3 text-sm">Once you hit the required Waffles and base WPS, you can Rebirth! This wipes your current waffles and facilities but gives a massive permanent multiplier to your production.</p>
+</details>
+<button onclick="closeHelpMenu(); startTutorial();" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-black py-3 px-8 rounded-xl text-xl shadow-[0_4px_0_0_#1e3a8a] transition-all uppercase">Replay Introduction</button>
+</div>
+</div>
+<div id="screen-tutorial" class="hidden fixed inset-0 z-[9999] pointer-events-none flex flex-col items-center justify-end pb-10 md:pb-20">
+<div class="absolute inset-0 bg-black/70 pointer-events-none"></div>
+<div class="relative z-[10000] bg-amber-50 p-6 md:p-8 rounded-3xl shadow-2xl max-w-3xl w-[90%] flex flex-col md:flex-row gap-6 items-center pointer-events-auto border-4 border-amber-900">
+<div class="relative w-32 h-32 flex items-center justify-center text-7xl bg-white rounded-full border-4 border-amber-300 shadow-inner shrink-0">
+<span class="absolute z-10 top-0 text-6xl transform -translate-y-5 translate-x-3">🎩</span>
+<span class="absolute z-30 top-9 text-4xl transform -translate-x-2">🕶️</span>
+<span class="relative z-20 transform -translate-y-1">🐢</span>
+</div>
+<div class="flex-1 text-center md:text-left">
+<h3 class="text-xl font-black text-amber-900 mb-2">Tim Wolly Washington terry Bartholomue Barthothias The III</h3>
+<p id="tutorial-text" class="text-lg font-bold text-amber-800 leading-snug">Greetings!</p>
+<p id="tutorial-instruction" class="text-xs text-amber-600/90 mt-4 uppercase tracking-widest font-bold">Press <kbd class="bg-amber-200 px-2 py-1 rounded text-amber-900 shadow-sm border border-amber-300">SPACE</kbd> to continue &bull; <kbd class="bg-amber-200 px-2 py-1 rounded text-amber-900 shadow-sm border border-amber-300">X</kbd> to skip</p>
+</div>
+</div>
+</div>
+<div id="screen-debug-login" class="hidden fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center px-4">
+<div class="bg-stone-900 p-8 rounded-xl border-2 border-green-500 w-full max-w-sm text-center font-mono shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+<h2 class="text-green-500 text-xl mb-4 font-bold">SYSTEM OVERRIDE</h2>
+<p class="text-green-600/70 text-xs mb-2">AUTHORIZATION REQUIRED</p>
+<input type="text" id="debug-password-display" readonly class="w-full bg-black text-green-400 border border-green-700 p-3 rounded mb-4 text-center text-lg tracking-widest outline-none focus:border-green-400 shadow-inner" placeholder="ENTER PASSWORD">
+<p class="text-green-600/50 text-xs mt-4">Press ESC to abort</p>
+</div>
+</div>
+<div id="screen-debug-menu" class="hidden fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center px-4">
+<div class="bg-stone-900 p-8 rounded-xl border-2 border-green-500 w-full max-w-sm text-center font-mono shadow-[0_0_30px_rgba(34,197,94,0.3)]">
+<h2 class="text-green-500 text-2xl mb-6 font-bold">DEBUG MENU</h2>
+<div class="flex flex-col gap-4">
+<button onclick="debugGiveWaffles()" class="bg-green-900 hover:bg-green-700 text-green-100 border border-green-500 py-3 rounded transition-colors">+1,000,000 Waffles</button>
+<button onclick="toggleDebugFreeFacilities()" id="btn-debug-fac" class="bg-green-900 hover:bg-green-700 text-green-100 border border-green-500 py-3 rounded transition-colors">Free Facilities: OFF</button>
+<button onclick="toggleDebugFreeUpgrades()" id="btn-debug-upg" class="bg-green-900 hover:bg-green-700 text-green-100 border border-green-500 py-3 rounded transition-colors">Free Upgrades: OFF</button>
+<button onclick="closeDebugMenu()" class="mt-4 text-red-500 hover:text-red-400 underline decoration-red-500/50 underline-offset-4">Close Override</button>
+</div>
+</div>
+</div>
+<div id="toast-container" class="fixed top-4 left-1/2 transform -translate-x-1/2 flex flex-col gap-2 z-50 w-full max-w-md px-4 pointer-events-none"></div>
+<div id="left-panel" class="z-10 flex-1 flex flex-col items-center justify-start pt-8 pb-16 relative bg-amber-100 shadow-inner border-r-4 border-amber-800/20 overflow-y-auto">
+<div class="text-center w-full px-4 shrink-0 z-20">
+<div class="flex justify-center items-center mb-2 px-4 w-full">
+<h2 id="active-company-name" class="text-xl font-black text-amber-900 bg-white/80 px-6 py-2 rounded-full shadow-md border-2 border-amber-200 backdrop-blur-sm hidden md:block">My Company</h2>
+</div>
+<h1 class="text-3xl md:text-5xl font-black text-amber-900 drop-shadow-sm mb-2 mt-2 md:mt-0">Waffle Works</h1>
+<div class="bg-white/60 backdrop-blur-sm rounded-2xl py-3 px-8 inline-block shadow-sm border border-amber-200">
+<p class="text-4xl font-bold text-amber-600" id="waffle-count">0</p>
+<p class="text-amber-800/80 font-bold uppercase tracking-wider text-sm mt-1">waffles</p>
+</div>
+<br>
+<div class="flex flex-col items-center gap-2 mt-4">
+<p class="text-lg font-bold text-amber-700 bg-amber-200/50 rounded-full py-1 px-4 inline-block">per second: <span id="wps-count">0.0</span></p>
+<p class="text-sm font-bold text-amber-600 bg-amber-200/30 rounded-full py-1 px-3 inline-block">per click: <span id="wpc-count">1.0</span></p>
+</div>
+<div id="rebirth-container" class="mt-5 flex flex-col items-center bg-white/40 p-3 rounded-2xl border border-amber-200/50 backdrop-blur-sm">
+<button id="btn-rebirth" onclick="performRebirth()" disabled class="bg-purple-300 text-purple-800 font-black py-2 px-6 rounded-xl shadow-md transition-all uppercase opacity-50 cursor-not-allowed">Rebirth (+25% Boost)</button>
+<p id="rebirth-req-text" class="text-xs font-black text-amber-700 mt-2 uppercase tracking-wide">Requires 1M Waffles & 1,000 WPS</p>
+</div>
+<p class="mt-2 text-xs text-amber-600/70 font-bold uppercase tracking-widest hidden md:block">Press SPACE (or B) to Click &bull; ESC to Pause</p>
+</div>
+<div class="relative w-48 h-48 md:w-64 md:h-64 mt-8 mb-8 shrink-0 z-10" id="waffle-container">
+<svg id="main-waffle" viewBox="0 0 100 100" class="w-full h-full">
+<defs>
+<pattern id="waffleGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+<rect width="20" height="20" fill="#f59e0b" />
+<rect x="2" y="2" width="16" height="16" rx="3" fill="#b45309" opacity="0.8"/>
+<rect x="2" y="2" width="14" height="14" rx="3" fill="#d97706" />
+</pattern>
+</defs>
+<circle cx="50" cy="50" r="48" fill="url(#waffleGrid)" stroke="#92400e" stroke-width="4"/>
+<rect x="40" y="35" width="20" height="20" rx="2" fill="#fef08a" transform="rotate(15 50 45)" stroke="#eab308" stroke-width="1"/>
+</svg>
+</div>
+<div id="barrier-field" class="hidden flex-col items-center w-full px-4 shrink-0 mt-8 border-t-4 border-amber-800/10 pt-8">
+<h2 class="text-3xl font-black text-amber-900 mb-2">The Waffle Field</h2>
+<p class="text-amber-800 mb-6 font-bold max-w-md text-center bg-white/50 p-3 rounded-xl border border-amber-200">Defend the stash! Click the field to Smash Attack or build defenses!</p>
+<div class="relative bg-green-200 border-8 border-amber-900 rounded-lg shadow-[inset_0_5px_20px_rgba(0,0,0,0.2)] w-full max-w-[600px] aspect-square">
+<canvas id="field-canvas" width="600" height="600" class="w-full h-full"></canvas>
+</div>
+<div class="mt-6 flex flex-col w-full max-w-[600px] gap-2">
+<div class="flex flex-row overflow-x-auto gap-2 p-2 bg-amber-900/10 rounded-xl" id="defense-shop"></div>
+<div id="defense-desc" class="text-center text-sm font-bold text-amber-800 min-h-[2rem] bg-white/50 py-2 rounded-xl border border-amber-200 shadow-inner">Select a defense to build.</div>
+<button id="btn-upgrade-wall" onclick="upgradeWalls()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 px-4 rounded-xl text-lg shadow-[0_6px_0_0_#1e3a8a] transition-all">Upgrade Walls & Turrets (500 🧇)</button>
+</div>
+</div>
+</div>
+<div id="right-panel" class="z-20 w-full md:w-96 bg-amber-50 h-[40vh] md:h-screen flex flex-col shadow-[-10px_0_20px_rgba(0,0,0,0.05)] shrink-0">
+<div class="bg-amber-800 text-amber-50 py-4 px-6 shadow-md flex justify-between items-center shrink-0">
+<div>
+<h2 id="sidebar-title" class="text-2xl font-bold">Facilities</h2>
+<p id="sidebar-subtitle" class="text-sm text-amber-200/80">Buy and expand your empire!</p>
+</div>
+</div>
+<div id="shop-view" class="flex-1 overflow-y-auto p-3 space-y-2 pb-10 relative"></div>
+<div id="upgrades-view" class="hidden flex-1 overflow-y-auto p-3 space-y-2 pb-10"></div>
+</div>
+<script>
+let waffles = 0;
+let wps = 0;
+let clickPower = 1;
+let companies =[];
+let currentCompanyIndex = -1;
+let isBarrierMode = false;
+let isQuietMode = false;
+let tutorialActive = false;
+let tutorialStep = 0;
+let tutorialSteps =[];
+let ctrlShiftQCount = 0;
+let debugQTimer = null;
+let isDebugMenuOpen = false;
+let debugRealPassword = "";
+let debugDotsLengths =[];
+let debugFreeFacilities = false;
+let debugFreeUpgrades = false;
+let walls = {};
+let turtles =[];
+let turtleBuildings = {};
+let playerFieldBuildings = {};
+let droppedWaffles =[];
+let smashEffects =[];
+let selectedDefense = null;
+let turtleMoveTimer = 0;
+let turtleSpawnTimer = 0;
+let wallFortificationLevel = 0;
+let randomEventInterval;
+let missileTick = 0;
+const waffleVisualOffsets = Array.from({length: 500}, () => ({x: (Math.random() - 0.5) * 80,y: (Math.random() - 0.5) * 80,rot: (Math.random() - 0.5) * Math.PI * 2}));
+const buildings =[
+{ id: 'worker', name: 'Factory Worker', desc: 'A dedicated worker to bake waffles.', baseCost: 10, wps: 0.5, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '👷' },
+{ id: 'tapper', name: 'Batter Tapper', desc: 'Taps the batter bowl to increase Waffles Per Click.', baseCost: 25, wps: 0, wpc: 0.5, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🥣' },
+{ id: 'iron', name: 'Waffle Iron', desc: 'Bakes waffles automatically.', baseCost: 50, wps: 1, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🧇' },
+{ id: 'whisk', name: 'Golden Whisk', desc: 'Whips up batter for better clicks.', baseCost: 300, wps: 0, wpc: 5, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🥄' },
+{ id: 'stand', name: 'Waffle Stand', desc: 'Sells waffles to passersby.', baseCost: 400, wps: 8, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🏪' },
+{ id: 'house', name: 'Waffle House', desc: 'Never closes. Survives minor disasters.', baseCost: 1500, wps: 24, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🏠' },
+{ id: 'pump', name: 'Syrup Pump', desc: 'Coats the waffle for massive clicks.', baseCost: 2500, wps: 0, wpc: 35, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🍯' },
+{ id: 'factory', name: 'Waffle Factory', desc: 'Mass produces waffles.', baseCost: 5000, wps: 47, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🏭' },
+{ id: 'mallet', name: 'Auto-Mallet', desc: 'Smashes the waffle for you.', baseCost: 15000, wps: 0, wpc: 200, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🔨' },
+{ id: 'mine', name: 'Syrup Mine', desc: 'Extracts sweet syrup to multiply yield.', baseCost: 35000, wps: 260, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '⛏️' },
+{ id: 'temple', name: 'Waffle Temple', desc: 'Pray to the waffle gods.', baseCost: 250000, wps: 1400, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🏛️' },
+{ id: 'portal', name: 'Antimatter Waffle', desc: 'Condenses matter into pure breakfast.', baseCost: 1500000, wps: 7800, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🌌' },
+{ id: 'geyser', name: 'Syrup Geyser', desc: 'Erupts with delicious syrup.', baseCost: 5000000, wps: 20000, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '⛲' },
+{ id: 'clone', name: 'Waffle Clone Vat', desc: 'Genetically identical waffles.', baseCost: 12000000, wps: 50000, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🧪' },
+{ id: 'megawhisk', name: 'Mega-Whisk 3000', desc: 'Whisks with the power of a tornado.', baseCost: 25000000, wps: 0, wpc: 150000, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🌪️' },
+{ id: 'cannon', name: 'Orbital Cannon', desc: 'Fires waffles from space.', baseCost: 100000000, wps: 400000, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🛰️' },
+{ id: 'aicore', name: 'Waffle AI Core', desc: 'Calculates the perfect baking temp. Boosts both!', baseCost: 500000000, wps: 1500000, wpc: 1500000, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🤖' },
+{ id: 'galactic', name: 'Galactic Baker', desc: 'Bakes waffles across the galaxy.', baseCost: 2000000000, wps: 6000000, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🧑‍🚀' },
+{ id: 'matrix', name: 'Multiverse Matrix', desc: 'Harvests waffles from other dimensions.', baseCost: 10000000000, wps: 25000000, wpc: 10000000, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🌐' },
+{ id: 'time', name: 'Time-Traveling Engine', desc: 'Brings waffles from the future.', baseCost: 50000000000, wps: 150000000, wpc: 0, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '⏳' },
+{ id: 'hivemind', name: 'Sentient Hivemind', desc: 'The waffles are alive. They bake themselves.', baseCost: 250000000000, wps: 500000000, wpc: 500000000, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '🧠' },
+{ id: 'god', name: 'Omega Waffle God', desc: 'Bow down to the ultimate breakfast deity.', baseCost: 1000000000000, wps: 5000000000, wpc: 5000000000, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0, prodMultiplier: 1, hardness: 0, syrupMultiplier: 1, effDiscount: 1, icon: '👁️' }
+];
+const disasters =[
+{ name: "Tornado", baseSeverity: 0.10, icon: '🌪️', color: 'bg-orange-500' },
+{ name: "Earthquake", baseSeverity: 0.15, icon: '🌋', color: 'bg-red-500' },
+{ name: "Syrup Flood", baseSeverity: 0.25, icon: '🌊', color: 'bg-blue-600' },
+{ name: "Hurricane", baseSeverity: 0.40, icon: '🌀', color: 'bg-purple-600' },
+{ name: "Meteor Strike", baseSeverity: 0.60, icon: '☄️', color: 'bg-red-700' }
+];
+const defenseTypes = {
+basic: { name: 'Basic Wall', cost: 50, icon: '🧱', isObstacle: true, maxHp: 20, desc: 'A sturdy barrier to block turtles.' },
+spiked: { name: 'Spiked Wall', cost: 200, icon: '🦔', isObstacle: true, maxHp: 30, desc: 'Damages turtles that attack it.' },
+syrup: { name: 'Syrup Trap', cost: 500, icon: '🍯', isObstacle: false, maxHp: 10, desc: 'Slows and constantly damages turtles.' },
+mine: { name: 'Landmine', cost: 1500, icon: '💣', isObstacle: false, maxHp: 1, desc: 'Explodes for massive AoE damage and knockback.' },
+missile: { name: 'Missile Turret', cost: 5000, icon: '🚀', isObstacle: true, maxHp: 50, desc: 'Periodically fires missiles at distant turtles.' }
+};
+const waffleEl = document.getElementById('main-waffle');
+const waffleContainer = document.getElementById('waffle-container');
+const countEl = document.getElementById('waffle-count');
+const wpsEl = document.getElementById('wps-count');
+const wpcEl = document.getElementById('wpc-count');
+const toastContainer = document.getElementById('toast-container');
+const fieldCanvas = document.getElementById('field-canvas');
+const ctx = fieldCanvas.getContext('2d');
+const shopUIElements = {};
+function formatNumber(num) {
+if (num < 1000) return Math.floor(num).toString();
+if (num < 1000000) return (num / 1000).toFixed(1) + 'k';
+if (num < 1000000000) return (num / 1000000).toFixed(2) + 'M';
+if (num < 1000000000000) return (num / 1000000000).toFixed(2) + 'B';
+return (num / 1000000000000).toFixed(2) + 'T';
+}
+function formatStat(num) {
+if (num === 0) return "0.0";
+if (num < 1000) return num.toFixed(1);
+return formatNumber(num);
+}
+function getCost(building) {
+if (debugFreeFacilities) return 0;
+return Math.floor(building.baseCost * building.effDiscount * Math.pow(1.15, building.count));
+}
+function getProdUpgradeCost(building) {
+if (debugFreeUpgrades) return 0;
+return Math.floor(building.baseCost * 15 * Math.pow(2.2, building.prodLevel));
+}
+function getHardUpgradeCost(building) {
+if (debugFreeUpgrades) return 0;
+return Math.floor(building.baseCost * 25 * Math.pow(2.5, building.hardLevel));
+}
+function getSyrupUpgradeCost(building) {
+if (debugFreeUpgrades) return 0;
+return Math.floor(building.baseCost * 50 * Math.pow(3.5, building.syrupLevel));
+}
+function getEffUpgradeCost(building) {
+if (debugFreeUpgrades) return 0;
+return Math.floor(building.baseCost * 100 * Math.pow(4, building.effLevel));
+}
+function getClosest(x, y, keysArray) {
+let closest = keysArray[0]; let minDist = Infinity;
+for (let key of keysArray) { let [kx, ky] = key.split(',').map(Number); let dist = Math.abs(x - kx) + Math.abs(y - ky); if (dist < minDist) { minDist = dist; closest = key; } }
+return closest;
+}
+function getRebirthReqWaffles(r) { return 1000000 * Math.pow(5, r); }
+function getRebirthReqWPS(r) { return 1000 * Math.pow(2, r); }
+function getRebirthMultiplier(r) { return 1 + (r * 0.25); }
+function recalculateStats() {
+let multiplier = 1;
+if (currentCompanyIndex !== -1 && companies[currentCompanyIndex]) multiplier = getRebirthMultiplier(companies[currentCompanyIndex].rebirths || 0);
+let baseWPS = 0; let baseWPC = 1;
+if(isBarrierMode) {
+let effCounts = new Array(buildings.length).fill(0);
+for(let key in playerFieldBuildings) { let pb = playerFieldBuildings[key]; effCounts[pb.index] += pb.hp / pb.maxHp; }
+buildings.forEach((b, i) => { baseWPS += (b.wps || 0) * b.prodMultiplier * b.syrupMultiplier * effCounts[i]; baseWPC += (b.wpc || 0) * b.prodMultiplier * b.syrupMultiplier * effCounts[i]; });
+} else {
+buildings.forEach(b => { baseWPS += (b.wps || 0) * b.prodMultiplier * b.syrupMultiplier * b.count; baseWPC += (b.wpc || 0) * b.prodMultiplier * b.syrupMultiplier * b.count; });
+}
+wps = baseWPS * multiplier; wpsEl.textContent = formatStat(wps);
+clickPower = baseWPC * multiplier; wpcEl.textContent = formatStat(clickPower);
+}
+function startTutorial() {
+tutorialActive = true; tutorialStep = 0;
+tutorialSteps =[
+{text: "Greetings! I am Tim Wolly Washington terry Bartholomue Barthothias The III, Head of the Department of Food for the United Turtle Nation.", target: null, waitForClick: false},
+{text: "Your mission is to craft the most delectable waffles in existence. Click the giant waffle to begin baking!", target: 'waffle-container', waitForClick: true},
+{text: "Splendid! Now, let me teach you how to build your empire. Over here are the Facilities.", target: 'shop-view', waitForClick: false},
+{text: "Click on a Facility if you have enough waffles to purchase it. It will automatically bake for you! You can scroll this list as well.", target: 'shop-view', waitForClick: false}
+];
+if (isBarrierMode) tutorialSteps.push({text: "Ah, Barrier Mode! My hungry turtle brethren will try to steal your stash. Click the field to SMASH them, or select a Defense to build!", target: 'barrier-field', waitForClick: false});
+tutorialSteps.push({text: "That is all! Good luck, and may your waffles be ever golden!", target: null, waitForClick: false});
+document.getElementById('left-panel').classList.remove('z-10'); document.getElementById('right-panel').classList.remove('z-20'); document.getElementById('screen-tutorial').classList.remove('hidden'); showTutorialStep();
+}
+function showTutorialStep() {
+let step = tutorialSteps[tutorialStep]; document.getElementById('tutorial-text').innerHTML = step.text; let instructionEl = document.getElementById('tutorial-instruction');
+if (step.waitForClick) instructionEl.innerHTML = `Interact with the highlighted area to continue &bull; <kbd class="bg-amber-200 px-2 py-1 rounded text-amber-900 shadow-sm border border-amber-300">X</kbd> to skip`;
+else instructionEl.innerHTML = `Press <kbd class="bg-amber-200 px-2 py-1 rounded text-amber-900 shadow-sm border border-amber-300">SPACE</kbd> to continue &bull; <kbd class="bg-amber-200 px-2 py-1 rounded text-amber-900 shadow-sm border border-amber-300">X</kbd> to skip`;
+if (step.target) { let el = document.getElementById(step.target); if (el) el.classList.add('tutorial-highlight'); }
+}
+function advanceTutorial() {
+let current = tutorialSteps[tutorialStep];
+if (current && current.target) { let el = document.getElementById(current.target); if (el) el.classList.remove('tutorial-highlight'); }
+tutorialStep++; if (tutorialStep >= tutorialSteps.length) endTutorial(); else showTutorialStep();
+}
+function skipTutorial() {
+let current = tutorialSteps[tutorialStep];
+if (current && current.target) { let el = document.getElementById(current.target); if (el) el.classList.remove('tutorial-highlight'); }
+endTutorial();
+}
+function endTutorial() {
+tutorialActive = false; document.getElementById('screen-tutorial').classList.add('hidden'); document.getElementById('left-panel').classList.add('z-10'); document.getElementById('right-panel').classList.add('z-20');
+if (currentCompanyIndex !== -1) { companies[currentCompanyIndex].hasSeenTutorial = true; saveData(); }
+}
+window.addEventListener('click', function(e) {
+if (tutorialActive && tutorialSteps[tutorialStep]) {
+let currentTarget = tutorialSteps[tutorialStep].target;
+if (e.target.closest('#screen-tutorial')) return;
+if (currentTarget) { let el = document.getElementById(currentTarget); if (el && el.contains(e.target)) return; }
+e.stopPropagation(); e.preventDefault();
+}
+}, true); 
+function closeHelpMenu() { document.getElementById('screen-help-menu').classList.add('hidden'); }
+function openDebugLogin() { document.getElementById('screen-debug-login').classList.remove('hidden'); document.getElementById('debug-password-display').value = ""; document.getElementById('debug-password-display').focus(); debugRealPassword = ""; debugDotsLengths =[]; isDebugMenuOpen = true; }
+function closeDebugMenu() { document.getElementById('screen-debug-login').classList.add('hidden'); document.getElementById('screen-debug-menu').classList.add('hidden'); isDebugMenuOpen = false; }
+document.getElementById('debug-password-display').addEventListener('keydown', (e) => {
+if (e.key === "Escape") { closeDebugMenu(); return; }
+if (e.key === "Enter") {
+if(debugRealPassword === "TESTER") { document.getElementById('screen-debug-login').classList.add('hidden'); document.getElementById('screen-debug-menu').classList.remove('hidden'); }
+else { document.getElementById('debug-password-display').value = "ACCESS DENIED"; setTimeout(() => { document.getElementById('debug-password-display').value = ""; debugRealPassword = ""; debugDotsLengths =[]; }, 1000); }
+return;
+}
+if (e.key === "Backspace") {
+if (debugRealPassword.length > 0) { debugRealPassword = debugRealPassword.slice(0, -1); let dotsToRemove = debugDotsLengths.pop(); let currentVal = document.getElementById('debug-password-display').value; document.getElementById('debug-password-display').value = currentVal.slice(0, -dotsToRemove); }
+e.preventDefault(); return;
+}
+if (e.key.length > 1) return;
+e.preventDefault(); debugRealPassword += e.key; let dotsCount = Math.floor(Math.random() * 3); debugDotsLengths.push(dotsCount);
+if (dotsCount > 0) document.getElementById('debug-password-display').value += "•".repeat(dotsCount);
+});
+function debugGiveWaffles() { waffles += 1000000; updateDisplay(); updateShopUI(); showToast("System Override", "Added 1,000,000 Waffles.", "bg-green-600"); }
+function toggleDebugFreeFacilities() { debugFreeFacilities = !debugFreeFacilities; document.getElementById('btn-debug-fac').textContent = "Free Facilities: " + (debugFreeFacilities ? "ON" : "OFF"); updateShopUI(); }
+function toggleDebugFreeUpgrades() { debugFreeUpgrades = !debugFreeUpgrades; document.getElementById('btn-debug-upg').textContent = "Free Upgrades: " + (debugFreeUpgrades ? "ON" : "OFF"); updateShopUI(); }
+function performRebirth() {
+if (currentCompanyIndex === -1) return;
+const comp = companies[currentCompanyIndex]; let r = comp.rebirths || 0; let reqWaffles = getRebirthReqWaffles(r); let reqWPS = getRebirthReqWPS(r); let currentBaseWPS = wps / getRebirthMultiplier(r);
+if (waffles >= reqWaffles && currentBaseWPS >= reqWPS) {
+comp.rebirths = r + 1; waffles = 0; buildings.forEach(b => { b.count = 0; }); playerFieldBuildings = {};
+saveData(); recalculateStats(); updateShopUI(); updateDisplay();
+showToast("Rebirth Successful!", `Your multiplier is now x${getRebirthMultiplier(comp.rebirths).toFixed(2)}!`, "bg-purple-600");
+}
+}
+function initDefenses() {
+let container = document.getElementById('defense-shop');
+if(!container) return;
+container.innerHTML = '';
+for(let key in defenseTypes) {
+let d = defenseTypes[key]; let btn = document.createElement('button');
+btn.id = `def-btn-${key}`; btn.className = `shrink-0 bg-stone-600 text-white font-black p-2 rounded-xl border-4 border-transparent hover:bg-stone-500 transition-all flex flex-col items-center min-w-[80px]`;
+btn.onclick = () => selectDefense(key);
+btn.onmouseenter = () => { document.getElementById('defense-desc').textContent = `${d.name}: ${d.desc}`; };
+btn.onmouseleave = () => { 
+if (selectedDefense) document.getElementById('defense-desc').textContent = `${defenseTypes[selectedDefense].name}: ${defenseTypes[selectedDefense].desc}`;
+else document.getElementById('defense-desc').textContent = `Select a defense to build.`;
+};
+btn.innerHTML = `<span class="text-2xl">${d.icon}</span><span class="text-xs mt-1">${formatNumber(d.cost)} 🧇</span>`;
+container.appendChild(btn);
+}
+}
+function selectDefense(id) {
+if (selectedDefense === id) { selectedDefense = null; fieldCanvas.style.cursor = "pointer"; document.getElementById('defense-desc').textContent = `Select a defense to build.`; }
+else { selectedDefense = id; fieldCanvas.style.cursor = "crosshair"; document.getElementById('defense-desc').textContent = `${defenseTypes[id].name}: ${defenseTypes[id].desc}`; }
+updateDisplay();
+}
+function initShop() {
+const shopView = document.getElementById('shop-view'); const upgView = document.getElementById('upgrades-view'); shopView.innerHTML = ''; upgView.innerHTML = '';
+buildings.forEach((b, index) => {
+const cost = getCost(b);
+const prodTexts =[]; if (b.wps > 0) prodTexts.push(`+${formatStat(b.wps * b.prodMultiplier * b.syrupMultiplier)} WPS`); if (b.wpc > 0) prodTexts.push(`+${formatStat(b.wpc * b.prodMultiplier * b.syrupMultiplier)} WPC`); const prodDisplay = prodTexts.join(' & ');
+const btn = document.createElement('button'); btn.className = `w-full text-left p-3 rounded-xl border-2 transition-all flex items-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed bg-white border-amber-200 hover:border-amber-400 hover:shadow-md`; btn.onclick = () => buyBuilding(index);
+btn.innerHTML = `
+<div class="text-4xl bg-amber-100 p-2 rounded-lg group-hover:scale-110 transition-transform">${b.icon}</div>
+<div class="flex-1">
+<div class="flex justify-between items-center"><h3 class="font-bold text-lg text-amber-900">${b.name}</h3><span class="font-black text-2xl text-amber-700/30 count-display">${b.count > 0 ? b.count : ''}</span></div>
+<p class="text-xs text-amber-700/70 line-clamp-1">${b.desc}</p>
+<div class="flex gap-4 mt-1"><span class="text-sm font-bold text-red-600 cost-display">🧇 ${formatNumber(cost)}</span><span class="text-sm font-bold text-green-600 wps-display">${prodDisplay}</span></div>
+</div>
+`;
+shopView.appendChild(btn);
+shopUIElements[b.id] = { button: btn, costDisplay: btn.querySelector('.cost-display'), countDisplay: btn.querySelector('.count-display'), wpsDisplay: btn.querySelector('.wps-display') };
+});
+const navToUpg = document.createElement('button'); navToUpg.className = 'w-full py-4 mt-4 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-[0_4px_0_0_#92400e] transition-all uppercase tracking-wide'; navToUpg.textContent = 'Research Upgrades ➔'; navToUpg.onclick = () => toggleSidebarView('upgrades'); shopView.appendChild(navToUpg);
+buildings.forEach((b, index) => {
+const prodTexts =[]; if (b.wps > 0) prodTexts.push(`WPS`); if (b.wpc > 0) prodTexts.push(`WPC`); const prodLabel = prodTexts.join(' & ');
+const upgDiv = document.createElement('div'); upgDiv.className = 'w-full text-left p-3 rounded-xl border-2 bg-white border-amber-200 mb-2 flex flex-col gap-2 shadow-sm';
+upgDiv.innerHTML = `
+<div class="flex items-center gap-2 mb-1 border-b border-amber-100 pb-2"><div class="text-2xl">${b.icon}</div><h3 class="font-black text-md text-amber-900">${b.name} Upgrades</h3></div>
+<div class="flex justify-between items-center bg-amber-50 p-2 rounded-lg border border-amber-100">
+<div><div class="text-sm font-bold text-amber-900">Production <span class="prod-lvl text-xs text-amber-600/70 ml-1">Lvl ${b.prodLevel}</span></div><div class="text-xs text-green-600 font-bold">+10% Base</div></div>
+<button class="prod-btn bg-amber-200 hover:bg-amber-300 disabled:opacity-50 px-3 py-1 rounded-lg font-bold transition flex flex-col items-center min-w-[80px]"><span class="text-amber-900 text-sm">Upgrade</span><span class="prod-cost text-xs text-red-600">🧇 ${formatNumber(getProdUpgradeCost(b))}</span></button>
+</div>
+<div class="flex justify-between items-center bg-amber-50 p-2 rounded-lg border border-amber-100 mt-1">
+<div><div class="text-sm font-bold text-amber-900">Hardness <span class="hard-lvl text-xs text-amber-600/70 ml-1">Lvl ${b.hardLevel}</span></div><div class="text-xs text-blue-600 font-bold">+5% Resist</div></div>
+<button class="hard-btn bg-amber-200 hover:bg-amber-300 disabled:opacity-50 px-3 py-1 rounded-lg font-bold transition flex flex-col items-center min-w-[80px]"><span class="text-amber-900 text-sm">Upgrade</span><span class="hard-cost text-xs text-red-600">🧇 ${formatNumber(getHardUpgradeCost(b))}</span></button>
+</div>
+<div class="flex justify-between items-center bg-amber-50 p-2 rounded-lg border border-amber-100 mt-1">
+<div><div class="text-sm font-bold text-amber-900">Syrup Infusion <span class="syrup-lvl text-xs text-amber-600/70 ml-1">Lvl ${b.syrupLevel}</span></div><div class="text-xs text-purple-600 font-bold">+20% Mult</div></div>
+<button class="syrup-btn bg-amber-200 hover:bg-amber-300 disabled:opacity-50 px-3 py-1 rounded-lg font-bold transition flex flex-col items-center min-w-[80px]"><span class="text-amber-900 text-sm">Upgrade</span><span class="syrup-cost text-xs text-red-600">🧇 ${formatNumber(getSyrupUpgradeCost(b))}</span></button>
+</div>
+<div class="flex justify-between items-center bg-amber-50 p-2 rounded-lg border border-amber-100 mt-1">
+<div><div class="text-sm font-bold text-amber-900">Efficiency <span class="eff-lvl text-xs text-amber-600/70 ml-1">Lvl ${b.effLevel}</span></div><div class="text-xs text-orange-600 font-bold">-5% Cost</div></div>
+<button class="eff-btn bg-amber-200 hover:bg-amber-300 disabled:opacity-50 px-3 py-1 rounded-lg font-bold transition flex flex-col items-center min-w-[80px]"><span class="text-amber-900 text-sm">Upgrade</span><span class="eff-cost text-xs text-red-600">🧇 ${formatNumber(getEffUpgradeCost(b))}</span></button>
+</div>
+`;
+const prodBtn = upgDiv.querySelector('.prod-btn'); prodBtn.onclick = () => upgradeProduction(index);
+const hardBtn = upgDiv.querySelector('.hard-btn'); hardBtn.onclick = () => upgradeHardness(index);
+const syrupBtn = upgDiv.querySelector('.syrup-btn'); syrupBtn.onclick = () => upgradeSyrup(index);
+const effBtn = upgDiv.querySelector('.eff-btn'); effBtn.onclick = () => upgradeEff(index);
+upgView.appendChild(upgDiv);
+shopUIElements[`${b.id}_prod`] = { button: prodBtn, costDisplay: upgDiv.querySelector('.prod-cost'), levelDisplay: upgDiv.querySelector('.prod-lvl') };
+shopUIElements[`${b.id}_hard`] = { button: hardBtn, costDisplay: upgDiv.querySelector('.hard-cost'), levelDisplay: upgDiv.querySelector('.hard-lvl') };
+shopUIElements[`${b.id}_syrup`] = { button: syrupBtn, costDisplay: upgDiv.querySelector('.syrup-cost'), levelDisplay: upgDiv.querySelector('.syrup-lvl') };
+shopUIElements[`${b.id}_eff`] = { button: effBtn, costDisplay: upgDiv.querySelector('.eff-cost'), levelDisplay: upgDiv.querySelector('.eff-lvl') };
+});
+const navToShop = document.createElement('button'); navToShop.className = 'w-full py-4 mt-4 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-[0_4px_0_0_#92400e] transition-all uppercase tracking-wide'; navToShop.textContent = '⬅ Back to Facilities'; navToShop.onclick = () => toggleSidebarView('shop'); upgView.appendChild(navToShop);
+updateShopUI();
+}
+function toggleSidebarView(view) {
+const shopView = document.getElementById('shop-view'); const upgView = document.getElementById('upgrades-view'); const title = document.getElementById('sidebar-title'); const subtitle = document.getElementById('sidebar-subtitle');
+if (view === 'upgrades') { shopView.classList.add('hidden'); upgView.classList.remove('hidden'); title.textContent = "Upgrades"; subtitle.textContent = "Fortify and optimize!"; }
+else { shopView.classList.remove('hidden'); upgView.classList.add('hidden'); title.textContent = "Facilities"; subtitle.textContent = "Buy and expand your empire!"; }
+}
+function performClick(clientX, clientY, isB_Key = false) {
+if (isQuietMode && !isB_Key) return;
+waffles += clickPower;
+if (tutorialActive && tutorialSteps[tutorialStep].waitForClick && tutorialSteps[tutorialStep].target === 'waffle-container') advanceTutorial();
+if (!isQuietMode) {
+if (clientX && clientY) spawnParticle(clientX, clientY);
+waffleEl.style.transform = 'scale(0.92)'; waffleEl.style.filter = 'drop-shadow(0 5px 5px rgba(0,0,0,0.2))';
+setTimeout(() => { waffleEl.style.transform = ''; waffleEl.style.filter = ''; }, 100);
+}
+updateDisplay();
+}
+function spawnParticle(x, y) {
+const particle = document.createElement('div'); particle.textContent = '🧇'; particle.className = 'particle';
+const rect = waffleContainer.getBoundingClientRect(); let startX = x || (rect.left + rect.width / 2); let startY = y || (rect.top + rect.height / 2);
+particle.style.left = `${startX - 16}px`; particle.style.top = `${startY - 16}px`;
+const tx = (Math.random() - 0.5) * 200; const ty = -(Math.random() * 150 + 50); const rot = (Math.random() - 0.5) * 360; 
+particle.style.setProperty('--tx', `${tx}px`); particle.style.setProperty('--ty', `${ty}px`); particle.style.setProperty('--rot', `${rot}deg`);
+document.body.appendChild(particle); setTimeout(() => { particle.remove(); }, 1000);
+}
+function placeBuildingOnField(index) {
+let b = buildings[index]; let maxHp = 100 * (1 + b.hardLevel) * Math.max(1, b.baseCost / 50); let cx = 14, cy = 14;
+for(let r=2; r<15; r++) {
+for(let dx=-r; dx<=r; dx++) {
+for(let dy=-r; dy<=r; dy++) {
+if(Math.abs(dx)===r || Math.abs(dy)===r) {
+let x = cx+dx, y = cy+dy;
+if(x>=0 && x<30 && y>=0 && y<30) {
+let key = `${x},${y}`;
+if(!walls[key] && !turtleBuildings[key] && !playerFieldBuildings[key]) {
+if(x>=13 && x<=16 && y>=13 && y<=16) continue; 
+playerFieldBuildings[key] = { index: index, hp: maxHp, maxHp: maxHp };
+return true;
+}
+}
+}
+}
+}
+}
+return false;
+}
+function buyBuilding(index) {
+const b = buildings[index]; const cost = getCost(b);
+if (waffles >= cost) {
+if(isBarrierMode) { if(!placeBuildingOnField(index)) { showToast("Field Full", "No space left to place this building!", "bg-red-500"); return; } }
+waffles -= cost; b.count++; recalculateStats(); updateShopUI(); updateDisplay();
+}
+}
+function upgradeProduction(index) { const b = buildings[index]; const cost = getProdUpgradeCost(b); if (waffles >= cost) { waffles -= cost; b.prodLevel++; b.prodMultiplier = 1 + (b.prodLevel * 0.1); recalculateStats(); updateShopUI(); updateDisplay(); } }
+function upgradeHardness(index) {
+const b = buildings[index]; const cost = getHardUpgradeCost(b);
+if (waffles >= cost) {
+waffles -= cost; b.hardLevel++; b.hardness = Math.min(0.9, b.hardLevel * 0.05); 
+if(isBarrierMode) {
+for(let key in playerFieldBuildings) {
+let pb = playerFieldBuildings[key];
+if(pb.index === index) { let hpRatio = pb.hp / pb.maxHp; pb.maxHp = 100 * (1 + b.hardLevel) * Math.max(1, b.baseCost / 50); pb.hp = pb.maxHp * hpRatio; }
+}
+}
+updateShopUI(); updateDisplay();
+}
+}
+function upgradeSyrup(index) { const b = buildings[index]; const cost = getSyrupUpgradeCost(b); if (waffles >= cost) { waffles -= cost; b.syrupLevel++; b.syrupMultiplier = Math.pow(1.2, b.syrupLevel); recalculateStats(); updateShopUI(); updateDisplay(); } }
+function upgradeEff(index) { const b = buildings[index]; const cost = getEffUpgradeCost(b); if (waffles >= cost) { waffles -= cost; b.effLevel++; b.effDiscount = Math.pow(0.95, b.effLevel); updateShopUI(); updateDisplay(); } }
+function triggerDisaster() {
+const totalBuildings = buildings.reduce((sum, b) => sum + b.count, 0); if (totalBuildings < 15) return;
+const rand = Math.random(); let d;
+if (rand < 0.40) d = disasters[0]; else if (rand < 0.70) d = disasters[1]; else if (rand < 0.85) d = disasters[2]; else if (rand < 0.95) d = disasters[3]; else d = disasters[4]; 
+const level = Math.floor(Math.random() * 5) + 1; const levelMultipliers =[0.6, 1.0, 1.5, 2.0, 2.5]; const effectiveSeverity = d.baseSeverity * levelMultipliers[level - 1];
+let totalLost = 0; let lostDetails =[];
+if(isBarrierMode) {
+for(let key in playerFieldBuildings) {
+let pb = playerFieldBuildings[key]; let b = buildings[pb.index];
+if (b.id === 'house' && effectiveSeverity < 0.40) continue;
+const resist = Math.min(0.9, b.hardness); let dmg = pb.maxHp * effectiveSeverity * (1 - resist); pb.hp -= dmg;
+if(pb.hp <= 0) { b.count--; totalLost++; lostDetails.push(b.name); delete playerFieldBuildings[key]; }
+}
+} else {
+buildings.forEach(b => {
+if (b.count > 0) {
+if (b.id === 'house' && effectiveSeverity < 0.40) return; 
+const resist = Math.min(0.9, b.hardness); let lost = Math.floor(b.count * effectiveSeverity * (1 - resist));
+if (lost === 0 && Math.random() < effectiveSeverity * (1 - resist) * 2) lost = 1;
+if (lost > 0) { if (lost > b.count) lost = b.count; b.count -= lost; totalLost += lost; lostDetails.push(`${lost} ${b.name}(s)`); }
+}
+});
+}
+if (totalLost > 0) { recalculateStats(); updateShopUI(); updateDisplay(); let lostMsg = isBarrierMode ? `A brutal disaster destroyed ${totalLost} buildings!` : `A brutal disaster! You lost: ${lostDetails.join(", ")}.`; showToast(`${d.icon} Lvl ${level} ${d.name}!`, lostMsg, d.color); }
+else showToast(`${d.icon} Lvl ${level} ${d.name}!`, `Your upgraded facilities withstood the disaster!`, 'bg-green-600');
+}
+let mouseGridX = -1; let mouseGridY = -1;
+fieldCanvas.addEventListener('mousemove', (e) => {
+const rect = fieldCanvas.getBoundingClientRect(); const scaleX = fieldCanvas.width / rect.width; const scaleY = fieldCanvas.height / rect.height;
+mouseGridX = Math.floor(((e.clientX - rect.left) * scaleX) / 20); mouseGridY = Math.floor(((e.clientY - rect.top) * scaleY) / 20);
+});
+fieldCanvas.addEventListener('mouseleave', () => { mouseGridX = -1; mouseGridY = -1; });
+fieldCanvas.addEventListener('click', (e) => {
+const rect = fieldCanvas.getBoundingClientRect(); const scaleX = fieldCanvas.width / rect.width; const scaleY = fieldCanvas.height / rect.height;
+const clickX = ((e.clientX - rect.left) * scaleX) / 20; const clickY = ((e.clientY - rect.top) * scaleY) / 20;
+const mgX = Math.floor(clickX); const mgY = Math.floor(clickY);
+let clickedDroppedWaffle = false;
+droppedWaffles.forEach(dw => { if (!dw.returning && Math.abs(dw.x - clickX) <= 1.5 && Math.abs(dw.y - clickY) <= 1.5) { dw.returning = true; clickedDroppedWaffle = true; } });
+if (clickedDroppedWaffle) return;
+if (selectedDefense) {
+if (mgX < 0 || mgY < 0 || mgX > 29 || mgY > 29) return;
+if (mgX >= 13 && mgX <= 16 && mgY >= 13 && mgY <= 16) { showToast("Invalid", "Cannot build on the stash!", "bg-red-500"); return; }
+let key = `${mgX},${mgY}`; if (walls[key] || playerFieldBuildings[key]) return; 
+let def = defenseTypes[selectedDefense];
+if (waffles >= def.cost) { waffles -= def.cost; let hp = def.maxHp * (def.isObstacle ? (1 + wallFortificationLevel) : 1); walls[key] = { id: selectedDefense, hp: hp, maxHp: hp, isObstacle: def.isObstacle }; updateDisplay(); }
+else showToast("Not Enough Waffles", "You cannot afford this defense.", "bg-red-500");
+} else if (mgX >= 0 && mgY >= 0 && mgX <= 29 && mgY <= 29) applyAoE(mgX, mgY, 3, 4, 10);
+});
+function applyAoE(cx, cy, radius, force, dmg) {
+smashEffects.push({x: cx * 20 + 10, y: cy * 20 + 10, radius: 0, maxRadius: radius * 20, alpha: 1});
+for (let i = turtles.length - 1; i >= 0; i--) {
+let t = turtles[i]; let dx = t.x - cx; let dy = t.y - cy; let dist = Math.sqrt(dx*dx + dy*dy);
+if (dist <= radius) {
+let pushForce = Math.ceil(force - dist*(force/radius));
+if (dist === 0) t.x += pushForce; else { t.x += Math.round((dx/dist) * pushForce); t.y += Math.round((dy/dist) * pushForce); }
+if(t.hp===undefined) t.hp = t.type==='builder'?15:10;
+t.hp -= dmg; if (t.hp <= 0 || t.x <= 0 || t.x >= 29 || t.y <= 0 || t.y >= 29) turtles.splice(i, 1);
+}
+}
+for (let key in turtleBuildings) {
+let[tx, ty] = key.split(',').map(Number); let dx = tx - cx; let dy = ty - cy; let dist = Math.sqrt(dx*dx + dy*dy);
+if (dist <= radius) {
+let b = turtleBuildings[key]; let actualDamage = Math.max(0, (radius - dist + 1) * 25) / b.level; b.hp -= actualDamage;
+if (b.hp <= 0) { if (b.type === 'storage' && b.waffles > 0) droppedWaffles.push({x: tx, y: ty, amount: b.waffles, returning: false}); delete turtleBuildings[key]; } else b.level = Math.max(1, Math.ceil(b.hp / 100));
+}
+}
+let pbHit = false;
+for (let key in playerFieldBuildings) {
+let[tx, ty] = key.split(',').map(Number); let dx = tx - cx; let dy = ty - cy; let dist = Math.sqrt(dx*dx + dy*dy);
+if(dist <= radius) { let pb = playerFieldBuildings[key]; let b = buildings[pb.index]; let dmg = Math.max(0, (radius - dist + 1) * 20) / (1 + b.hardLevel); pb.hp -= dmg; if(pb.hp <= 0) { b.count--; delete playerFieldBuildings[key]; } pbHit = true; }
+}
+if(pbHit) { recalculateStats(); updateShopUI(); }
+if (wallFortificationLevel < 2) {
+for (let key in walls) { let[tx, ty] = key.split(',').map(Number); let dx = tx - cx; let dy = ty - cy; if (Math.sqrt(dx*dx + dy*dy) <= radius) { walls[key].hp -= 20; if (walls[key].hp <= 0) delete walls[key]; } }
+}
+}
+function getWallUpgradeCost() { return Math.floor(500 * Math.pow(2.5, wallFortificationLevel)); }
+function upgradeWalls() {
+const cost = getWallUpgradeCost();
+if (waffles >= cost) {
+waffles -= cost; wallFortificationLevel++; updateDisplay(); updateWallUpgradeButton();
+for(let key in walls) { let w = walls[key]; if(w.isObstacle) { w.maxHp *= 1.5; w.hp = w.maxHp; } }
+showToast("Defenses Fortified!", `Obstacles will now take much longer to break.`, "bg-blue-600");
+} else showToast("Not Enough Waffles", `You need ${formatNumber(cost)} waffles.`, "bg-red-500");
+}
+function updateWallUpgradeButton() { const btn = document.getElementById('btn-upgrade-wall'); if (btn) btn.innerText = `Upgrade Walls & Turrets (${formatNumber(getWallUpgradeCost())} 🧇)`; }
+function spawnTurtle() {
+if (!isBarrierMode || currentCompanyIndex === -1) return;
+let tx, ty;
+if (Math.random() < 0.5) { tx = Math.random() < 0.5 ? 0 : 29; ty = Math.floor(Math.random() * 30); }
+else { tx = Math.floor(Math.random() * 30); ty = Math.random() < 0.5 ? 0 : 29; }
+let t = { x: tx, y: ty, state: 'moving_in', targetKey: null, thoughtTicks: 0 };
+if (Math.random() < 0.05) { t.type = 'builder'; t.state = 'seeking'; t.buildTicks = 0; t.hp = 15; } else { t.type = 'normal'; t.hp = 10; }
+turtles.push(t);
+}
+function getNextStepBFS(sx, sy, targetConditionFn) {
+let queue = [[sx, sy]]; let cameFrom = {}; cameFrom[`${sx},${sy}`] = null; let targetKey = null; const dirs = [[0,-1], [0,1],[-1,0],[1,0]]; let iterations = 0;
+while (queue.length > 0 && iterations < 500) {
+iterations++; let[cx, cy] = queue.shift();
+if (targetConditionFn(cx, cy)) { targetKey = `${cx},${cy}`; break; }
+for (let[dx, dy] of dirs) {
+let nx = cx + dx; let ny = cy + dy;
+if (nx >= 0 && nx < 30 && ny >= 0 && ny < 30) {
+let key = `${nx},${ny}`;
+if (!cameFrom.hasOwnProperty(key) && (!walls[key] || walls[key].isObstacle === false) && !playerFieldBuildings[key]) { cameFrom[key] = `${cx},${cy}`; queue.push([nx, ny]); }
+}
+}
+}
+if (!targetKey) return null; 
+let curr = targetKey; while (cameFrom[curr] && cameFrom[curr] !== `${sx},${sy}`) curr = cameFrom[curr]; return curr.split(',').map(Number);
+}
+function attackWallIfBlocked(t, targetX, targetY) {
+let dx = Math.sign(targetX - t.x); let dy = Math.sign(targetY - t.y); let movedOrAttacked = false;
+let wallDamage = 0.5 / (1 + (wallFortificationLevel * 0.75)); let buildingDamage = 5; 
+let tryMove = (nx, ny) => {
+let key = `${nx},${ny}`;
+if (walls[key] && walls[key].isObstacle !== false) {
+walls[key].hp -= wallDamage; if(walls[key].id === 'spiked') t.hp -= 2; if (walls[key].hp <= 0) delete walls[key]; return true;
+} else if (playerFieldBuildings[key]) {
+let pb = playerFieldBuildings[key]; let b = buildings[pb.index]; let dmg = buildingDamage / (1 + b.hardLevel); pb.hp -= dmg;
+if (pb.hp <= 0) { b.count--; delete playerFieldBuildings[key]; recalculateStats(); updateShopUI(); }
+return true; 
+} else if (nx >= 0 && nx < 30 && ny >= 0 && ny < 30 && !turtleBuildings[key]) { t.x = nx; t.y = ny; return true; }
+return false;
+};
+if (dx !== 0 && tryMove(t.x + dx, t.y)) movedOrAttacked = true;
+if (!movedOrAttacked && dy !== 0 && tryMove(t.x, t.y + dy)) movedOrAttacked = true;
+}
+function updateTurtles() {
+let builders = turtles.filter(t => t.type === 'builder'); let buildJobsCount = builders.filter(t => t.builderJob === 'build').length; let upgradeJobsCount = builders.filter(t => t.builderJob === 'upgrade').length;
+for (let i = turtles.length - 1; i >= 0; i--) {
+let t = turtles[i];
+if (t.hp === undefined) t.hp = t.type === 'builder' ? 15 : 10;
+if (t.hp <= 0) { turtles.splice(i, 1); continue; }
+if (t.thoughtTicks > 0) t.thoughtTicks--;
+if (t.slowTicks > 0) { t.slowTicks--; continue; }
+if (t.type === 'builder') {
+if (t.state === 'seeking') {
+let normals = turtles.filter(nt => nt.type === 'normal');
+if (normals.length > 0 && Math.random() < 0.15) { t.state = 'recruiting'; t.targetTurtle = normals[Math.floor(Math.random() * normals.length)]; continue; }
+if (builders.length >= 2) {
+if (buildJobsCount < upgradeJobsCount) { t.builderJob = 'build'; buildJobsCount++; }
+else if (upgradeJobsCount < buildJobsCount) { t.builderJob = 'upgrade'; upgradeJobsCount++; }
+else { t.builderJob = Math.random() < 0.5 ? 'build' : 'upgrade'; if (t.builderJob === 'build') buildJobsCount++; else upgradeJobsCount++; }
+} else t.builderJob = Math.random() < 0.5 ? 'build' : 'upgrade';
+if (t.builderJob === 'upgrade') {
+let possibleTargets =[]; for (let key in turtleBuildings) if (turtleBuildings[key].hp < 400) possibleTargets.push(key);
+if (possibleTargets.length > 0) { t.targetKey = possibleTargets[Math.floor(Math.random() * possibleTargets.length)]; t.state = 'moving_to_build'; }
+else t.builderJob = 'build'; 
+}
+if (t.builderJob === 'build') {
+let emptySpots =[];
+for(let x = 2; x < 28; x++) { for(let y = 2; y < 28; y++) { if (x >= 13 && x <= 16 && y >= 13 && y <= 16) continue; let key = `${x},${y}`; if (!walls[key] && !turtleBuildings[key] && !playerFieldBuildings[key]) emptySpots.push(key); } }
+if (emptySpots.length > 0) { t.targetKey = emptySpots[Math.floor(Math.random() * emptySpots.length)]; t.state = 'moving_to_build'; }
+}
+}
+else if (t.state === 'recruiting') {
+if (!t.targetTurtle || t.targetTurtle.type !== 'normal' || !turtles.includes(t.targetTurtle)) { t.state = 'seeking'; continue; }
+let dx = t.x - t.targetTurtle.x; let dy = t.y - t.targetTurtle.y; let dist = Math.sqrt(dx*dx + dy*dy);
+if (dist <= 1.5) { 
+t.thought = '👷?'; t.thoughtTicks = 15;
+if (Math.random() < 0.15) { 
+t.targetTurtle.thought = '👍'; t.targetTurtle.thoughtTicks = 15; t.thought = '🎉';
+t.targetTurtle.type = 'builder'; t.targetTurtle.state = 'seeking'; t.targetTurtle.targetKey = null; t.targetTurtle.builderJob = null; 
+if (t.targetTurtle.waffles_stolen > 0) { droppedWaffles.push({x: t.targetTurtle.x, y: t.targetTurtle.y, amount: t.targetTurtle.waffles_stolen, returning: false}); t.targetTurtle.waffles_stolen = 0; }
+builders.push(t.targetTurtle); 
+} else { t.targetTurtle.thought = '👎'; t.targetTurtle.thoughtTicks = 15; }
+t.state = 'seeking'; 
+} else { let step = getNextStepBFS(t.x, t.y, (cx, cy) => cx === t.targetTurtle.x && cy === t.targetTurtle.y); if (step) { t.x = step[0]; t.y = step[1]; } else t.state = 'seeking'; }
+}
+else if (t.state === 'moving_to_build') {
+if (!t.targetKey) { t.state = 'seeking'; continue; }
+let[tx, ty] = t.targetKey.split(',').map(Number);
+if (t.x === tx && t.y === ty) { t.state = 'building'; t.buildTicks = 0; }
+else { let step = getNextStepBFS(t.x, t.y, (cx, cy) => cx === tx && cy === ty); if (step) { t.x = step[0]; t.y = step[1]; } else t.state = 'seeking'; }
+}
+else if (t.state === 'building') {
+t.buildTicks++;
+if (t.buildTicks >= 4) { 
+let key = `${t.x},${t.y}`;
+if (turtleBuildings[key]) { if (turtleBuildings[key].hp < 400) { turtleBuildings[key].hp = Math.min(400, turtleBuildings[key].hp + 100); turtleBuildings[key].level = Math.ceil(turtleBuildings[key].hp / 100); } }
+else { turtleBuildings[key] = { type: Math.random() < 0.7 ? 'house' : 'storage', level: 1, hp: 100, occupants:[], waffles: 0 }; }
+t.state = 'seeking';
+}
+}
+} else if (t.type === 'normal') {
+if (t.state === 'moving_in') {
+if (t.x >= 14 && t.x <= 15 && t.y >= 14 && t.y <= 15) {
+let stealAmount = Math.max(5, Math.floor(wps * 2)); if (waffles >= stealAmount) waffles -= stealAmount; else { stealAmount = waffles; waffles = 0; }
+t.waffles_stolen = stealAmount; updateDisplay(); t.state = 'evaluating_next'; t.targetKey = null; continue;
+}
+let step = getNextStepBFS(t.x, t.y, (cx, cy) => cx >= 14 && cx <= 15 && cy >= 14 && cy <= 15);
+if (step) { t.x = step[0]; t.y = step[1]; } else attackWallIfBlocked(t, 14, 14);
+}
+else if (t.state === 'evaluating_next') {
+let housesExist = Object.values(turtleBuildings).some(b => b.type === 'house');
+if (!housesExist) { t.state = 'leaving'; t.targetKey = null; }
+else {
+let validStorages = Object.keys(turtleBuildings).filter(k => { let b = turtleBuildings[k]; return b.type === 'storage' && b.waffles < b.level * 10; });
+if (!t.has_deposited && validStorages.length > 0 && t.waffles_stolen >= 2) { t.targetKey = getClosest(t.x, t.y, validStorages); t.state = 'depositing'; }
+else {
+let validHouses = Object.keys(turtleBuildings).filter(k => { let b = turtleBuildings[k]; return b.type === 'house' && b.occupants.length < b.level; });
+if (validHouses.length > 0) { t.targetKey = getClosest(t.x, t.y, validHouses); t.state = 'going_home'; } else { t.state = 'waiting_for_house'; t.wait_ticks = 100; }
+}
+}
+}
+else if (t.state === 'depositing') {
+if (!t.targetKey || !turtleBuildings[t.targetKey] || turtleBuildings[t.targetKey].type !== 'storage') { t.state = 'evaluating_next'; continue; }
+let[tx, ty] = t.targetKey.split(',').map(Number);
+if (t.x === tx && t.y === ty) {
+let b = turtleBuildings[t.targetKey]; let space = (b.level * 10) - b.waffles;
+if (space <= 0) { t.state = 'evaluating_next'; continue; }
+let depositAmount = Math.min(space, Math.floor(t.waffles_stolen / 2)); if (depositAmount <= 0) depositAmount = 1; 
+b.waffles += depositAmount; t.has_deposited = true; t.state = 'evaluating_next'; 
+} else { let step = getNextStepBFS(t.x, t.y, (cx, cy) => cx === tx && cy === ty); if (step) { t.x = step[0]; t.y = step[1]; } else attackWallIfBlocked(t, tx, ty); }
+}
+else if (t.state === 'waiting_for_house') {
+let validHouses = Object.keys(turtleBuildings).filter(k => { let b = turtleBuildings[k]; return b.type === 'house' && b.occupants.length < b.level; });
+if (validHouses.length > 0) { t.targetKey = getClosest(t.x, t.y, validHouses); t.state = 'going_home'; } else { t.wait_ticks--; if (t.wait_ticks <= 0) t.state = 'leaving'; }
+}
+else if (t.state === 'going_home') {
+if (!t.targetKey || !turtleBuildings[t.targetKey] || turtleBuildings[t.targetKey].type !== 'house') { t.state = 'evaluating_next'; continue; }
+let[tx, ty] = t.targetKey.split(',').map(Number);
+if (t.x === tx && t.y === ty) {
+let b = turtleBuildings[t.targetKey];
+if (b.occupants.length < b.level) { b.occupants.push({ restTicks: 450 }); turtles.splice(i, 1); continue; } else t.state = 'evaluating_next'; 
+} else { let step = getNextStepBFS(t.x, t.y, (cx, cy) => cx === tx && cy === ty); if (step) { t.x = step[0]; t.y = step[1]; } else attackWallIfBlocked(t, tx, ty); }
+}
+else if (t.state === 'leaving') {
+if (t.x === 0 || t.x === 29 || t.y === 0 || t.y === 29) { turtles.splice(i, 1); continue; }
+let step = getNextStepBFS(t.x, t.y, (cx, cy) => cx === 0 || cx === 29 || cy === 0 || cy === 29);
+if (step) { t.x = step[0]; t.y = step[1]; } else attackWallIfBlocked(t, t.x < 15 ? 0 : 29, t.y < 15 ? 0 : 29);
+}
+}
+if(t.hp <= 0) { turtles.splice(i, 1); continue; }
+let key = `${t.x},${t.y}`;
+if (walls[key] && !walls[key].isObstacle) {
+if (walls[key].id === 'syrup') { t.slowTicks = 1; walls[key].hp--; if(walls[key].hp <= 0) delete walls[key]; }
+else if (walls[key].id === 'mine') { applyAoE(t.x, t.y, 2, 3, 15); delete walls[key]; }
+}
+}
+}
+function drawField() {
+if (!isBarrierMode || currentCompanyIndex === -1) return;
+ctx.clearRect(0, 0, fieldCanvas.width, fieldCanvas.height);
+ctx.globalAlpha = 1; ctx.lineWidth = 1; ctx.fillStyle = "#000000"; ctx.strokeStyle = "rgba(0,0,0,0.05)";
+for(let i=0; i<=30; i++) { ctx.beginPath(); ctx.moveTo(i*20, 0); ctx.lineTo(i*20, 600); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i*20); ctx.lineTo(600, i*20); ctx.stroke(); }
+let visualWaffles = Math.floor(waffles / 10); if (waffles > 0 && visualWaffles === 0) visualWaffles = 1; visualWaffles = Math.min(visualWaffles, 500);
+ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "18px sans-serif"; ctx.fillStyle = "#000000"; 
+for(let i = 0; i < visualWaffles; i++) { ctx.save(); ctx.translate(300 + waffleVisualOffsets[i].x, 300 + waffleVisualOffsets[i].y); ctx.rotate(waffleVisualOffsets[i].rot); ctx.fillText('🧇', 0, 0); ctx.restore(); }
+for (let key in playerFieldBuildings) {
+let[x, y] = key.split(',').map(Number); let pb = playerFieldBuildings[key]; let b = buildings[pb.index];
+ctx.font = "16px sans-serif"; ctx.fillText(b.icon, x * 20 + 10, y * 20 + 10);
+let hpRatio = pb.hp / pb.maxHp; ctx.fillStyle = "rgba(255,0,0,0.8)"; ctx.fillRect(x * 20 + 2, y * 20 + 16, 16, 3); ctx.fillStyle = "rgba(0,255,0,0.8)"; ctx.fillRect(x * 20 + 2, y * 20 + 16, 16 * hpRatio, 3);
+}
+for (let key in walls) {
+let [x, y] = key.split(',').map(Number); let w = walls[key]; let defId = w.id || 'basic'; let def = defenseTypes[defId] || defenseTypes['basic'];
+if(def.isObstacle) { ctx.fillStyle = "#8B4513"; ctx.fillRect(x * 20, y * 20, 20, 20); ctx.strokeStyle = "#5C2E0B"; ctx.lineWidth = 2; ctx.strokeRect(x * 20, y * 20, 20, 20); }
+if(defId !== 'basic') { ctx.font = "16px sans-serif"; ctx.fillText(def.icon, x * 20 + 10, y * 20 + 10); }
+if(defId === 'basic') { ctx.beginPath(); ctx.moveTo(x*20, y*20 + 10); ctx.lineTo(x*20 + 20, y*20 + 10); ctx.moveTo(x*20 + 10, y*20); ctx.lineTo(x*20 + 10, y*20 + 10); ctx.stroke(); }
+if(w.maxHp > 1) { const hpRatio = w.hp / w.maxHp; ctx.fillStyle = "rgba(255,0,0,0.8)"; ctx.fillRect(x * 20 + 2, y * 20 + 16, 16, 3); ctx.fillStyle = "rgba(0,255,0,0.8)"; ctx.fillRect(x * 20 + 2, y * 20 + 16, 16 * hpRatio, 3); }
+}
+ctx.fillStyle = "#000000"; 
+for (let key in turtleBuildings) {
+let[x, y] = key.split(',').map(Number); let b = turtleBuildings[key]; ctx.font = "16px sans-serif"; let icon = '';
+if (b.type === 'house') { if (b.level === 1) icon = '🏜️'; else if (b.level === 2) icon = '⛺'; else if (b.level === 3) icon = '🏚️'; else icon = '🏠'; }
+else if (b.type === 'storage') { if (b.level === 1) icon = '🧺'; else if (b.level === 2) icon = '📦'; else if (b.level === 3) icon = '🗄️'; else icon = '🏦'; }
+ctx.fillText(icon, x * 20 + 10, y * 20 + 10);
+if (b.type === 'storage' && b.waffles > 0) { ctx.font = "9px sans-serif"; ctx.fillText(`🧇${b.waffles}`, x * 20 + 10, y * 20 - 2); }
+if (b.type === 'house' && b.occupants && b.occupants.length > 0) { ctx.font = "10px sans-serif"; ctx.fillText('💤', x * 20 + 18, y * 20 + 2); }
+}
+droppedWaffles.forEach(dw => {
+ctx.save(); ctx.translate(dw.x * 20 + 10, dw.y * 20 + 10); ctx.font = "14px sans-serif"; ctx.fillStyle = "#000000"; ctx.fillText('🧇', 0, 0);
+if (!dw.returning) { ctx.font = "10px sans-serif"; ctx.fillStyle = "white"; ctx.shadowColor = "black"; ctx.shadowBlur = 2; ctx.fillText(dw.amount, 10, -10); } ctx.restore();
+});
+turtles.forEach(t => {
+ctx.font = "16px sans-serif"; ctx.fillStyle = "#000000"; ctx.fillText('🐢', t.x * 20 + 10, t.y * 20 + 10);
+if (t.thought && t.thoughtTicks > 0) { ctx.font = "12px sans-serif"; ctx.shadowColor = "rgba(255,255,255,0.8)"; ctx.shadowBlur = 4; ctx.fillText(t.thought, t.x * 20 + 10, t.y * 20 - 10); ctx.shadowBlur = 0; }
+else if (t.type === 'builder') { ctx.font = "10px sans-serif"; ctx.fillText('🪖', t.x * 20 + 10, t.y * 20 + 2); }
+else if (t.state !== 'moving_in') { ctx.font = "10px sans-serif"; ctx.fillText('🧇', t.x * 20 + 10, t.y * 20 - 4); }
+});
+for (let i = smashEffects.length - 1; i >= 0; i--) {
+let s = smashEffects[i]; s.radius += 8; s.alpha -= 0.08; 
+if (s.alpha <= 0) smashEffects.splice(i, 1);
+else { ctx.save(); ctx.beginPath(); ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2); ctx.fillStyle = `rgba(217, 119, 6, ${s.alpha * 0.4})`; ctx.fill(); ctx.strokeStyle = `rgba(180, 83, 9, ${s.alpha})`; ctx.lineWidth = 3; ctx.stroke(); ctx.restore(); }
+}
+if (mouseGridX >= 0 && mouseGridY >= 0) {
+ctx.save();
+if (selectedDefense) {
+const key = `${mouseGridX},${mouseGridY}`; const isOnCenter = (mouseGridX >= 13 && mouseGridX <= 16 && mouseGridY >= 13 && mouseGridY <= 16); const def = defenseTypes[selectedDefense];
+const cantBuild = walls[key] || playerFieldBuildings[key] || isOnCenter || waffles < def.cost;
+ctx.fillStyle = cantBuild ? "rgba(255,0,0,0.4)" : "rgba(255,255,255,0.6)"; ctx.fillRect(mouseGridX * 20, mouseGridY * 20, 20, 20); ctx.strokeStyle = cantBuild ? "red" : "white"; ctx.lineWidth = 2; ctx.strokeRect(mouseGridX * 20, mouseGridY * 20, 20, 20);
+} else { ctx.strokeStyle = "rgba(180, 83, 9, 0.5)"; ctx.lineWidth = 2; ctx.strokeRect(mouseGridX * 20, mouseGridY * 20, 20, 20); }
+ctx.restore();
+}
+requestAnimationFrame(drawField);
+}
+function updateDisplay() {
+countEl.textContent = formatNumber(waffles);
+if (currentCompanyIndex !== -1 && companies[currentCompanyIndex]) {
+const comp = companies[currentCompanyIndex]; const rebirthBtn = document.getElementById('btn-rebirth'); const rebirthReqText = document.getElementById('rebirth-req-text');
+const r = comp.rebirths || 0; const reqWaffles = getRebirthReqWaffles(r); const reqWPS = getRebirthReqWPS(r); let currentBaseWPS = wps / getRebirthMultiplier(r); const nextMult = getRebirthMultiplier(r + 1);
+rebirthBtn.textContent = `Rebirth (x${nextMult.toFixed(2)} Boost)`;
+if (waffles >= reqWaffles && currentBaseWPS >= reqWPS) {
+rebirthBtn.disabled = false; rebirthBtn.classList.replace('bg-purple-300', 'bg-purple-600'); rebirthBtn.classList.replace('text-purple-800', 'text-white'); rebirthBtn.classList.remove('opacity-50', 'cursor-not-allowed'); rebirthBtn.classList.add('hover:bg-purple-700', 'shadow-[0_4px_0_0_#6b21a8]', 'hover:translate-y-[2px]', 'hover:shadow-[0_2px_0_0_#6b21a8]'); rebirthReqText.textContent = "Ready for Rebirth!"; rebirthReqText.classList.replace('text-amber-700', 'text-green-600');
+} else {
+rebirthBtn.disabled = true; rebirthBtn.classList.replace('bg-purple-600', 'bg-purple-300'); rebirthBtn.classList.replace('text-white', 'text-purple-800'); rebirthBtn.classList.add('opacity-50', 'cursor-not-allowed'); rebirthBtn.classList.remove('hover:bg-purple-700', 'shadow-[0_4px_0_0_#6b21a8]', 'hover:translate-y-[2px]', 'hover:shadow-[0_2px_0_0_#6b21a8]'); rebirthReqText.textContent = `Req. ${formatNumber(reqWaffles)} Waffles & ${formatNumber(reqWPS)} WPS`; rebirthReqText.classList.replace('text-green-600', 'text-amber-700');
+}
+}
+for(let key in defenseTypes) {
+let btn = document.getElementById(`def-btn-${key}`);
+if(btn) {
+if (waffles >= defenseTypes[key].cost) btn.classList.remove('opacity-50'); else btn.classList.add('opacity-50');
+if (selectedDefense === key) { btn.classList.add('border-amber-400', 'bg-amber-600'); btn.classList.remove('border-transparent', 'bg-stone-600'); }
+else { btn.classList.remove('border-amber-400', 'bg-amber-600'); btn.classList.add('border-transparent', 'bg-stone-600'); }
+}
+}
+}
+function updateShopUI() {
+buildings.forEach((b) => {
+const ui = shopUIElements[b.id]; const cost = getCost(b); const prodTexts =[];
+if (b.wps > 0) prodTexts.push(`+${formatStat(b.wps * b.prodMultiplier * b.syrupMultiplier)} WPS`); if (b.wpc > 0) prodTexts.push(`+${formatStat(b.wpc * b.prodMultiplier * b.syrupMultiplier)} WPC`);
+ui.costDisplay.textContent = `🧇 ${formatNumber(cost)}`; ui.countDisplay.textContent = b.count > 0 ? b.count : ''; ui.wpsDisplay.textContent = prodTexts.join(' & ');
+if (waffles >= cost) { ui.button.removeAttribute('disabled'); ui.button.classList.remove('opacity-50', 'bg-gray-50'); ui.costDisplay.classList.replace('text-red-600', 'text-green-600'); }
+else { ui.button.setAttribute('disabled', 'true'); ui.button.classList.add('opacity-50', 'bg-gray-50'); ui.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const prodUi = shopUIElements[`${b.id}_prod`]; const prodCost = getProdUpgradeCost(b); prodUi.costDisplay.textContent = `🧇 ${formatNumber(prodCost)}`; prodUi.levelDisplay.textContent = `Lvl ${b.prodLevel}`;
+if (waffles >= prodCost) { prodUi.button.removeAttribute('disabled'); prodUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { prodUi.button.setAttribute('disabled', 'true'); prodUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const hardUi = shopUIElements[`${b.id}_hard`]; const hardCost = getHardUpgradeCost(b); hardUi.costDisplay.textContent = `🧇 ${formatNumber(hardCost)}`; hardUi.levelDisplay.textContent = `Lvl ${b.hardLevel}`;
+if (waffles >= hardCost) { hardUi.button.removeAttribute('disabled'); hardUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { hardUi.button.setAttribute('disabled', 'true'); hardUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const syrupUi = shopUIElements[`${b.id}_syrup`]; const syrupCost = getSyrupUpgradeCost(b); syrupUi.costDisplay.textContent = `🧇 ${formatNumber(syrupCost)}`; syrupUi.levelDisplay.textContent = `Lvl ${b.syrupLevel}`;
+if (waffles >= syrupCost) { syrupUi.button.removeAttribute('disabled'); syrupUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { syrupUi.button.setAttribute('disabled', 'true'); syrupUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const effUi = shopUIElements[`${b.id}_eff`]; const effCost = getEffUpgradeCost(b); effUi.costDisplay.textContent = `🧇 ${formatNumber(effCost)}`; effUi.levelDisplay.textContent = `Lvl ${b.effLevel}`;
+if (waffles >= effCost) { effUi.button.removeAttribute('disabled'); effUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { effUi.button.setAttribute('disabled', 'true'); effUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+});
+}
+function showToast(title, message, bgColor) {
+const toast = document.createElement('div'); toast.className = `${bgColor} text-white p-4 rounded-xl shadow-2xl toast-enter flex items-start gap-3 pointer-events-auto z-[99999]`;
+toast.innerHTML = `<div class="flex-1"><h4 class="font-black text-lg tracking-wide uppercase">${title}</h4><p class="font-semibold text-sm opacity-90">${message}</p></div><button class="text-white/50 hover:text-white" onclick="this.parentElement.remove()"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>`;
+toastContainer.appendChild(toast); setTimeout(() => { if(toastContainer.contains(toast)) { toast.classList.remove('toast-enter'); toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 500); } }, 6000);
+}
+function toggleGameMode() {
+const btn = document.getElementById('btn-game-mode'); const textEl = document.getElementById('game-mode-text'); const descEl = document.getElementById('game-mode-desc');
+if (btn.dataset.mode === 'normal') { btn.dataset.mode = 'barrier'; textEl.textContent = 'Barrier'; descEl.textContent = 'Defend from hungry turtles!'; btn.classList.replace('border-amber-500', 'border-red-500'); btn.classList.replace('shadow-[0_4px_0_0_#d97706]', 'shadow-[0_4px_0_0_#ef4444]'); btn.classList.replace('hover:shadow-[0_2px_0_0_#d97706]', 'hover:shadow-[0_2px_0_0_#ef4444]'); }
+else { btn.dataset.mode = 'normal'; textEl.textContent = 'Normal'; descEl.textContent = 'Standard endless clicking'; btn.classList.replace('border-red-500', 'border-amber-500'); btn.classList.replace('shadow-[0_4px_0_0_#ef4444]', 'shadow-[0_4px_0_0_#d97706]'); btn.classList.replace('hover:shadow-[0_2px_0_0_#ef4444]', 'hover:shadow-[0_2px_0_0_#d97706]'); }
+}
+function showScreen(screenId) {
+document.getElementById('screen-main-menu').classList.add('hidden'); document.getElementById('screen-companies').classList.add('hidden'); document.getElementById('screen-new-company').classList.add('hidden'); document.getElementById('screen-pause-menu').classList.add('hidden');
+if (screenId) document.getElementById(screenId).classList.remove('hidden');
+if (screenId === 'screen-new-company') { document.getElementById('company-name-input').value = ''; const btn = document.getElementById('btn-game-mode'); if (btn && btn.dataset.mode !== 'normal') toggleGameMode(); }
+}
+function togglePauseMenu() { const pauseMenu = document.getElementById('screen-pause-menu'); if (pauseMenu.classList.contains('hidden')) pauseMenu.classList.remove('hidden'); else pauseMenu.classList.add('hidden'); }
+function toggleQuietMode() {
+isQuietMode = !isQuietMode; const btn = document.getElementById('btn-quiet-mode');
+if (isQuietMode) { btn.textContent = 'Quiet Mode: ON'; btn.classList.replace('bg-amber-300', 'bg-amber-600'); btn.classList.replace('hover:bg-amber-400', 'hover:bg-amber-700'); btn.classList.replace('text-amber-900', 'text-amber-50'); }
+else { btn.textContent = 'Quiet Mode: OFF'; btn.classList.replace('bg-amber-600', 'bg-amber-300'); btn.classList.replace('hover:bg-amber-700', 'hover:bg-amber-400'); btn.classList.replace('text-amber-50', 'text-amber-900'); }
+}
+function loadCompanies() { const stored = localStorage.getItem('waffle_companies'); if (stored) companies = JSON.parse(stored); renderCompaniesList(); }
+function deleteCompany(e, index) {
+e.stopPropagation();
+if(confirm("Are you sure you want to delete this company?")) {
+companies.splice(index, 1); if(currentCompanyIndex === index) { currentCompanyIndex = -1; stopGameLoops(); showScreen('screen-main-menu'); } else if (currentCompanyIndex > index) currentCompanyIndex--;
+saveData(); renderCompaniesList();
+}
+}
+function renderCompaniesList() {
+const list = document.getElementById('companies-list'); list.innerHTML = '';
+if (companies.length === 0) { list.innerHTML = '<p class="text-amber-700/70 text-center font-bold bg-white/50 py-4 rounded-xl border border-amber-200">No companies yet. Start one!</p>'; return; }
+companies.forEach((comp, index) => {
+const rebirthBadge = comp.rebirths ? `<span class="bg-purple-200 text-purple-900 px-2 py-1 rounded shrink-0">Rebirths: ${comp.rebirths}</span>` : '';
+const btn = document.createElement('div'); btn.className = "w-full text-left p-5 rounded-2xl border-4 bg-white border-amber-200 hover:border-amber-400 hover:shadow-lg transition-all flex justify-between items-center group mb-2 cursor-pointer"; btn.onclick = () => loadGame(index);
+btn.innerHTML = `<div class="truncate mr-4"><h3 class="font-black text-2xl text-amber-900 mb-1 truncate">${comp.name}</h3><div class="flex gap-3 text-sm font-bold text-amber-700/80 uppercase tracking-wider overflow-hidden"><span class="bg-amber-100 px-2 py-1 rounded shrink-0">Mode: ${comp.mode}</span><span class="bg-amber-100 px-2 py-1 rounded shrink-0">Waffles: ${formatNumber(comp.waffles || 0)}</span>${rebirthBadge}</div></div><div class="flex items-center gap-4"><button onclick="deleteCompany(event, ${index})" class="text-red-400 hover:text-red-600 transition-colors font-black text-2xl" title="Delete">🗑️</button><span class="text-3xl group-hover:translate-x-2 transition-transform text-amber-500 shrink-0">▶</span></div>`;
+list.appendChild(btn);
+});
+}
+function startNewGame() {
+let nameInput = document.getElementById('company-name-input').value.trim(); if (!nameInput) nameInput = "My Waffle Co."; if (nameInput.length > 15) nameInput = nameInput.substring(0, 15);
+const modeInput = document.getElementById('btn-game-mode').dataset.mode;
+const newCompany = { name: nameInput, mode: modeInput, waffles: 0, rebirths: 0, hasSeenTutorial: false, buildingsData: buildings.map(b => ({ id: b.id, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0 })), walls: {}, wallLevel: 0, turtleBuildings: {}, playerFieldBuildings: {}, droppedWaffles:[] };
+companies.push(newCompany); saveData(); loadGame(companies.length - 1); document.getElementById('company-name-input').value = '';
+}
+function loadGame(index) {
+currentCompanyIndex = index; const comp = companies[index];
+waffles = comp.waffles || 0; wallFortificationLevel = comp.wallLevel || 0; turtleBuildings = comp.turtleBuildings || {}; playerFieldBuildings = comp.playerFieldBuildings || {};
+for (let key in turtleBuildings) if (turtleBuildings[key].hp === undefined) turtleBuildings[key].hp = turtleBuildings[key].level * 100;
+for (let key in walls) if (walls[key].id === undefined) { walls[key].id = 'basic'; walls[key].isObstacle = true; }
+droppedWaffles = comp.droppedWaffles ||[];
+if (comp.buildingsData) {
+buildings.forEach((b, idx) => {
+const savedB = comp.buildingsData.find(sb => sb.id === b.id);
+if (savedB) { b.count = savedB.count || 0; b.prodLevel = savedB.prodLevel || 0; b.hardLevel = savedB.hardLevel || 0; b.syrupLevel = savedB.syrupLevel || 0; b.effLevel = savedB.effLevel || 0; }
+else { b.count = 0; b.prodLevel = 0; b.hardLevel = 0; b.syrupLevel = 0; b.effLevel = 0; }
+b.prodMultiplier = 1 + (b.prodLevel * 0.1); b.hardness = Math.min(0.9, b.hardLevel * 0.05); b.syrupMultiplier = Math.pow(1.2, b.syrupLevel); b.effDiscount = Math.pow(0.95, b.effLevel);
+});
+}
+if (comp.mode === 'barrier') {
+isBarrierMode = true; walls = comp.walls || {}; turtles = []; smashEffects =[]; document.getElementById('barrier-field').classList.remove('hidden'); document.getElementById('barrier-field').classList.add('flex');
+selectedDefense = null; initDefenses(); updateWallUpgradeButton();
+if(Object.keys(playerFieldBuildings).length === 0) buildings.forEach((b, idx) => { for(let i=0; i<b.count; i++) placeBuildingOnField(idx); });
+requestAnimationFrame(drawField);
+} else { isBarrierMode = false; document.getElementById('barrier-field').classList.add('hidden'); document.getElementById('barrier-field').classList.remove('flex'); }
+document.getElementById('active-company-name').textContent = comp.name; toggleSidebarView('shop'); initShop(); recalculateStats(); updateDisplay(); showScreen(null);
+if (!comp.hasSeenTutorial) startTutorial(); else tutorialActive = false;
+startGameLoops();
+}
+function saveAndExit() {
+if (currentCompanyIndex !== -1) {
+companies[currentCompanyIndex].waffles = waffles;
+companies[currentCompanyIndex].buildingsData = buildings.map(b => ({ id: b.id, count: b.count, prodLevel: b.prodLevel, hardLevel: b.hardLevel, syrupLevel: b.syrupLevel, effLevel: b.effLevel }));
+if (isBarrierMode) { companies[currentCompanyIndex].walls = walls; companies[currentCompanyIndex].wallLevel = wallFortificationLevel; companies[currentCompanyIndex].turtleBuildings = turtleBuildings; companies[currentCompanyIndex].playerFieldBuildings = playerFieldBuildings; companies[currentCompanyIndex].droppedWaffles = droppedWaffles; }
+saveData();
+}
+stopGameLoops(); if (tutorialActive) endTutorial(); selectedDefense = null; showScreen('screen-companies'); renderCompaniesList();
+}
+function saveData() { localStorage.setItem('waffle_companies', JSON.stringify(companies)); }
+function spawnRandomTurtleEvent() {
+let el = document.createElement('div'); el.id = 'random-turtle-event'; el.className = 'fixed z-[120] flex items-center gap-4 cursor-pointer transition-transform bg-white/90 p-3 rounded-full border-4 border-amber-400 shadow-2xl';
+let startY = 100 + Math.random() * (window.innerHeight - 200); let startX = -200; let endX = window.innerWidth + 100; let duration = 8000 + Math.random() * 4000;
+el.style.top = startY + 'px'; el.style.left = startX + 'px'; el.style.transition = `left ${duration}ms linear`;
+let bagBtn = document.createElement('button'); bagBtn.textContent = '🛍️'; bagBtn.className = 'text-4xl hover:scale-125 transition-transform bg-green-200 rounded-full w-16 h-16 flex items-center justify-center border-2 border-green-500 shadow-md';
+bagBtn.onclick = (e) => { e.stopPropagation(); let reward = Math.max(100, wps * 60); waffles += reward; showToast("Bonus!", `You secured ${formatNumber(reward)} waffles from the bag!`, "bg-green-600"); updateDisplay(); el.remove(); };
+let turtleBtn = document.createElement('button'); turtleBtn.textContent = '🐢'; turtleBtn.className = 'text-4xl hover:scale-125 transition-transform bg-red-200 rounded-full w-16 h-16 flex items-center justify-center border-2 border-red-500 shadow-md';
+turtleBtn.onclick = (e) => { e.stopPropagation(); let stolen = Math.min(waffles, Math.max(100, waffles * 0.2)); waffles -= stolen; showToast("Oh no!", `The turtle stole ${formatNumber(stolen)} waffles!`, "bg-red-600"); updateDisplay(); el.remove(); };
+el.appendChild(bagBtn); el.appendChild(turtleBtn); document.body.appendChild(el);
+setTimeout(() => { el.style.left = endX + 'px'; }, 50); setTimeout(() => { if(el.parentElement) el.remove(); }, duration + 100);
+}
+let gameLoopInterval; let disasterLoopInterval;
+function startGameLoops() {
+stopGameLoops();
+gameLoopInterval = setInterval(() => {
+waffles += wps / 10; updateDisplay(); updateShopUI(); 
+if (isBarrierMode) {
+missileTick++;
+if(missileTick >= 20) {
+missileTick = 0;
+for(let key in walls) {
+if(walls[key].id === 'missile') {
+let [wx, wy] = key.split(',').map(Number); let target = null; let bestD = 8;
+for(let t of turtles) { let d = Math.hypot(t.x-wx, t.y-wy); if(d < bestD) { bestD = d; target = t; } }
+if(target) applyAoE(target.x, target.y, 1, 3, 10);
+}
+}
+}
+for (let key in turtleBuildings) {
+let b = turtleBuildings[key];
+if (b.type === 'house' && b.occupants) {
+for (let i = b.occupants.length - 1; i >= 0; i--) { b.occupants[i].restTicks--; if (b.occupants[i].restTicks <= 0) { b.occupants.splice(i, 1); let [bx, by] = key.split(',').map(Number); turtles.push({ x: bx, y: by, type: 'normal', state: 'moving_in', targetKey: null, thoughtTicks: 0 }); } }
+}
+}
+for (let i = droppedWaffles.length - 1; i >= 0; i--) {
+let dw = droppedWaffles[i];
+if (dw.returning) {
+let dx = 14.5 - dw.x; let dy = 14.5 - dw.y; let dist = Math.sqrt(dx*dx + dy*dy); let speed = 0.4;
+if (dist <= speed) { waffles += dw.amount; droppedWaffles.splice(i, 1); updateDisplay(); } else { dw.x += (dx/dist) * speed; dw.y += (dy/dist) * speed; }
+}
+}
+turtleMoveTimer += 100; turtleSpawnTimer += 100;
+if (turtleMoveTimer >= 500) { updateTurtles(); turtleMoveTimer = 0; }
+let spawnThreshold = Math.max(2500, 7000 - (wps * 12));
+if (waffles > 50 && turtleSpawnTimer >= spawnThreshold) { spawnTurtle(); turtleSpawnTimer = 0; }
+}
+if (Math.random() < 0.01 && currentCompanyIndex !== -1) {
+companies[currentCompanyIndex].waffles = waffles; companies[currentCompanyIndex].buildingsData = buildings.map(b => ({ id: b.id, count: b.count, prodLevel: b.prodLevel, hardLevel: b.hardLevel, syrupLevel: b.syrupLevel, effLevel: b.effLevel }));
+if (isBarrierMode) { companies[currentCompanyIndex].walls = walls; companies[currentCompanyIndex].wallLevel = wallFortificationLevel; companies[currentCompanyIndex].turtleBuildings = turtleBuildings; companies[currentCompanyIndex].playerFieldBuildings = playerFieldBuildings; companies[currentCompanyIndex].droppedWaffles = droppedWaffles; }
+saveData();
+}
+}, 100);
+disasterLoopInterval = setInterval(() => { if (Math.random() < 0.35) triggerDisaster(); }, 20000); 
+randomEventInterval = setInterval(() => { if(Math.random() < 0.3 && !document.getElementById('random-turtle-event') && currentCompanyIndex !== -1 && !tutorialActive) spawnRandomTurtleEvent(); }, 30000);
+}
+function stopGameLoops() { clearInterval(gameLoopInterval); clearInterval(disasterLoopInterval); clearInterval(randomEventInterval); let oldEv = document.getElementById('random-turtle-event'); if(oldEv) oldEv.remove(); }
+waffleEl.addEventListener('mousedown', (e) => { if (e && e.clientX !== undefined) performClick(e.clientX, e.clientY); });
+waffleEl.addEventListener('touchstart', (e) => { e.preventDefault(); Array.from(e.changedTouches).forEach(touch => performClick(touch.clientX, touch.clientY)); }, {passive: false});
+waffleEl.addEventListener('dragstart', (e) => e.preventDefault());
+document.addEventListener('keydown', (e) => {
+if (e.target.tagName === 'INPUT') return; 
+const isPlaying = document.getElementById('screen-main-menu').classList.contains('hidden') && document.getElementById('screen-companies').classList.contains('hidden') && document.getElementById('screen-new-company').classList.contains('hidden');
+if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') { ctrlShiftQCount++; clearTimeout(debugQTimer); debugQTimer = setTimeout(() => { ctrlShiftQCount = 0; }, 1000); if (ctrlShiftQCount >= 2) { ctrlShiftQCount = 0; openDebugLogin(); } }
+if (e.key === 'Escape') { if (isDebugMenuOpen) closeDebugMenu(); else if (currentCompanyIndex !== -1 && isPlaying && !tutorialActive) togglePauseMenu(); else if (selectedDefense) selectDefense(selectedDefense); }
+if (tutorialActive && e.key.toLowerCase() === 'x') { e.preventDefault(); skipTutorial(); return; }
+if (e.code === 'Space') { e.preventDefault(); if (tutorialActive) { if (!tutorialSteps[tutorialStep].waitForClick) advanceTutorial(); else if (tutorialSteps[tutorialStep].target === 'waffle-container') performClick(window.innerWidth / 4, window.innerHeight / 2); return; } if (isPlaying && document.getElementById('screen-pause-menu').classList.contains('hidden') && !isDebugMenuOpen) performClick(window.innerWidth / 4, window.innerHeight / 2); }
+if (e.key.toLowerCase() === 'b') { if (isPlaying && document.getElementById('screen-pause-menu').classList.contains('hidden') && !tutorialActive && !isDebugMenuOpen) performClick(null, null, true); }
+});
+loadCompanies(); showScreen('screen-main-menu');
+</script>
+</body>
 </html>
