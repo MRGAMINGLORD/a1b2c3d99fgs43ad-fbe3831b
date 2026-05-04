@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { SecretInput } from "@/components/ui/secret-input";
 import { toast } from "@/hooks/use-toast";
 
@@ -43,12 +43,10 @@ const Login = () => {
         <p className="text-center text-xs text-muted-foreground">
           Admin accounts are provisioned by an existing admin. Public sign-up is disabled.
         </p>
-        <Input
-          type="email"
+        <SecretInput
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
+          onChange={setEmail}
         />
         <SecretInput
           placeholder="Password"

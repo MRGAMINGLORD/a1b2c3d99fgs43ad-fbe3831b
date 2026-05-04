@@ -37,10 +37,10 @@ const BlastDoor = ({
   children: React.ReactNode;
   doorState?: "closed" | "shake" | "opening";
 }) => {
-  const stripeColor = "hsl(var(--primary))";
-  const accentClass = "text-primary";
-  const borderClass = variant === "warning" ? "border-primary" : "border-primary/70";
-  const ringClass = "ring-primary/30";
+  const stripeColor = "hsl(var(--foreground))";
+  const accentClass = "text-foreground";
+  const borderClass = variant === "warning" ? "border-foreground" : "border-foreground/70";
+  const ringClass = "ring-foreground/30";
 
   const doorAnim =
     doorState === "shake"
@@ -56,7 +56,7 @@ const BlastDoor = ({
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
         style={{
           backgroundImage:
-            "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
+            "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -64,7 +64,7 @@ const BlastDoor = ({
 
       {/* Flash on open */}
       {doorState === "opening" && (
-        <div className="pointer-events-none absolute inset-0 bg-primary/40 animate-flash-clear" />
+        <div className="pointer-events-none absolute inset-0 bg-foreground/40 animate-flash-clear" />
       )}
 
       {/* Two-leaf door wrapper */}
@@ -74,7 +74,7 @@ const BlastDoor = ({
           className={`absolute inset-y-0 left-0 w-1/2 origin-left ${doorState === "opening" ? "animate-door-open-left" : ""} ${doorAnim}`}
           style={{
             backgroundImage: `repeating-linear-gradient(45deg, ${stripeColor} 0 18px, hsl(var(--background)) 18px 36px)`,
-            borderRight: "2px solid hsl(var(--primary))",
+            borderRight: "2px solid hsl(var(--foreground))",
             opacity: doorState === "opening" ? 1 : 0,
             transition: "opacity 0.1s",
           }}
@@ -84,7 +84,7 @@ const BlastDoor = ({
           className={`absolute inset-y-0 right-0 w-1/2 origin-right ${doorState === "opening" ? "animate-door-open-right" : ""}`}
           style={{
             backgroundImage: `repeating-linear-gradient(-45deg, ${stripeColor} 0 18px, hsl(var(--background)) 18px 36px)`,
-            borderLeft: "2px solid hsl(var(--primary))",
+            borderLeft: "2px solid hsl(var(--foreground))",
             opacity: doorState === "opening" ? 1 : 0,
             transition: "opacity 0.1s",
           }}
@@ -107,27 +107,27 @@ const BlastDoor = ({
             {Array.from({ length: 8 }).map((_, i) => (
               <span
                 key={`t-${i}`}
-                className="h-2.5 w-2.5 rounded-full bg-primary/80 ring-2 ring-background shadow-inner"
+                className="h-2.5 w-2.5 rounded-full bg-foreground/80 ring-2 ring-background shadow-inner"
               />
             ))}
           </div>
           <div className="pointer-events-none absolute inset-y-10 left-2 flex flex-col justify-between">
             {Array.from({ length: 6 }).map((_, i) => (
-              <span key={`l-${i}`} className="h-2.5 w-2.5 rounded-full bg-primary/70 ring-2 ring-background" />
+              <span key={`l-${i}`} className="h-2.5 w-2.5 rounded-full bg-foreground/70 ring-2 ring-background" />
             ))}
           </div>
           <div className="pointer-events-none absolute inset-y-10 right-2 flex flex-col justify-between">
             {Array.from({ length: 6 }).map((_, i) => (
-              <span key={`r-${i}`} className="h-2.5 w-2.5 rounded-full bg-primary/70 ring-2 ring-background" />
+              <span key={`r-${i}`} className="h-2.5 w-2.5 rounded-full bg-foreground/70 ring-2 ring-background" />
             ))}
           </div>
 
           {/* Inner panel */}
-          <div className="m-4 mt-8 rounded-sm border border-primary/40 bg-background/60 p-6 backdrop-blur">
+          <div className="m-4 mt-8 rounded-sm border border-foreground/40 bg-background/60 p-6 backdrop-blur">
             {/* Status bar */}
-            <div className="mb-5 flex items-center justify-between border-b border-primary/30 pb-2 font-mono text-[10px] uppercase tracking-widest text-primary/80">
+            <div className="mb-5 flex items-center justify-between border-b border-foreground/30 pb-2 font-mono text-[10px] uppercase tracking-widest text-foreground/80">
               <span className="flex items-center gap-1.5">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-foreground" />
                 SECURE • SYS-WAFFLE
               </span>
               <span>SECTOR 7-G</span>
@@ -137,7 +137,7 @@ const BlastDoor = ({
             <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center">
               <div className={`absolute inset-0 rounded-full border-4 ${borderClass} animate-border-pulse`} />
               <div
-                className={`absolute inset-2 rounded-full border-2 border-dashed border-primary/50 ${doorState === "opening" ? "animate-vault-spin-fast" : ""}`}
+                className={`absolute inset-2 rounded-full border-2 border-dashed border-foreground/50 ${doorState === "opening" ? "animate-vault-spin-fast" : ""}`}
               />
               <div className={`relative ${accentClass}`}>{icon}</div>
             </div>
@@ -145,7 +145,7 @@ const BlastDoor = ({
             <h1 className={`text-center font-display text-3xl uppercase tracking-[0.3em] ${accentClass} text-glow`}>
               {label}
             </h1>
-            <p className="mt-2 text-center font-mono text-[11px] uppercase tracking-wider text-primary/70">
+            <p className="mt-2 text-center font-mono text-[11px] uppercase tracking-wider text-foreground/70">
               {sublabel}
             </p>
 
@@ -195,7 +195,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
       </div>
     );
   }
@@ -212,17 +212,17 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
           icon={<ShieldAlert className="h-12 w-12" />}
           doorState="shake"
         >
-          <div className="rounded-sm border border-primary/40 bg-primary/10 p-3 text-center">
-            <div className="flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-primary">
+          <div className="rounded-sm border border-foreground/40 bg-foreground/10 p-3 text-center">
+            <div className="flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground">
               <AlertTriangle className="h-3 w-3" />
               Lockdown engaged
               <AlertTriangle className="h-3 w-3" />
             </div>
-            <p className="mt-2 text-xs text-primary/70">
+            <p className="mt-2 text-xs text-foreground/70">
               The bunker is sealed by command. All civilian systems offline. Only admin operations are permitted.
             </p>
           </div>
-          <div className="mt-3 text-center font-mono text-[10px] uppercase tracking-widest text-primary/70">
+          <div className="mt-3 text-center font-mono text-[10px] uppercase tracking-widest text-foreground/70">
             ⛔ Access denied — code black
           </div>
         </BlastDoor>
@@ -265,15 +265,15 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
         doorState={doorState}
       >
         {lockedOut ? (
-          <div className="rounded-sm border border-primary/50 bg-primary/10 p-4 text-center">
-            <div className="flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-primary">
+          <div className="rounded-sm border border-foreground/50 bg-foreground/10 p-4 text-center">
+            <div className="flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground">
               <AlertTriangle className="h-3 w-3" />
               Bunker lockout active
               <AlertTriangle className="h-3 w-3" />
             </div>
-            <p className="mt-2 text-sm text-primary/80">
+            <p className="mt-2 text-sm text-foreground/80">
               Three failed attempts. Try again in{" "}
-              <span className="font-mono font-bold text-primary">
+              <span className="font-mono font-bold text-foreground">
                 {formatLockoutCountdown(lockoutUntil)}
               </span>
               .
@@ -283,7 +283,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
           <form onSubmit={handle}>
             <label
               htmlFor="defcon-passphrase"
-              className="mb-1 block cursor-pointer font-mono text-[10px] uppercase tracking-widest text-primary/80"
+              className="mb-1 block cursor-pointer font-mono text-[10px] uppercase tracking-widest text-foreground/80"
             >
               ▸ Enter bunker passphrase
             </label>
@@ -295,7 +295,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
               autoFocus
             />
             {err && (
-              <p className="mt-2 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-primary">
+              <p className="mt-2 flex items-center gap-1 font-mono text-[10px] uppercase tracking-wider text-foreground">
                 <AlertTriangle className="h-3 w-3" /> {err}
               </p>
             )}
@@ -303,7 +303,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
               <KeyRound className="h-4 w-4" />
               Disengage Lock
             </Button>
-            <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-widest text-primary/60">
+            <p className="mt-3 text-center font-mono text-[9px] uppercase tracking-widest text-foreground/60">
               {remaining} of 3 attempts remaining • All entries logged
             </p>
           </form>
