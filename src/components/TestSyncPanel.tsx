@@ -138,11 +138,22 @@ const TestSyncPanel = ({ onSynced }: Props) => {
       return;
     }
 
+    // Don't blow away an existing live cover_url when the test row has none —
+    // fetch current live rows and preserve their cover when the tester left it empty.
+    const slugs = playable.map((r) => r.slug);
+    const { data: liveRows } = await supabase
+      .from("custom_games")
+      .select("slug, cover_url")
+      .in("slug", slugs);
+    const liveCoverBySlug = new Map(
+      (liveRows ?? []).map((r) => [r.slug as string, (r.cover_url as string | null) ?? null]),
+    );
+
     const payload = playable.map((r) => ({
       slug: r.slug,
       title: r.title,
       description: r.description,
-      cover_url: r.cover_url,
+      cover_url: r.cover_url ?? liveCoverBySlug.get(r.slug) ?? null,
       html: r.html,
       category: r.category,
     }));

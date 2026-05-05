@@ -23,6 +23,24 @@ const customRowToMeta = (row: CustomGameRow): GameMeta => ({
   credits: row.credits ?? "",
 });
 
+// When a custom_games row shares a slug with a built-in game (e.g. the tester
+// pushed code for "waffle-works"), merge the custom row ON TOP of the built-in
+// instead of replacing it. This preserves the bundled cover image and any
+// other built-in metadata when the tester row left those fields empty.
+const mergeCustomOntoBuiltin = (builtin: GameMeta, row: CustomGameRow): GameMeta => ({
+  ...builtin,
+  title: row.title?.trim() ? row.title : builtin.title,
+  description: row.description?.trim() ? row.description : builtin.description,
+  cover: row.cover_url?.trim() ? row.cover_url : builtin.cover,
+  available: row.html.trim().length > 0 ? true : builtin.available,
+  playUrl: `/play/${row.slug}`,
+  category:
+    row.category === "tycoon" || row.category === "twist" || row.category === "other"
+      ? row.category
+      : builtin.category,
+  credits: row.credits?.trim() ? row.credits : builtin.credits,
+});
+
 export interface GameOverrideRow {
   id: string;
   game_id: string;
@@ -64,11 +82,26 @@ export const useAllGames = () => {
       if (!active) return;
       const overrides = (overrideRes.data ?? []) as GameOverrideRow[];
       const overrideMap = new Map(overrides.map((o) => [o.game_id, o]));
-      const builtinsWithOverrides = GAMES.map((g) => applyOverride(g, overrideMap.get(g.id)));
-      const customMetas = !customRes.error && customRes.data
-        ? (customRes.data as CustomGameRow[]).map(customRowToMeta)
+      
+      const customRows = !customRes.error && customRes.data
+        ? (customRes.data as CustomGameRow[])
         : [];
-      setGames([...builtinsWithOverrides, ...customMetas]);
+      const builtinSlugs = new Set(GAMES.map((g) => g.id));
+      const customBySlug = new Map(customRows.map((r) => [r.slug, r]));
+
+      // Built-ins: apply override + merge any custom row that shares the slug.
+      const builtinsMerged = GAMES.map((g) => {
+        const withOverride = applyOverride(g, overrideMap.get(g.id));
+        const matchingCustom = customBySlug.get(g.id);
+        return matchingCustom ? mergeCustomOntoBuiltin(withOverride, matchingCustom) : withOverride;
+      });
+
+      // Only show standalone custom games whose slug doesn't collide with a built-in.
+      const standaloneCustom = customRows
+        .filter((r) => !builtinSlugs.has(r.slug))
+        .map(customRowToMeta);
+
+      setGames([...builtinsMerged, ...standaloneCustom]);
       setLoading(false);
     })();
     return () => {
