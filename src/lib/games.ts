@@ -80,8 +80,7 @@ export const GAMES: GameMeta[] = [
     description:
       "A patient turtle tutor powered by Gemini. Ask Bob about any subject — math, science, history, languages, code — and he'll explain it slow, steady, and shell-sized.",
     cover: coverBobTurtleAI,
-    available: true,
-    playUrl: "/education/bob-turtle-ai",
+    available: false,
     category: "education",
     credits: "Powered by Google Gemini · Tutor persona by Apocalypse Waffle",
   },
