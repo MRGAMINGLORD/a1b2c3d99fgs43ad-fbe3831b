@@ -23,6 +23,24 @@ const customRowToMeta = (row: CustomGameRow): GameMeta => ({
   credits: row.credits ?? "",
 });
 
+// When a custom_games row shares a slug with a built-in game (e.g. the tester
+// pushed code for "waffle-works"), merge the custom row ON TOP of the built-in
+// instead of replacing it. This preserves the bundled cover image and any
+// other built-in metadata when the tester row left those fields empty.
+const mergeCustomOntoBuiltin = (builtin: GameMeta, row: CustomGameRow): GameMeta => ({
+  ...builtin,
+  title: row.title?.trim() ? row.title : builtin.title,
+  description: row.description?.trim() ? row.description : builtin.description,
+  cover: row.cover_url?.trim() ? row.cover_url : builtin.cover,
+  available: row.html.trim().length > 0 ? true : builtin.available,
+  playUrl: `/play/${row.slug}`,
+  category:
+    row.category === "tycoon" || row.category === "twist" || row.category === "other"
+      ? row.category
+      : builtin.category,
+  credits: row.credits?.trim() ? row.credits : builtin.credits,
+});
+
 export interface GameOverrideRow {
   id: string;
   game_id: string;
