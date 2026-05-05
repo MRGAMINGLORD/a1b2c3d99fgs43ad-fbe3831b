@@ -83,10 +83,25 @@ export const useAllGames = () => {
       const overrides = (overrideRes.data ?? []) as GameOverrideRow[];
       const overrideMap = new Map(overrides.map((o) => [o.game_id, o]));
       const builtinsWithOverrides = GAMES.map((g) => applyOverride(g, overrideMap.get(g.id)));
-      const customMetas = !customRes.error && customRes.data
-        ? (customRes.data as CustomGameRow[]).map(customRowToMeta)
+      const customRows = !customRes.error && customRes.data
+        ? (customRes.data as CustomGameRow[])
         : [];
-      setGames([...builtinsWithOverrides, ...customMetas]);
+      const builtinSlugs = new Set(GAMES.map((g) => g.id));
+      const customBySlug = new Map(customRows.map((r) => [r.slug, r]));
+
+      // Built-ins: apply override + merge any custom row that shares the slug.
+      const builtinsMerged = GAMES.map((g) => {
+        const withOverride = applyOverride(g, overrideMap.get(g.id));
+        const matchingCustom = customBySlug.get(g.id);
+        return matchingCustom ? mergeCustomOntoBuiltin(withOverride, matchingCustom) : withOverride;
+      });
+
+      // Only show standalone custom games whose slug doesn't collide with a built-in.
+      const standaloneCustom = customRows
+        .filter((r) => !builtinSlugs.has(r.slug))
+        .map(customRowToMeta);
+
+      setGames([...builtinsMerged, ...standaloneCustom]);
       setLoading(false);
     })();
     return () => {
