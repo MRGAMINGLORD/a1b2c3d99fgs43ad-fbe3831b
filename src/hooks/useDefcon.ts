@@ -19,8 +19,22 @@ const DEFCON_PASSWORD = "WAFFLE";
 const GATE_KEY = "apocalypse-waffle:defcon1-unlocked";
 const ATTEMPTS_KEY = "apocalypse-waffle:defcon1-attempts";
 const LOCKOUT_KEY = "apocalypse-waffle:defcon1-lockout-until";
+// How many lockouts the user has racked up — drives the doubling schedule.
+// 1st lockout = 1 day, then 2, 4, 8, 16, 32, … (capped at 30 days).
+const LOCKOUT_COUNT_KEY = "apocalypse-waffle:defcon1-lockout-count";
 const MAX_ATTEMPTS = 3;
-const LOCKOUT_MS = 24 * 60 * 60 * 1000; // 1 day
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_LOCKOUT_MS = 30 * ONE_DAY_MS;
+
+const getLockoutCount = (): number => {
+  try {
+    return Number(localStorage.getItem(LOCKOUT_COUNT_KEY) ?? "0") || 0;
+  } catch {
+    return 0;
+  }
+};
+const nextLockoutMs = (count: number): number =>
+  Math.min(MAX_LOCKOUT_MS, ONE_DAY_MS * Math.pow(2, Math.max(0, count)));
 
 export const isDefconGateUnlocked = (): boolean => {
   try {
