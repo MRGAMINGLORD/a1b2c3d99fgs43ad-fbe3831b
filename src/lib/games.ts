@@ -49,8 +49,7 @@ export const GAMES: GameMeta[] = [
     description:
       "A turtle-flavored language model playground for learning. Slow, steady, and surprisingly clever.",
     cover: coverBobTurtleAI,
-    available: true,
-    playUrl: "/education/turtle-lm",
+    available: false,
     category: "education",
     credits: "Design: Apocalypse Waffle team",
   },
