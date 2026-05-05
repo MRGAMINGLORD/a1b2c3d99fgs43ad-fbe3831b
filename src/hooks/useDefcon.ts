@@ -91,8 +91,12 @@ export const unlockDefconGate = (input: string): UnlockResult => {
   try {
     localStorage.setItem(ATTEMPTS_KEY, String(attempts));
     if (attempts >= MAX_ATTEMPTS) {
-      lockoutUntil = Date.now() + LOCKOUT_MS;
+      // Escalating lockout: 1d → 2d → 4d → 8d → 16d → 32d (capped 30d).
+      const newCount = getLockoutCount() + 1;
+      lockoutUntil = Date.now() + nextLockoutMs(newCount - 1);
+      localStorage.setItem(LOCKOUT_COUNT_KEY, String(newCount));
       localStorage.setItem(LOCKOUT_KEY, String(lockoutUntil));
+      localStorage.removeItem(ATTEMPTS_KEY);
     }
   } catch {
     /* ignore */
