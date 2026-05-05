@@ -580,16 +580,21 @@ const TestHubCard = ({
 };
 
 // ---------- Main page ----------
-const testRowToMeta = (row: TestGameRow): GameMeta => ({
-  id: row.slug,
-  title: row.title,
-  description: row.description,
-  cover: row.cover_url || "/placeholder.svg",
-  available: row.html.trim().length > 0,
-  playUrl: `/play-test/${row.slug}`,
-  category:
-    row.category === "tycoon" || row.category === "twist" ? row.category : "other",
-});
+const testRowToMeta = (row: TestGameRow): GameMeta => {
+  // Fall back to the built-in cover when the test row has none, so seeded
+  // built-ins (e.g. waffle-works) still show their bundled artwork in tester mode.
+  const builtin = GAMES.find((g) => g.id === row.slug);
+  return {
+    id: row.slug,
+    title: row.title,
+    description: row.description,
+    cover: row.cover_url || builtin?.cover || "/placeholder.svg",
+    available: row.html.trim().length > 0,
+    playUrl: `/play-test/${row.slug}`,
+    category:
+      row.category === "tycoon" || row.category === "twist" ? row.category : "other",
+  };
+};
 
 const Test = () => {
   const [unlocked, setUnlocked] = useState(isTestUnlocked());
