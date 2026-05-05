@@ -312,6 +312,39 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  // Lockout persists across DEFCON level changes — once you're locked out,
+  // dropping the level back to 4 doesn't grant access until the timer expires.
+  const lockedOutGlobal = isDefconLockedOut();
+  if (lockedOutGlobal && !ADMIN_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))) {
+    return (
+      <BlastDoor
+        variant="warning"
+        label="Locked Out"
+        sublabel="Bunker access revoked"
+        icon={<Lock className="h-12 w-12" />}
+        doorState="closed"
+      >
+        <div className="rounded-sm border border-foreground/50 bg-foreground/10 p-4 text-center">
+          <div className="flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-foreground">
+            <AlertTriangle className="h-3 w-3" />
+            Lockout active
+            <AlertTriangle className="h-3 w-3" />
+          </div>
+          <p className="mt-2 text-sm text-foreground/80">
+            Too many failed attempts. Try again in{" "}
+            <span className="font-mono font-bold text-foreground">
+              {formatLockoutCountdown(lockoutUntil || getDefconLockoutUntil())}
+            </span>
+            .
+          </p>
+          <p className="mt-2 font-mono text-[9px] uppercase tracking-widest text-foreground/60">
+            Lockout persists regardless of DEFCON level.
+          </p>
+        </div>
+      </BlastDoor>
+    );
+  }
+
   return <>{children}</>;
 };
 
