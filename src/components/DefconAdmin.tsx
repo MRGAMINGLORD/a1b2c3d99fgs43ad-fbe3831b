@@ -11,7 +11,7 @@ import { DEFCON_LABELS, type DefconLevel } from "@/hooks/useDefcon";
 
 const LEVEL_DESCRIPTIONS: Record<DefconLevel, string> = {
   0: "Total lockdown — only /admin and /login load. Everyone else is locked out.",
-  1: "Password gate — visitors must enter the passphrase WAFFLE (case sensitive) to enter.",
+  1: "Password gate — visitors must enter the passphrase 676767676767 (case sensitive) to enter.",
   2: "Tester area is closed. Everything else is normal.",
   3: "Feedback can only be sent once every 10 minutes per visitor.",
   4: "Normal operations. No restrictions.",
