@@ -82,7 +82,7 @@ export const useAllGames = () => {
       if (!active) return;
       const overrides = (overrideRes.data ?? []) as GameOverrideRow[];
       const overrideMap = new Map(overrides.map((o) => [o.game_id, o]));
-      const builtinsWithOverrides = GAMES.map((g) => applyOverride(g, overrideMap.get(g.id)));
+      
       const customRows = !customRes.error && customRes.data
         ? (customRes.data as CustomGameRow[])
         : [];
