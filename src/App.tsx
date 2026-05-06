@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import { SirWafflingtonChat } from "./components/SirWafflingtonChat";
 import { SirWafflingtonProvider } from "./components/SirWafflingtonContext";
 import { DefconGate } from "./components/DefconGate";
+import { FullscreenGate } from "./components/FullscreenGate";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <SirWafflingtonProvider>
+         <FullscreenGate>
          <DefconGate>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -51,6 +53,7 @@ const App = () => (
           </Routes>
           <ConciergeGate />
          </DefconGate>
+         </FullscreenGate>
         </SirWafflingtonProvider>
       </BrowserRouter>
     </TooltipProvider>
