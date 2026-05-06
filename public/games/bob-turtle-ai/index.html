@@ -4,20 +4,47 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bob the Turtle AI</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      html, body { margin: 0; height: 100%; background: #0a0a0a; color: #fde68a;
-        font-family: ui-sans-serif, system-ui, sans-serif; }
-      .center { display: flex; flex-direction: column; align-items: center;
-        justify-content: center; height: 100%; gap: 12px; padding: 24px; text-align: center; }
-      code { background: rgba(234,179,8,0.1); padding: 2px 6px; border-radius: 4px; }
+      html, body, #root { margin: 0; height: 100%; background: #0a0a0a; color: #fde68a; font-family: ui-sans-serif, system-ui, sans-serif; }
     </style>
   </head>
   <body>
-    <div class="center">
-      <div style="font-size:48px">🐢</div>
-      <h1 style="text-transform:uppercase;letter-spacing:.1em">Paste Bob's code here</h1>
-      <p>Replace the contents of <code>public/games/bob-turtle-ai/index.html</code>
-      with your full HTML or Gemini-canvas React snippet.</p>
-    </div>
+    <div id="root"></div>
+
+    <!--
+      ============================================================
+      PASTE YOUR BOB-THE-TURTLE REACT COMPONENT BELOW
+      ============================================================
+      Rules:
+      - Keep the <script type="text/babel"> tag.
+      - Your top-level component must be named `App` (or rename the
+        ReactDOM.createRoot(...).render(<App />) line at the bottom).
+      - You can use JSX, hooks, fetch, etc.
+      - For Gemini calls, use fetch() against your own backend or a
+        public proxy — do not hard-code API keys here.
+      ============================================================
+    -->
+    <script type="text/babel" data-presets="react">
+      const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+      function App() {
+        return (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
+            <div style={{ fontSize: 64 }}>🐢</div>
+            <h1 className="text-2xl uppercase tracking-widest">Paste Bob's React code here</h1>
+            <p className="max-w-md text-sm opacity-80">
+              Open <code>public/games/bob-turtle-ai/index.html</code> and replace
+              this <code>App</code> component with your Gemini-canvas code.
+            </p>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
   </body>
 </html>
