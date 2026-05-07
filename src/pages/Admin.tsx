@@ -39,8 +39,8 @@ const Admin = () => {
   useEffect(() => {
     const checkAdmin = async () => {
       const ALLOWED_ADMIN_EMAIL = "mrgaminglordfuzz@gmail.com";
+      const CO_ADMIN_EMAIL = "67er@coadmin.local";
 
-      // 1. Must be logged in
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
       if (userErr || !user) {
         toast({
@@ -52,8 +52,17 @@ const Admin = () => {
         return;
       }
 
-      // 2. Must have a confirmed email (relevant for accounts created
-      //    before email auto-confirm was enabled).
+      const email = (user.email ?? "").toLowerCase();
+
+      // Co-admin path — limited access (announcements + feedback only)
+      if (email === CO_ADMIN_EMAIL) {
+        setIsCoAdmin(true);
+        setLoading(false);
+        loadData();
+        return;
+      }
+
+      // Full admin must have a confirmed email
       if (!user.email_confirmed_at && !(user as unknown as { confirmed_at?: string }).confirmed_at) {
         await supabase.auth.signOut();
         toast({
@@ -65,8 +74,7 @@ const Admin = () => {
         return;
       }
 
-      // 3. Must be the allow-listed admin email
-      if ((user.email ?? "").toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
+      if (email !== ALLOWED_ADMIN_EMAIL) {
         await supabase.auth.signOut();
         toast({
           title: "Account not authorized",
@@ -77,7 +85,6 @@ const Admin = () => {
         return;
       }
 
-      // 4. Must have the admin role in the database
       const { data: hasRole, error: roleErr } = await supabase.rpc("is_admin" as never);
       if (roleErr) {
         toast({
