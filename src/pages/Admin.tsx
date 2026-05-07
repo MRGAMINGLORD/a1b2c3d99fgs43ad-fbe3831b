@@ -29,6 +29,7 @@ interface Announcement {
 const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoAdmin, setIsCoAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
