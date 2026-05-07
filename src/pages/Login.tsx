@@ -18,7 +18,12 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Allow co-admin to sign in with the username "67'er" (no email)
+    const normalized = email.trim().toLowerCase().replace(/[''`]/g, "'");
+    const loginEmail = normalized === "67'er" || normalized === "67er"
+      ? "67er@coadmin.local"
+      : email;
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setLoading(false);
     if (error) {
       const code = (error as { code?: string }).code;
@@ -41,7 +46,7 @@ const Login = () => {
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-8">
         <h1 className="text-center font-display text-2xl text-primary">Admin Login</h1>
         <p className="text-center text-xs text-muted-foreground">
-          Admin accounts are provisioned by an existing admin. Public sign-up is disabled.
+          Admin or co-admin sign-in. Public sign-up is disabled.
         </p>
         <SecretInput
           placeholder="Email"

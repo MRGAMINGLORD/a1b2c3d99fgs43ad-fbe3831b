@@ -29,6 +29,7 @@ interface Announcement {
 const Admin = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isCoAdmin, setIsCoAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -38,8 +39,8 @@ const Admin = () => {
   useEffect(() => {
     const checkAdmin = async () => {
       const ALLOWED_ADMIN_EMAIL = "mrgaminglordfuzz@gmail.com";
+      const CO_ADMIN_EMAIL = "67er@coadmin.local";
 
-      // 1. Must be logged in
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
       if (userErr || !user) {
         toast({
@@ -51,8 +52,17 @@ const Admin = () => {
         return;
       }
 
-      // 2. Must have a confirmed email (relevant for accounts created
-      //    before email auto-confirm was enabled).
+      const email = (user.email ?? "").toLowerCase();
+
+      // Co-admin path — limited access (announcements + feedback only)
+      if (email === CO_ADMIN_EMAIL) {
+        setIsCoAdmin(true);
+        setLoading(false);
+        loadData();
+        return;
+      }
+
+      // Full admin must have a confirmed email
       if (!user.email_confirmed_at && !(user as unknown as { confirmed_at?: string }).confirmed_at) {
         await supabase.auth.signOut();
         toast({
@@ -64,8 +74,7 @@ const Admin = () => {
         return;
       }
 
-      // 3. Must be the allow-listed admin email
-      if ((user.email ?? "").toLowerCase() !== ALLOWED_ADMIN_EMAIL) {
+      if (email !== ALLOWED_ADMIN_EMAIL) {
         await supabase.auth.signOut();
         toast({
           title: "Account not authorized",
@@ -76,7 +85,6 @@ const Admin = () => {
         return;
       }
 
-      // 4. Must have the admin role in the database
       const { data: hasRole, error: roleErr } = await supabase.rpc("is_admin" as never);
       if (roleErr) {
         toast({
@@ -140,27 +148,26 @@ const Admin = () => {
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-background text-primary">Loading...</div>;
-  if (!isAdmin) return null;
+  if (!isAdmin && !isCoAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="font-display text-3xl text-primary">Admin Dashboard</h1>
+          <h1 className="font-display text-3xl text-primary">
+            {isCoAdmin ? "Co-Admin Dashboard (67'er)" : "Admin Dashboard"}
+          </h1>
           <Button variant="outline" onClick={handleLogout}>Logout</Button>
         </div>
 
-        {/* DEFCON system */}
-        <DefconAdmin />
-
-        {/* Featured Games */}
-        <FeaturedGamesAdmin />
-
-        {/* Game Profiles — quick read-only inspector for any game */}
-        <GameProfilesAdmin />
-
-        {/* Custom Games (admin-created) */}
-        <CustomGamesAdmin />
+        {isAdmin && (
+          <>
+            <DefconAdmin />
+            <FeaturedGamesAdmin />
+            <GameProfilesAdmin />
+            <CustomGamesAdmin />
+          </>
+        )}
 
         {/* Add Announcement */}
         <div className="mb-10 rounded-lg border border-border bg-card p-6">
@@ -192,7 +199,7 @@ const Admin = () => {
         </div>
 
         {/* Patch Notes (admin-edited) */}
-        <PatchNotesAdmin />
+        {isAdmin && <PatchNotesAdmin />}
 
         {/* Feedback */}
         <div>
