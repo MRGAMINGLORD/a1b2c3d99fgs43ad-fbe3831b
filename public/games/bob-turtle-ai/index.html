@@ -857,22 +857,11 @@ export default function App() {
     </div>
   );
 }
-      const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-      function App() {
-        return (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
-            <div style={{ fontSize: 64 }}>🐢</div>
-            <h1 className="text-2xl uppercase tracking-widest">Paste Bob's React code here</h1>
-            <p className="max-w-md text-sm opacity-80">
-              Open <code>public/games/bob-turtle-ai/index.html</code> and replace
-              this <code>App</code> component with your Gemini-canvas code.
-            </p>
-          </div>
-        );
-      }
-
-      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      // Mount Bob's default-exported App component.
+      import { createRoot } from "react-dom/client";
+      import * as React from "react";
+      createRoot(document.getElementById("root")).render(React.createElement(App));
     </script>
   </body>
 </html>
