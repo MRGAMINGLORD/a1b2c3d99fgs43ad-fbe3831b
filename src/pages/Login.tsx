@@ -41,7 +41,7 @@ const Login = () => {
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-8">
         <h1 className="text-center font-display text-2xl text-primary">Admin Login</h1>
         <p className="text-center text-xs text-muted-foreground">
-          Admin accounts are provisioned by an existing admin. Public sign-up is disabled.
+          Admin or co-admin sign-in. Public sign-up is disabled.
         </p>
         <SecretInput
           placeholder="Email"
