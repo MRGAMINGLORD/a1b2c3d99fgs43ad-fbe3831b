@@ -74,6 +74,14 @@
       var __initial_auth_token = window.__initial_auth_token;
       var __firebase_config = window.__firebase_config;
 
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import {
+  MessageSquare, Plus, Trash2, Send, Image as ImageIcon,
+  Menu, X, Loader2, Code2, AlertCircle, Wand2, BookOpen, Edit2,
+  Check, ShieldAlert, Zap, BrainCircuit, Gem, StopCircle, Paperclip,
+  FileText, LayoutPanelLeft, Play, FolderArchive, Layers
+} from 'lucide-react';
+
 // Firebase Imports
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
