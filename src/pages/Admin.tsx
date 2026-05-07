@@ -148,27 +148,26 @@ const Admin = () => {
   };
 
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-background text-primary">Loading...</div>;
-  if (!isAdmin) return null;
+  if (!isAdmin && !isCoAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
-          <h1 className="font-display text-3xl text-primary">Admin Dashboard</h1>
+          <h1 className="font-display text-3xl text-primary">
+            {isCoAdmin ? "Co-Admin Dashboard (67'er)" : "Admin Dashboard"}
+          </h1>
           <Button variant="outline" onClick={handleLogout}>Logout</Button>
         </div>
 
-        {/* DEFCON system */}
-        <DefconAdmin />
-
-        {/* Featured Games */}
-        <FeaturedGamesAdmin />
-
-        {/* Game Profiles — quick read-only inspector for any game */}
-        <GameProfilesAdmin />
-
-        {/* Custom Games (admin-created) */}
-        <CustomGamesAdmin />
+        {isAdmin && (
+          <>
+            <DefconAdmin />
+            <FeaturedGamesAdmin />
+            <GameProfilesAdmin />
+            <CustomGamesAdmin />
+          </>
+        )}
 
         {/* Add Announcement */}
         <div className="mb-10 rounded-lg border border-border bg-card p-6">
