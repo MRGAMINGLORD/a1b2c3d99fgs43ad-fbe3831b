@@ -199,7 +199,7 @@ const Admin = () => {
         </div>
 
         {/* Patch Notes (admin-edited) */}
-        <PatchNotesAdmin />
+        {isAdmin && <PatchNotesAdmin />}
 
         {/* Feedback */}
         <div>
