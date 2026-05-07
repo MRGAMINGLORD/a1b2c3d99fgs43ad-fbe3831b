@@ -18,7 +18,12 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Allow co-admin to sign in with the username "67'er" (no email)
+    const normalized = email.trim().toLowerCase().replace(/[''`]/g, "'");
+    const loginEmail = normalized === "67'er" || normalized === "67er"
+      ? "67er@coadmin.local"
+      : email;
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setLoading(false);
     if (error) {
       const code = (error as { code?: string }).code;
