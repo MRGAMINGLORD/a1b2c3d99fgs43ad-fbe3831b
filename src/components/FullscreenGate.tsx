@@ -1,14 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
- * Auto-requests fullscreen on the first user gesture (click / key / touch),
- * since browsers refuse programmatic fullscreen without one. If the user
- * leaves fullscreen we show a "Connection terminated" screen and try to
- * close the tab.
+ * Auto-requests fullscreen on the first user gesture. The moment the user
+ * leaves fullscreen (Esc, F11, exit-fullscreen button, etc.) we attempt to
+ * close the tab. Browsers refuse to close tabs the user opened themselves,
+ * so as a fallback we wipe the page to about:blank and tell them to close
+ * it manually.
  */
 export const FullscreenGate = ({ children }: { children: ReactNode }) => {
   const [terminated, setTerminated] = useState(false);
-  const [hasEnteredOnce, setHasEnteredOnce] = useState(false);
+  const hasEnteredOnceRef = useRef(false);
 
   // Auto-enter fullscreen on the first user gesture.
   useEffect(() => {
@@ -16,15 +17,15 @@ export const FullscreenGate = ({ children }: { children: ReactNode }) => {
       if (document.fullscreenElement) return;
       try {
         await document.documentElement.requestFullscreen();
-        setHasEnteredOnce(true);
+        hasEnteredOnceRef.current = true;
       } catch {
-        /* ignored — user can retry */
+        /* ignored — user can retry by clicking again */
       }
     };
     const handler = () => { void tryEnter(); };
-    window.addEventListener("pointerdown", handler, { once: false });
-    window.addEventListener("keydown", handler, { once: false });
-    window.addEventListener("touchstart", handler, { once: false });
+    window.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", handler);
+    window.addEventListener("touchstart", handler);
     return () => {
       window.removeEventListener("pointerdown", handler);
       window.removeEventListener("keydown", handler);
@@ -32,24 +33,24 @@ export const FullscreenGate = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Watch for fullscreen exit → terminate.
+  // Watch for fullscreen exit → kill the tab.
   useEffect(() => {
+    const closeTab = () => {
+      // Browsers only honor window.close() for windows opened via script.
+      // Try every escape hatch, then fall back to a "tab dead" screen.
+      try { window.open("", "_self"); window.close(); } catch { /* ignore */ }
+      try { window.close(); } catch { /* ignore */ }
+      try { window.location.replace("about:blank"); } catch { /* ignore */ }
+      setTerminated(true);
+    };
     const onChange = () => {
-      if (hasEnteredOnce && !document.fullscreenElement) {
-        setTerminated(true);
-        try { window.close(); } catch { /* ignore */ }
+      if (hasEnteredOnceRef.current && !document.fullscreenElement) {
+        closeTab();
       }
     };
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
-  }, [hasEnteredOnce]);
-
-  const reEnter = async () => {
-    try {
-      await document.documentElement.requestFullscreen();
-      setTerminated(false);
-    } catch { /* ignore */ }
-  };
+  }, []);
 
   if (terminated) {
     return (
@@ -61,14 +62,8 @@ export const FullscreenGate = ({ children }: { children: ReactNode }) => {
           Bunker sealed
         </h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          You exited the bunker. Close this tab to disconnect, or re-enter below.
+          You exited the bunker. Close this tab and open a new one to reconnect.
         </p>
-        <button
-          onClick={reEnter}
-          className="rounded-md border border-primary bg-primary px-4 py-2 font-display text-sm uppercase tracking-wider text-primary-foreground transition-colors hover:bg-primary/80"
-        >
-          Re-enter bunker
-        </button>
       </div>
     );
   }
