@@ -10,15 +10,16 @@ import { ShieldAlert, Loader2 } from "lucide-react";
 import { DEFCON_LABELS, type DefconLevel } from "@/hooks/useDefcon";
 
 const LEVEL_DESCRIPTIONS: Record<DefconLevel, string> = {
-  0: "Total lockdown — only /admin and /login load. Everyone else is locked out.",
-  1: "Password gate — visitors must enter the passphrase 676767676767 (case sensitive) to enter.",
-  2: "Tester area is closed. Everything else is normal.",
-  3: "Feedback can only be sent once every 10 minutes per visitor.",
-  4: "Normal operations. No restrictions.",
+  0: "Stealth mode — site looks unpublished (Lovable placeholder) to non-admins. /admin and /login still work.",
+  1: "Total lockdown — only /admin and /login load. Everyone else is locked out.",
+  2: "Password gate — visitors must enter the passphrase WAFFLE (case sensitive) to enter.",
+  3: "Tester area is closed. Everything else is normal.",
+  4: "Feedback can only be sent once every 10 minutes per visitor.",
+  5: "Normal operations. No restrictions.",
 };
 
 const DefconAdmin = () => {
-  const [level, setLevel] = useState<DefconLevel>(4);
+  const [level, setLevel] = useState<DefconLevel>(5);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<DefconLevel | null>(null);
 
@@ -29,7 +30,7 @@ const DefconAdmin = () => {
         .select("defcon_level")
         .eq("id", "global")
         .maybeSingle();
-      if (data) setLevel(((data as { defcon_level: number }).defcon_level ?? 4) as DefconLevel);
+      if (data) setLevel(((data as { defcon_level: number }).defcon_level ?? 5) as DefconLevel);
       setLoading(false);
     };
     load();
@@ -64,7 +65,7 @@ const DefconAdmin = () => {
             <span className="font-display text-primary">{DEFCON_LABELS[level]}</span>
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {([0, 1, 2, 3, 4] as DefconLevel[]).map((lvl) => (
+            {([0, 1, 2, 3, 4, 5] as DefconLevel[]).map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => setDefcon(lvl)}

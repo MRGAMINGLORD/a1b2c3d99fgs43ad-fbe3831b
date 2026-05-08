@@ -60,19 +60,7 @@
       the importmap above. Do NOT change `type` or `data-type`.
       ============================================================
     -->
-    <script type="text/babel" data-type="module" data-presets="react">
-      // Guard the Gemini-Canvas globals so initializeApp doesn't throw
-      // when no Firebase config has been pasted in yet.
-      if (!window.__firebase_config) {
-        window.__firebase_config = JSON.stringify({
-          apiKey: "demo", authDomain: "demo.firebaseapp.com",
-          projectId: "demo-project", appId: "demo"
-        });
-      }
-      // Expose the globals as bare identifiers Bob's code reads.
-      var __app_id = window.__app_id;
-      var __initial_auth_token = window.__initial_auth_token;
-      var __firebase_config = window.__firebase_config;
+    <script type="text/plain" id="bob-source">
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
@@ -865,10 +853,44 @@ function App() {
     </div>
   );
 }
+    </script>
 
-      // Mount Bob's App component.
-      import { createRoot } from "react-dom/client";
-      createRoot(document.getElementById("root")).render(React.createElement(App));
+    <!-- Bootstrap: compile Bob's source with Babel, then dynamic-import as ESM. -->
+    <script>
+      (function () {
+        try {
+          var raw = document.getElementById("bob-source").textContent;
+          var prelude =
+            'import React, { createElement } from "react";\n' +
+            'import { createRoot } from "react-dom/client";\n' +
+            'window.React = React;\n' +
+            'const __app_id = window.__app_id;\n' +
+            'const __initial_auth_token = window.__initial_auth_token;\n' +
+            'const __firebase_config = window.__firebase_config;\n';
+          var epilogue =
+            '\ncreateRoot(document.getElementById("root")).render(createElement(App));\n';
+          var src = prelude + raw + epilogue;
+          var compiled = Babel.transform(src, {
+            presets: [["react", { runtime: "classic" }]],
+            sourceType: "module",
+          }).code;
+          var blob = new Blob([compiled], { type: "text/javascript" });
+          var url = URL.createObjectURL(blob);
+          import(url).catch(function (e) {
+            console.error("Bob failed to start:", e);
+            document.getElementById("root").innerHTML =
+              '<div style="padding:24px;color:#fde68a;font-family:monospace;white-space:pre-wrap">Bob failed to start.\n\n' +
+              String(e && (e.stack || e.message || e)).replace(/[<>&]/g, "") +
+              '</div>';
+          });
+        } catch (e) {
+          console.error("Bob compile error:", e);
+          document.getElementById("root").innerHTML =
+            '<div style="padding:24px;color:#fda4af;font-family:monospace;white-space:pre-wrap">Bob compile error:\n\n' +
+            String(e && (e.stack || e.message || e)).replace(/[<>&]/g, "") +
+            '</div>';
+        }
+      })();
     </script>
   </body>
 </html>

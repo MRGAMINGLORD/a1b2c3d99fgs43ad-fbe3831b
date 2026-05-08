@@ -1,7 +1,8 @@
 // Wraps the app and enforces the current DEFCON level on the client.
-// - DEFCON 0: only /admin and /login load. Everything else shows a lockdown screen.
-// - DEFCON 1: a password gate must be cleared (password "WAFFLE", case sensitive).
-// - DEFCON 2+: handled per-feature (testing page, feedback form).
+// - DEFCON 0: stealth — non-admins see a fake "unpublished" placeholder.
+// - DEFCON 1: full lockdown except /admin and /login.
+// - DEFCON 2: password gate must be cleared (password "WAFFLE", case sensitive).
+// - DEFCON 3+: handled per-feature (testing page, feedback form).
 
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -200,14 +201,29 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // DEFCON 0 — full lockdown except admin/login
+  // DEFCON 0 — stealth: site looks unpublished to non-admins
   if (level === 0) {
+    const allowed = ADMIN_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
+    if (!allowed) {
+      return (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#1a1a1a] text-[#a1a1aa]">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="h-20 w-16 text-[#a1a1aa]">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+          </svg>
+          <p className="mt-6 text-sm">Publish or update your Lovable project for it to appear here.</p>
+        </div>
+      );
+    }
+  }
+
+  // DEFCON 1 — full lockdown except admin/login
+  if (level === 1) {
     const allowed = ADMIN_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p));
     if (!allowed) {
       return (
         <BlastDoor
           variant="warning"
-          label="DEFCON 0"
+          label="DEFCON 1"
           sublabel="Blast door sealed • No entry"
           icon={<ShieldAlert className="h-12 w-12" />}
           doorState="shake"
@@ -230,8 +246,8 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     }
   }
 
-  // DEFCON 1 — password gate (admin/login still bypass so admins can recover)
-  if (level === 1 && !unlocked && !ADMIN_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))) {
+  // DEFCON 2 — password gate (admin/login still bypass so admins can recover)
+  if (level === 2 && !unlocked && !ADMIN_ALLOWED_PREFIXES.some((p) => pathname.startsWith(p))) {
     const lockedOut = isDefconLockedOut();
     const remaining = remainingDefconAttempts();
 
@@ -259,7 +275,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     return (
       <BlastDoor
         variant="primary"
-        label="DEFCON 1"
+        label="DEFCON 2"
         sublabel={lockedOut ? "Access revoked" : "Authorized personnel only"}
         icon={<Lock className="h-12 w-12" />}
         doorState={doorState}
