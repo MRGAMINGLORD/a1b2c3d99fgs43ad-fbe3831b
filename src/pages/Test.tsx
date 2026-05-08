@@ -606,7 +606,7 @@ const Test = () => {
   const [manageMode, setManageMode] = useState(false);
   const { level: defcon } = useDefcon();
 
-  if (defcon <= 2) {
+  if (defcon <= 3) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
         <div className="max-w-md rounded-lg border-2 border-destructive bg-card p-8 text-center">

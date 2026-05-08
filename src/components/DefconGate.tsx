@@ -275,7 +275,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     return (
       <BlastDoor
         variant="primary"
-        label="DEFCON 1"
+        label="DEFCON 2"
         sublabel={lockedOut ? "Access revoked" : "Authorized personnel only"}
         icon={<Lock className="h-12 w-12" />}
         doorState={doorState}
