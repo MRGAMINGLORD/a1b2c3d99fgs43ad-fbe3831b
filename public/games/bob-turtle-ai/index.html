@@ -60,19 +60,7 @@
       the importmap above. Do NOT change `type` or `data-type`.
       ============================================================
     -->
-    <script type="text/babel" data-type="module" data-presets="react">
-      // Guard the Gemini-Canvas globals so initializeApp doesn't throw
-      // when no Firebase config has been pasted in yet.
-      if (!window.__firebase_config) {
-        window.__firebase_config = JSON.stringify({
-          apiKey: "demo", authDomain: "demo.firebaseapp.com",
-          projectId: "demo-project", appId: "demo"
-        });
-      }
-      // Expose the globals as bare identifiers Bob's code reads.
-      var __app_id = window.__app_id;
-      var __initial_auth_token = window.__initial_auth_token;
-      var __firebase_config = window.__firebase_config;
+    <script type="text/plain" id="bob-source">
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
