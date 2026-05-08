@@ -5,14 +5,15 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type DefconLevel = 0 | 1 | 2 | 3 | 4;
+export type DefconLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
 export const DEFCON_LABELS: Record<DefconLevel, string> = {
-  0: "0 — Full lockdown (admin only)",
-  1: "1 — Password gate + testing closed + feedback throttled",
-  2: "2 — Testing closed + feedback throttled",
-  3: "3 — Feedback throttled (10 min)",
-  4: "4 — All systems normal",
+  0: "0 — Stealth mode (looks unpublished)",
+  1: "1 — Full lockdown (admin only)",
+  2: "2 — Password gate + testing closed + feedback throttled",
+  3: "3 — Testing closed + feedback throttled",
+  4: "4 — Feedback throttled (10 min)",
+  5: "5 — All systems normal",
 };
 
 const DEFCON_PASSWORD = "WAFFLE";
@@ -110,7 +111,7 @@ export const unlockDefconGate = (input: string): UnlockResult => {
 };
 
 export const useDefcon = () => {
-  const [level, setLevel] = useState<DefconLevel>(4);
+  const [level, setLevel] = useState<DefconLevel>(5);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export const useDefcon = () => {
         .eq("id", "global")
         .maybeSingle();
       if (mounted && data) {
-        setLevel(((data as { defcon_level: number }).defcon_level ?? 4) as DefconLevel);
+        setLevel(((data as { defcon_level: number }).defcon_level ?? 5) as DefconLevel);
       }
       if (mounted) setLoading(false);
     };
