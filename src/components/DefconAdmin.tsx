@@ -65,7 +65,7 @@ const DefconAdmin = () => {
             <span className="font-display text-primary">{DEFCON_LABELS[level]}</span>
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {([0, 1, 2, 3, 4] as DefconLevel[]).map((lvl) => (
+            {([0, 1, 2, 3, 4, 5] as DefconLevel[]).map((lvl) => (
               <button
                 key={lvl}
                 onClick={() => setDefcon(lvl)}
