@@ -4,6 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Bob the Turtle AI</title>
+    <link rel="preconnect" href="https://esm.sh" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="modulepreload" href="https://esm.sh/react@18.3.1">
+    <link rel="modulepreload" href="https://esm.sh/react-dom@18.3.1/client">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       html, body, #root { margin: 0; height: 100%; background: #0a0a0a; color: #fde68a; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -82,7 +87,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-const apiKey = "";
+const apiKey = (typeof window !== 'undefined' && window.__gemini_api_key) || "AIzaSyDH15t-tTDuvnESQMmWGgbcdaH-tWbUp2M";
 
 // Exponential backoff API call
 const fetchWithRetry = async (url, options, retries = 5) => {
@@ -868,10 +873,19 @@ function App() {
           var epilogue =
             '\ncreateRoot(document.getElementById("root")).render(React.createElement(App));\n';
           var src = prelude + raw + epilogue;
-          var compiled = Babel.transform(src, {
-            presets: [["react", { runtime: "classic" }]],
-            sourceType: "module",
-          }).code;
+          // Hash the source so we invalidate the cache when Bob changes.
+          var hash = 0;
+          for (var i = 0; i < src.length; i++) { hash = ((hash << 5) - hash + src.charCodeAt(i)) | 0; }
+          var cacheKey = "bob-compiled-" + hash;
+          var compiled = null;
+          try { compiled = sessionStorage.getItem(cacheKey); } catch (_) {}
+          if (!compiled) {
+            compiled = Babel.transform(src, {
+              presets: [["react", { runtime: "classic" }]],
+              sourceType: "module",
+            }).code;
+            try { sessionStorage.setItem(cacheKey, compiled); } catch (_) {}
+          }
           var blob = new Blob([compiled], { type: "text/javascript" });
           var url = URL.createObjectURL(blob);
           import(url).catch(function (e) {
