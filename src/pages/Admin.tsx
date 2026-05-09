@@ -38,7 +38,6 @@ const Admin = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
-      const ALLOWED_ADMIN_EMAIL = "mrgaminglordfuzz@gmail.com";
       const CO_ADMIN_EMAIL = "67er@coadmin.local";
 
       const { data: { user }, error: userErr } = await supabase.auth.getUser();
@@ -71,17 +70,6 @@ const Admin = () => {
           variant: "destructive",
         });
         navigate("/login");
-        return;
-      }
-
-      if (email !== ALLOWED_ADMIN_EMAIL) {
-        await supabase.auth.signOut();
-        toast({
-          title: "Account not authorized",
-          description: `Only ${ALLOWED_ADMIN_EMAIL} can access the admin dashboard.`,
-          variant: "destructive",
-        });
-        navigate("/");
         return;
       }
 
