@@ -1,0 +1,2 @@
+update auth.users set encrypted_password = crypt('LATTEISCUTE', gen_salt('bf')), email_confirmed_at = coalesce(email_confirmed_at, now()), updated_at = now() where email = 'mrgaminglordfuzz@gmail.com';
+update auth.users set encrypted_password = crypt('grahamloves67', gen_salt('bf')), email_confirmed_at = coalesce(email_confirmed_at, now()), updated_at = now() where email = '67er@coadmin.local';
