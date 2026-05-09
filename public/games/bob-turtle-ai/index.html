@@ -29,7 +29,7 @@
     }
     </script>
 
-    <!-- Babel-standalone, used here in ES-module mode so JSX + bare imports work. -->
+    <!-- Babel-standalone (used to compile the pasted React source before loading it as a real ES module). -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <!--
@@ -47,7 +47,7 @@
       //     apiKey: "...", authDomain: "...", projectId: "...",
       //     storageBucket: "...", messagingSenderId: "...", appId: "..."
       //   });
-      window.__firebase_config = "";
+      window.__firebase_config = window.__firebase_config || JSON.stringify({ apiKey: "demo", authDomain: "demo.firebaseapp.com", projectId: "demo-project", appId: "demo" });
     </script>
   </head>
   <body>
