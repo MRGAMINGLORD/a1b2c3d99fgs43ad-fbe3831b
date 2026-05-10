@@ -219,21 +219,43 @@ function App() {
     return { images, canvases };
   }, [chats]);
 
-  // Firebase Init
+  // Firebase Init — fall back to a local-only user if Firebase isn't configured
+  // (the demo apiKey will reject signInAnonymously, which would otherwise leave
+  // us stuck on "Accessing UTN Archives..." forever).
   useEffect(() => {
+    let cancelled = false;
+    const useLocal = () => {
+      if (cancelled) return;
+      setUser({ uid: 'local-' + Math.random().toString(36).slice(2, 10), __local: true });
+    };
     const initAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
         else await signInAnonymously(auth);
-      } catch (error) { console.error("Auth failed:", error); }
+      } catch (error) {
+        console.warn("Firebase auth unavailable, using local-only mode:", error?.message || error);
+        useLocal();
+      }
     };
     initAuth();
-    return onAuthStateChanged(auth, setUser);
+    // Hard fallback: if no auth state arrives in 2s, drop into local mode.
+    const timer = setTimeout(() => setUser((u) => u || { uid: 'local-fallback', __local: true }), 2000);
+    const unsub = onAuthStateChanged(auth, (u) => { if (u) setUser(u); }, () => useLocal());
+    return () => { cancelled = true; clearTimeout(timer); unsub && unsub(); };
   }, []);
 
-  // Firestore Sync
+  // Firestore Sync (skipped in local-only mode)
   useEffect(() => {
     if (!user) return;
+    if (user.__local) {
+      try {
+        const raw = localStorage.getItem('bob-chats-' + user.uid.replace(/^local-/, 'l-'));
+        const stored = raw ? JSON.parse(raw) : [];
+        setChats(stored);
+      } catch { setChats([]); }
+      setIsDbReady(true);
+      return;
+    }
     const chatsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'chats');
     const unsubscribe = onSnapshot(chatsRef, (snapshot) => {
       const loadedChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -241,9 +263,15 @@ function App() {
       setChats(loadedChats);
       setIsDbReady(true);
       if (!activeChatId && loadedChats.length > 0) setActiveChatId(loadedChats[0].id);
-    }, console.error);
+    }, (err) => { console.error(err); setIsDbReady(true); });
     return () => unsubscribe();
   }, [user]);
+
+  // Persist chats locally when in local mode
+  useEffect(() => {
+    if (!user || !user.__local) return;
+    try { localStorage.setItem('bob-chats-' + user.uid.replace(/^local-/, 'l-'), JSON.stringify(chats)); } catch {}
+  }, [chats, user]);
 
   useEffect(() => {
     if (isDbReady && chats.length === 0 && user) createNewChat();
@@ -262,8 +290,19 @@ function App() {
 
   const saveChatToDb = async (chatData) => {
     if (!user) return;
+    const updated = { ...chatData, updatedAt: Date.now() };
+    if (user.__local) {
+      setChats((prev) => {
+        const idx = prev.findIndex((c) => c.id === updated.id);
+        if (idx === -1) return [updated, ...prev];
+        const next = [...prev];
+        next[idx] = updated;
+        return next;
+      });
+      return;
+    }
     const chatRef = doc(db, 'artifacts', appId, 'users', user.uid, 'chats', chatData.id);
-    await setDoc(chatRef, { ...chatData, updatedAt: Date.now() });
+    await setDoc(chatRef, updated);
   };
 
   const createNewChat = async () => {
@@ -284,7 +323,11 @@ function App() {
   const deleteChat = async (e, id) => {
     e.stopPropagation();
     if (!user) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'chats', id));
+    if (user.__local) {
+      setChats((prev) => prev.filter((c) => c.id !== id));
+    } else {
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'chats', id));
+    }
     if (activeChatId === id) {
       const remaining = chats.filter(c => c.id !== id);
       if (remaining.length > 0) setActiveChatId(remaining[0].id);
