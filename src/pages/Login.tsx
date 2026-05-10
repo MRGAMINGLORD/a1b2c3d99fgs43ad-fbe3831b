@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
-import { SecretInput } from "@/components/ui/secret-input";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
 // Admin login only. New admin accounts are NOT created here — they must be
@@ -48,15 +48,19 @@ const Login = () => {
         <p className="text-center text-xs text-muted-foreground">
           Admin or co-admin sign-in. Public sign-up is disabled.
         </p>
-        <SecretInput
+        <Input
+          type="text"
           placeholder="Email"
           value={email}
-          onChange={setEmail}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="username"
         />
-        <SecretInput
+        <Input
+          type="password"
           placeholder="Password"
           value={password}
-          onChange={setPassword}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
         />
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Please wait..." : "Sign In"}
