@@ -37,7 +37,7 @@ import { GAMES, type GameMeta } from "@/lib/games";
 import { useDefcon } from "@/hooks/useDefcon";
 import heroBg from "@/assets/hero-bg.png";
 
-const CATEGORIES = ["tycoon", "twist", "other"] as const;
+const CATEGORIES = ["tycoon", "twist", "other", "education"] as const;
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
@@ -592,7 +592,9 @@ const testRowToMeta = (row: TestGameRow): GameMeta => {
     available: row.html.trim().length > 0,
     playUrl: `/play-test/${row.slug}`,
     category:
-      row.category === "tycoon" || row.category === "twist" ? row.category : "other",
+      row.category === "tycoon" || row.category === "twist" || row.category === "education"
+        ? row.category
+        : "other",
   };
 };
 
@@ -725,6 +727,7 @@ const Test = () => {
   const tycoonGames = allGames.filter((g) => g.category === "tycoon");
   const twistGames = allGames.filter((g) => g.category === "twist");
   const otherGames = allGames.filter((g) => g.category === "other");
+  const educationGames = allGames.filter((g) => g.category === "education");
 
   const renderGrid = (list: GameMeta[]) => (
     <div className="grid gap-6 pt-2 sm:grid-cols-2">
@@ -790,9 +793,26 @@ const Test = () => {
 
         <Accordion
           type="multiple"
-          defaultValue={["tycoon", "twist", "other"]}
+          defaultValue={["education", "tycoon", "twist", "other"]}
           className="space-y-3"
         >
+          <AccordionItem
+            value="education"
+            className="rounded-lg border border-primary/40 bg-card/40 px-4 border-glow"
+          >
+            <AccordionTrigger className="hover:no-underline">
+              <div className="text-left">
+                <div className="font-display text-xl uppercase tracking-wider text-primary">
+                  Education
+                </div>
+                <div className="text-xs italic text-muted-foreground">
+                  AI tutors and educational diversions
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>{renderGrid(educationGames)}</AccordionContent>
+          </AccordionItem>
+
           <AccordionItem
             value="tycoon"
             className="rounded-lg border border-primary/40 bg-card/40 px-4 border-glow"
