@@ -290,8 +290,19 @@ function App() {
 
   const saveChatToDb = async (chatData) => {
     if (!user) return;
+    const updated = { ...chatData, updatedAt: Date.now() };
+    if (user.__local) {
+      setChats((prev) => {
+        const idx = prev.findIndex((c) => c.id === updated.id);
+        if (idx === -1) return [updated, ...prev];
+        const next = [...prev];
+        next[idx] = updated;
+        return next;
+      });
+      return;
+    }
     const chatRef = doc(db, 'artifacts', appId, 'users', user.uid, 'chats', chatData.id);
-    await setDoc(chatRef, { ...chatData, updatedAt: Date.now() });
+    await setDoc(chatRef, updated);
   };
 
   const createNewChat = async () => {
@@ -312,7 +323,11 @@ function App() {
   const deleteChat = async (e, id) => {
     e.stopPropagation();
     if (!user) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'chats', id));
+    if (user.__local) {
+      setChats((prev) => prev.filter((c) => c.id !== id));
+    } else {
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'chats', id));
+    }
     if (activeChatId === id) {
       const remaining = chats.filter(c => c.id !== id);
       if (remaining.length > 0) setActiveChatId(remaining[0].id);
