@@ -1,28 +1,172 @@
-<!--
-  ─────────────────────────────────────────────────────────────
-  WAFFLE WORKS — paste your full game code below.
-
-  This file is served at /play/waffle-works once
-  GAMES[] in src/lib/games.ts has `available: true` and
-  `playUrl: "/play/waffle-works"` for this entry.
-
-  Replace this entire file with your <!doctype html>… document.
-  ─────────────────────────────────────────────────────────────
--->
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Waffle Works — placeholder</title>
-    <style>
-      body { font-family: system-ui, sans-serif; background:#111; color:#fc0; display:grid; place-items:center; min-height:100vh; margin:0; text-align:center; padding:2rem; }
-      code { background:#222; padding:.2rem .4rem; border-radius:4px; }
-    </style>
-  </head>
-  <body>
-    <div>
-      <h1>Waffle Works</h1>
-      <p>Drop your game code into <code>public/games/waffle-works/index.html</code>.</p>
-    </div>
-  </body>
+.add('border-transparent', 'bg-stone-600'); }
+}
+}
+}
+function updateShopUI() {
+buildings.forEach((b) => {
+const ui = shopUIElements[b.id]; const cost = getCost(b); const prodTexts =[];
+if (b.wps > 0) prodTexts.push(`+${formatStat(b.wps * b.prodMultiplier * b.syrupMultiplier)} WPS`); if (b.wpc > 0) prodTexts.push(`+${formatStat(b.wpc * b.prodMultiplier * b.syrupMultiplier)} WPC`);
+ui.costDisplay.textContent = `🧇 ${formatNumber(cost)}`; ui.countDisplay.textContent = b.count > 0 ? b.count : ''; ui.wpsDisplay.textContent = prodTexts.join(' & ');
+if (waffles >= cost) { ui.button.removeAttribute('disabled'); ui.button.classList.remove('opacity-50', 'bg-gray-50'); ui.costDisplay.classList.replace('text-red-600', 'text-green-600'); }
+else { ui.button.setAttribute('disabled', 'true'); ui.button.classList.add('opacity-50', 'bg-gray-50'); ui.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const prodUi = shopUIElements[`${b.id}_prod`]; const prodCost = getProdUpgradeCost(b); prodUi.costDisplay.textContent = `🧇 ${formatNumber(prodCost)}`; prodUi.levelDisplay.textContent = `Lvl ${b.prodLevel}`;
+if (waffles >= prodCost) { prodUi.button.removeAttribute('disabled'); prodUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { prodUi.button.setAttribute('disabled', 'true'); prodUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const hardUi = shopUIElements[`${b.id}_hard`]; const hardCost = getHardUpgradeCost(b); hardUi.costDisplay.textContent = `🧇 ${formatNumber(hardCost)}`; hardUi.levelDisplay.textContent = `Lvl ${b.hardLevel}`;
+if (waffles >= hardCost) { hardUi.button.removeAttribute('disabled'); hardUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { hardUi.button.setAttribute('disabled', 'true'); hardUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const syrupUi = shopUIElements[`${b.id}_syrup`]; const syrupCost = getSyrupUpgradeCost(b); syrupUi.costDisplay.textContent = `🧇 ${formatNumber(syrupCost)}`; syrupUi.levelDisplay.textContent = `Lvl ${b.syrupLevel}`;
+if (waffles >= syrupCost) { syrupUi.button.removeAttribute('disabled'); syrupUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { syrupUi.button.setAttribute('disabled', 'true'); syrupUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+const effUi = shopUIElements[`${b.id}_eff`]; const effCost = getEffUpgradeCost(b); effUi.costDisplay.textContent = `🧇 ${formatNumber(effCost)}`; effUi.levelDisplay.textContent = `Lvl ${b.effLevel}`;
+if (waffles >= effCost) { effUi.button.removeAttribute('disabled'); effUi.costDisplay.classList.replace('text-red-600', 'text-green-600'); } else { effUi.button.setAttribute('disabled', 'true'); effUi.costDisplay.classList.replace('text-green-600', 'text-red-600'); }
+});
+}
+function showToast(title, message, bgColor) {
+const toast = document.createElement('div'); toast.className = `${bgColor} text-white p-4 rounded-xl shadow-2xl toast-enter flex items-start gap-3 pointer-events-auto z-[99999]`;
+toast.innerHTML = `<div class="flex-1"><h4 class="font-black text-lg tracking-wide uppercase">${title}</h4><p class="font-semibold text-sm opacity-90">${message}</p></div><button class="text-white/50 hover:text-white" onclick="this.parentElement.remove()"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>`;
+toastContainer.appendChild(toast); setTimeout(() => { if(toastContainer.contains(toast)) { toast.classList.remove('toast-enter'); toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 500); } }, 6000);
+}
+function toggleGameMode() {
+const btn = document.getElementById('btn-game-mode'); const textEl = document.getElementById('game-mode-text'); const descEl = document.getElementById('game-mode-desc');
+if (btn.dataset.mode === 'normal') { btn.dataset.mode = 'barrier'; textEl.textContent = 'Barrier'; descEl.textContent = 'Defend from hungry turtles!'; btn.classList.replace('border-amber-500', 'border-red-500'); btn.classList.replace('shadow-[0_4px_0_0_#d97706]', 'shadow-[0_4px_0_0_#ef4444]'); btn.classList.replace('hover:shadow-[0_2px_0_0_#d97706]', 'hover:shadow-[0_2px_0_0_#ef4444]'); }
+else { btn.dataset.mode = 'normal'; textEl.textContent = 'Normal'; descEl.textContent = 'Standard endless clicking'; btn.classList.replace('border-red-500', 'border-amber-500'); btn.classList.replace('shadow-[0_4px_0_0_#ef4444]', 'shadow-[0_4px_0_0_#d97706]'); btn.classList.replace('hover:shadow-[0_2px_0_0_#ef4444]', 'hover:shadow-[0_2px_0_0_#d97706]'); }
+}
+function showScreen(screenId) {
+document.getElementById('screen-main-menu').classList.add('hidden'); document.getElementById('screen-companies').classList.add('hidden'); document.getElementById('screen-new-company').classList.add('hidden'); document.getElementById('screen-pause-menu').classList.add('hidden');
+if (screenId) document.getElementById(screenId).classList.remove('hidden');
+if (screenId === 'screen-new-company') { document.getElementById('company-name-input').value = ''; const btn = document.getElementById('btn-game-mode'); if (btn && btn.dataset.mode !== 'normal') toggleGameMode(); }
+}
+function togglePauseMenu() { const pauseMenu = document.getElementById('screen-pause-menu'); if (pauseMenu.classList.contains('hidden')) pauseMenu.classList.remove('hidden'); else pauseMenu.classList.add('hidden'); }
+function toggleQuietMode() {
+isQuietMode = !isQuietMode; const btn = document.getElementById('btn-quiet-mode');
+if (isQuietMode) { btn.textContent = 'Quiet Mode: ON'; btn.classList.replace('bg-amber-300', 'bg-amber-600'); btn.classList.replace('hover:bg-amber-400', 'hover:bg-amber-700'); btn.classList.replace('text-amber-900', 'text-amber-50'); }
+else { btn.textContent = 'Quiet Mode: OFF'; btn.classList.replace('bg-amber-600', 'bg-amber-300'); btn.classList.replace('hover:bg-amber-700', 'hover:bg-amber-400'); btn.classList.replace('text-amber-50', 'text-amber-900'); }
+}
+function loadCompanies() { const stored = localStorage.getItem('waffle_companies'); if (stored) companies = JSON.parse(stored); renderCompaniesList(); }
+function deleteCompany(e, index) {
+e.stopPropagation();
+if(confirm("Are you sure you want to delete this company?")) {
+companies.splice(index, 1); if(currentCompanyIndex === index) { currentCompanyIndex = -1; stopGameLoops(); showScreen('screen-main-menu'); } else if (currentCompanyIndex > index) currentCompanyIndex--;
+saveData(); renderCompaniesList();
+}
+}
+function renderCompaniesList() {
+const list = document.getElementById('companies-list'); list.innerHTML = '';
+if (companies.length === 0) { list.innerHTML = '<p class="text-amber-700/70 text-center font-bold bg-white/50 py-4 rounded-xl border border-amber-200">No companies yet. Start one!</p>'; return; }
+companies.forEach((comp, index) => {
+const rebirthBadge = comp.rebirths ? `<span class="bg-purple-200 text-purple-900 px-2 py-1 rounded shrink-0">Rebirths: ${comp.rebirths}</span>` : '';
+const btn = document.createElement('div'); btn.className = "w-full text-left p-5 rounded-2xl border-4 bg-white border-amber-200 hover:border-amber-400 hover:shadow-lg transition-all flex justify-between items-center group mb-2 cursor-pointer"; btn.onclick = () => loadGame(index);
+btn.innerHTML = `<div class="truncate mr-4"><h3 class="font-black text-2xl text-amber-900 mb-1 truncate">${comp.name}</h3><div class="flex gap-3 text-sm font-bold text-amber-700/80 uppercase tracking-wider overflow-hidden"><span class="bg-amber-100 px-2 py-1 rounded shrink-0">Mode: ${comp.mode}</span><span class="bg-amber-100 px-2 py-1 rounded shrink-0">Waffles: ${formatNumber(comp.waffles || 0)}</span>${rebirthBadge}</div></div><div class="flex items-center gap-4"><button onclick="deleteCompany(event, ${index})" class="text-red-400 hover:text-red-600 transition-colors font-black text-2xl" title="Delete">🗑️</button><span class="text-3xl group-hover:translate-x-2 transition-transform text-amber-500 shrink-0">▶</span></div>`;
+list.appendChild(btn);
+});
+}
+function startNewGame() {
+let nameInput = document.getElementById('company-name-input').value.trim(); if (!nameInput) nameInput = "My Waffle Co."; if (nameInput.length > 15) nameInput = nameInput.substring(0, 15);
+const modeInput = document.getElementById('btn-game-mode').dataset.mode;
+const newCompany = { name: nameInput, mode: modeInput, waffles: 0, rebirths: 0, hasSeenTutorial: false, buildingsData: buildings.map(b => ({ id: b.id, count: 0, prodLevel: 0, hardLevel: 0, syrupLevel: 0, effLevel: 0 })), walls: {}, wallLevel: 0, turtleBuildings: {}, playerFieldBuildings: {}, droppedWaffles:[] };
+companies.push(newCompany); saveData(); loadGame(companies.length - 1); document.getElementById('company-name-input').value = '';
+}
+function loadGame(index) {
+currentCompanyIndex = index; const comp = companies[index];
+waffles = comp.waffles || 0; wallFortificationLevel = comp.wallLevel || 0; turtleBuildings = comp.turtleBuildings || {}; playerFieldBuildings = comp.playerFieldBuildings || {};
+for (let key in turtleBuildings) if (turtleBuildings[key].hp === undefined) turtleBuildings[key].hp = turtleBuildings[key].level * 100;
+for (let key in walls) if (walls[key].id === undefined) { walls[key].id = 'basic'; walls[key].isObstacle = true; }
+droppedWaffles = comp.droppedWaffles ||[];
+if (comp.buildingsData) {
+buildings.forEach((b, idx) => {
+const savedB = comp.buildingsData.find(sb => sb.id === b.id);
+if (savedB) { b.count = savedB.count || 0; b.prodLevel = savedB.prodLevel || 0; b.hardLevel = savedB.hardLevel || 0; b.syrupLevel = savedB.syrupLevel || 0; b.effLevel = savedB.effLevel || 0; }
+else { b.count = 0; b.prodLevel = 0; b.hardLevel = 0; b.syrupLevel = 0; b.effLevel = 0; }
+b.prodMultiplier = 1 + (b.prodLevel * 0.1); b.hardness = Math.min(0.9, b.hardLevel * 0.05); b.syrupMultiplier = Math.pow(1.2, b.syrupLevel); b.effDiscount = Math.pow(0.95, b.effLevel);
+});
+}
+if (comp.mode === 'barrier') {
+isBarrierMode = true; walls = comp.walls || {}; turtles = []; smashEffects =[]; document.getElementById('barrier-field').classList.remove('hidden'); document.getElementById('barrier-field').classList.add('flex');
+selectedDefense = null; initDefenses(); updateWallUpgradeButton();
+if(Object.keys(playerFieldBuildings).length === 0) buildings.forEach((b, idx) => { for(let i=0; i<b.count; i++) placeBuildingOnField(idx); });
+requestAnimationFrame(drawField);
+} else { isBarrierMode = false; document.getElementById('barrier-field').classList.add('hidden'); document.getElementById('barrier-field').classList.remove('flex'); }
+document.getElementById('active-company-name').textContent = comp.name; toggleSidebarView('shop'); initShop(); recalculateStats(); updateDisplay(); showScreen(null);
+if (!comp.hasSeenTutorial) startTutorial(); else tutorialActive = false;
+startGameLoops();
+}
+function saveAndExit() {
+if (currentCompanyIndex !== -1) {
+companies[currentCompanyIndex].waffles = waffles;
+companies[currentCompanyIndex].buildingsData = buildings.map(b => ({ id: b.id, count: b.count, prodLevel: b.prodLevel, hardLevel: b.hardLevel, syrupLevel: b.syrupLevel, effLevel: b.effLevel }));
+if (isBarrierMode) { companies[currentCompanyIndex].walls = walls; companies[currentCompanyIndex].wallLevel = wallFortificationLevel; companies[currentCompanyIndex].turtleBuildings = turtleBuildings; companies[currentCompanyIndex].playerFieldBuildings = playerFieldBuildings; companies[currentCompanyIndex].droppedWaffles = droppedWaffles; }
+saveData();
+}
+stopGameLoops(); if (tutorialActive) endTutorial(); selectedDefense = null; showScreen('screen-companies'); renderCompaniesList();
+}
+function saveData() { localStorage.setItem('waffle_companies', JSON.stringify(companies)); }
+function spawnRandomTurtleEvent() {
+let el = document.createElement('div'); el.id = 'random-turtle-event'; el.className = 'fixed z-[120] flex items-center gap-4 cursor-pointer transition-transform bg-white/90 p-3 rounded-full border-4 border-amber-400 shadow-2xl';
+let startY = 100 + Math.random() * (window.innerHeight - 200); let startX = -200; let endX = window.innerWidth + 100; let duration = 8000 + Math.random() * 4000;
+el.style.top = startY + 'px'; el.style.left = startX + 'px'; el.style.transition = `left ${duration}ms linear`;
+let bagBtn = document.createElement('button'); bagBtn.textContent = '🛍️'; bagBtn.className = 'text-4xl hover:scale-125 transition-transform bg-green-200 rounded-full w-16 h-16 flex items-center justify-center border-2 border-green-500 shadow-md';
+bagBtn.onclick = (e) => { e.stopPropagation(); let reward = Math.max(100, wps * 60); waffles += reward; showToast("Bonus!", `You secured ${formatNumber(reward)} waffles from the bag!`, "bg-green-600"); updateDisplay(); el.remove(); };
+let turtleBtn = document.createElement('button'); turtleBtn.textContent = '🐢'; turtleBtn.className = 'text-4xl hover:scale-125 transition-transform bg-red-200 rounded-full w-16 h-16 flex items-center justify-center border-2 border-red-500 shadow-md';
+turtleBtn.onclick = (e) => { e.stopPropagation(); let stolen = Math.min(waffles, Math.max(100, waffles * 0.2)); waffles -= stolen; showToast("Oh no!", `The turtle stole ${formatNumber(stolen)} waffles!`, "bg-red-600"); updateDisplay(); el.remove(); };
+el.appendChild(bagBtn); el.appendChild(turtleBtn); document.body.appendChild(el);
+setTimeout(() => { el.style.left = endX + 'px'; }, 50); setTimeout(() => { if(el.parentElement) el.remove(); }, duration + 100);
+}
+let gameLoopInterval; let disasterLoopInterval;
+function startGameLoops() {
+stopGameLoops();
+gameLoopInterval = setInterval(() => {
+waffles += wps / 10; updateDisplay(); updateShopUI(); 
+if (isBarrierMode) {
+missileTick++;
+if(missileTick >= 20) {
+missileTick = 0;
+for(let key in walls) {
+if(walls[key].id === 'missile') {
+let [wx, wy] = key.split(',').map(Number); let target = null; let bestD = 8;
+for(let t of turtles) { let d = Math.hypot(t.x-wx, t.y-wy); if(d < bestD) { bestD = d; target = t; } }
+if(target) applyAoE(target.x, target.y, 1, 3, 10);
+}
+}
+}
+for (let key in turtleBuildings) {
+let b = turtleBuildings[key];
+if (b.type === 'house' && b.occupants) {
+for (let i = b.occupants.length - 1; i >= 0; i--) { b.occupants[i].restTicks--; if (b.occupants[i].restTicks <= 0) { b.occupants.splice(i, 1); let [bx, by] = key.split(',').map(Number); turtles.push({ x: bx, y: by, type: 'normal', state: 'moving_in', targetKey: null, thoughtTicks: 0 }); } }
+}
+}
+for (let i = droppedWaffles.length - 1; i >= 0; i--) {
+let dw = droppedWaffles[i];
+if (dw.returning) {
+let dx = 14.5 - dw.x; let dy = 14.5 - dw.y; let dist = Math.sqrt(dx*dx + dy*dy); let speed = 0.4;
+if (dist <= speed) { waffles += dw.amount; droppedWaffles.splice(i, 1); updateDisplay(); } else { dw.x += (dx/dist) * speed; dw.y += (dy/dist) * speed; }
+}
+}
+turtleMoveTimer += 100; turtleSpawnTimer += 100;
+if (turtleMoveTimer >= 500) { updateTurtles(); turtleMoveTimer = 0; }
+let spawnThreshold = Math.max(2500, 7000 - (wps * 12));
+if (waffles > 50 && turtleSpawnTimer >= spawnThreshold) { spawnTurtle(); turtleSpawnTimer = 0; }
+}
+if (Math.random() < 0.01 && currentCompanyIndex !== -1) {
+companies[currentCompanyIndex].waffles = waffles; companies[currentCompanyIndex].buildingsData = buildings.map(b => ({ id: b.id, count: b.count, prodLevel: b.prodLevel, hardLevel: b.hardLevel, syrupLevel: b.syrupLevel, effLevel: b.effLevel }));
+if (isBarrierMode) { companies[currentCompanyIndex].walls = walls; companies[currentCompanyIndex].wallLevel = wallFortificationLevel; companies[currentCompanyIndex].turtleBuildings = turtleBuildings; companies[currentCompanyIndex].playerFieldBuildings = playerFieldBuildings; companies[currentCompanyIndex].droppedWaffles = droppedWaffles; }
+saveData();
+}
+}, 100);
+disasterLoopInterval = setInterval(() => { if (Math.random() < 0.35) triggerDisaster(); }, 20000); 
+randomEventInterval = setInterval(() => { if(Math.random() < 0.3 && !document.getElementById('random-turtle-event') && currentCompanyIndex !== -1 && !tutorialActive) spawnRandomTurtleEvent(); }, 30000);
+}
+function stopGameLoops() { clearInterval(gameLoopInterval); clearInterval(disasterLoopInterval); clearInterval(randomEventInterval); let oldEv = document.getElementById('random-turtle-event'); if(oldEv) oldEv.remove(); }
+waffleEl.addEventListener('mousedown', (e) => { if (e && e.clientX !== undefined) performClick(e.clientX, e.clientY); });
+waffleEl.addEventListener('touchstart', (e) => { e.preventDefault(); Array.from(e.changedTouches).forEach(touch => performClick(touch.clientX, touch.clientY)); }, {passive: false});
+waffleEl.addEventListener('dragstart', (e) => e.preventDefault());
+document.addEventListener('keydown', (e) => {
+if (e.target.tagName === 'INPUT') return; 
+const isPlaying = document.getElementById('screen-main-menu').classList.contains('hidden') && document.getElementById('screen-companies').classList.contains('hidden') && document.getElementById('screen-new-company').classList.contains('hidden');
+if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') { ctrlShiftQCount++; clearTimeout(debugQTimer); debugQTimer = setTimeout(() => { ctrlShiftQCount = 0; }, 1000); if (ctrlShiftQCount >= 2) { ctrlShiftQCount = 0; openDebugLogin(); } }
+if (e.key === 'Escape') { if (isDebugMenuOpen) closeDebugMenu(); else if (currentCompanyIndex !== -1 && isPlaying && !tutorialActive) togglePauseMenu(); else if (selectedDefense) selectDefense(selectedDefense); }
+if (tutorialActive && e.key.toLowerCase() === 'x') { e.preventDefault(); skipTutorial(); return; }
+if (e.code === 'Space') { e.preventDefault(); if (tutorialActive) { if (!tutorialSteps[tutorialStep].waitForClick) advanceTutorial(); else if (tutorialSteps[tutorialStep].target === 'waffle-container') performClick(window.innerWidth / 4, window.innerHeight / 2); return; } if (isPlaying && document.getElementById('screen-pause-menu').classList.contains('hidden') && !isDebugMenuOpen) performClick(window.innerWidth / 4, window.innerHeight / 2); }
+if (e.key.toLowerCase() === 'b') { if (isPlaying && document.getElementById('screen-pause-menu').classList.contains('hidden') && !tutorialActive && !isDebugMenuOpen) performClick(null, null, true); }
+});
+loadCompanies(); showScreen('screen-main-menu');
+</script>
+</body>
 </html>
