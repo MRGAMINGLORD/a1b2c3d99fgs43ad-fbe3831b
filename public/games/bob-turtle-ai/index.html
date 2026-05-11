@@ -92,7 +92,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-const apiKey = (typeof window !== 'undefined' && window.__gemini_api_key) || "AIzaSyDH15t-tTDuvnESQMmWGgbcdaH-tWbUp2M";
+const apiKey = (typeof window !== 'undefined' && window.__gemini_api_key) || "AIzaSyDCZwAK0glrsNsUVZIS-gCVzux6pP3yVuQ";
 
 // Exponential backoff API call
 const fetchWithRetry = async (url, options, retries = 5) => {
