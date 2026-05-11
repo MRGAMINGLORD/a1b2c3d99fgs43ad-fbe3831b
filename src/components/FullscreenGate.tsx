@@ -43,13 +43,28 @@ export const FullscreenGate = ({ children }: { children: ReactNode }) => {
       try { window.location.replace("about:blank"); } catch { /* ignore */ }
       setTerminated(true);
     };
+    // Browsers briefly exit fullscreen when native dialogs (confirm, alert,
+    // file pickers, permission prompts) appear. We don't want those to nuke
+    // the tab, so we wait ~600ms and re-check before terminating. If
+    // fullscreen has been re-entered (or is back), we ignore the blip.
+    let pending: number | null = null;
     const onChange = () => {
-      if (hasEnteredOnceRef.current && !document.fullscreenElement) {
-        closeTab();
+      if (!hasEnteredOnceRef.current) return;
+      if (document.fullscreenElement) {
+        if (pending !== null) { window.clearTimeout(pending); pending = null; }
+        return;
       }
+      if (pending !== null) window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        pending = null;
+        if (!document.fullscreenElement) closeTab();
+      }, 600);
     };
     document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      if (pending !== null) window.clearTimeout(pending);
+    };
   }, []);
 
   if (terminated) {
