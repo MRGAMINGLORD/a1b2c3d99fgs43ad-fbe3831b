@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { fetchTestGame } from "@/hooks/useTestGames";
+import { prepareGameSource } from "@/lib/reactGameWrapper";
 import { isTestUnlocked } from "@/lib/testAuth";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
