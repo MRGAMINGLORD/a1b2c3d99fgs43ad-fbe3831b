@@ -15,6 +15,105 @@
 // snippets that mention `'<html'` inside string checks (e.g. Turtle LM).
 const HTML_DOC_RE = /^\s*(<!doctype\s+html|<\s*(html|head|body)\b)/i;
 
+// Some seeded test games were accidentally saved with literal escape
+// sequences (`\n`, `\t`) instead of real line breaks. That leaves the whole
+// file on one physical line, which makes the iframe treat valid React/HTML
+// source as broken text. Detect that malformed shape and repair it before any
+// wrapper heuristics run.
+export const normalizeGameSource = (source: string): string => {
+  const newlineCount = (source.match(/\n/g) ?? []).length;
+  const escapedNewlineCount = (source.match(/\\n/g) ?? []).length;
+  if (newlineCount > 2 || escapedNewlineCount < 8) return source;
+
+  type Context =
+    | { type: "code" }
+    | { type: "single"; escaped: boolean }
+    | { type: "double"; escaped: boolean }
+    | { type: "template"; escaped: boolean }
+    | { type: "templateExpr"; braceDepth: number };
+
+  const out: string[] = [];
+  const stack: Context[] = [{ type: "code" }];
+
+  for (let i = 0; i < source.length; i += 1) {
+    const ch = source[i];
+    const next = source[i + 1] ?? "";
+    const current = stack[stack.length - 1];
+
+    if (current.type === "single" || current.type === "double" || current.type === "template") {
+      out.push(ch);
+
+      if (current.escaped) {
+        current.escaped = false;
+        continue;
+      }
+
+      if (ch === "\\") {
+        current.escaped = true;
+        continue;
+      }
+
+      if (
+        (current.type === "single" && ch === "'") ||
+        (current.type === "double" && ch === '"') ||
+        (current.type === "template" && ch === "`")
+      ) {
+        stack.pop();
+        continue;
+      }
+
+      if (current.type === "template" && ch === "$" && next === "{") {
+        out.push(next);
+        stack.push({ type: "templateExpr", braceDepth: 0 });
+        i += 1;
+      }
+      continue;
+    }
+
+    if (ch === "\\" && source.slice(i, i + 4) === "\\r\\n") {
+      out.push("\n");
+      i += 3;
+      continue;
+    }
+    if (ch === "\\" && next === "n") {
+      out.push("\n");
+      i += 1;
+      continue;
+    }
+    if (ch === "\\" && next === "t") {
+      out.push("\t");
+      i += 1;
+      continue;
+    }
+
+    out.push(ch);
+
+    if (ch === "'") {
+      stack.push({ type: "single", escaped: false });
+      continue;
+    }
+    if (ch === '"') {
+      stack.push({ type: "double", escaped: false });
+      continue;
+    }
+    if (ch === "`") {
+      stack.push({ type: "template", escaped: false });
+      continue;
+    }
+
+    if (current.type === "templateExpr") {
+      if (ch === "{") {
+        current.braceDepth += 1;
+      } else if (ch === "}") {
+        if (current.braceDepth === 0) stack.pop();
+        else current.braceDepth -= 1;
+      }
+    }
+  }
+
+  return out.join("");
+};
+
 // Strong signals that this is React/JSX source, not an HTML fragment.
 const STRONG_REACT_HINTS: RegExp[] = [
   /\bimport\s+[^;]*\bfrom\s+['"]react['"]/i,
@@ -317,8 +416,9 @@ const injectHtmlErrorForwarder = (html: string): string => {
  * - Bare HTML fragments are returned untouched.
  */
 export const prepareGameSource = (source: string): string => {
-  if (!source.trim()) return source;
-  if (looksLikeReact(source)) return wrapReactGame(source);
-  if (looksLikeHtmlDoc(source)) return injectHtmlErrorForwarder(source);
-  return source;
+  const normalized = normalizeGameSource(source);
+  if (!normalized.trim()) return normalized;
+  if (looksLikeReact(normalized)) return wrapReactGame(normalized);
+  if (looksLikeHtmlDoc(normalized)) return injectHtmlErrorForwarder(normalized);
+  return normalized;
 };

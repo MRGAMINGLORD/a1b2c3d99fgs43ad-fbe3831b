@@ -7,6 +7,13 @@ import { isTestUnlocked } from "@/lib/testAuth";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 
+const BUILTIN_TEST_ROUTES: Record<string, { title: string; src: string }> = {
+  "turtle-lm": {
+    title: "Turtle LM",
+    src: "/education/turtle-lm",
+  },
+};
+
 const PlayTestGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
   const [src, setSrc] = useState<string | null>(null);
@@ -21,6 +28,13 @@ const PlayTestGame = () => {
     (async () => {
       const row = await fetchTestGame(gameId);
       if (!active) return;
+      const builtinRoute = gameId ? BUILTIN_TEST_ROUTES[gameId] : undefined;
+      if (builtinRoute && (!row || !row.html.trim())) {
+        setSrc(builtinRoute.src);
+        setTitle(builtinRoute.title);
+        setLoading(false);
+        return;
+      }
       if (!row || !row.html.trim()) {
         setNotFound(true);
         setLoading(false);
