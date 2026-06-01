@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
+import { normalizeGameSource } from "@/lib/reactGameWrapper";
 
 // Same shape as live custom_games (mirror table).
 export type TestGameRow = CustomGameRow;
@@ -33,5 +34,8 @@ export const fetchTestGame = async (slug: string): Promise<TestGameRow | null> =
     .eq("slug", slug)
     .maybeSingle();
   if (error || !data) return null;
-  return data as TestGameRow;
+  return {
+    ...(data as TestGameRow),
+    html: normalizeGameSource((data as TestGameRow).html ?? ""),
+  };
 };
