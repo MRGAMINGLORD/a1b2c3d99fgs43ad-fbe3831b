@@ -10,7 +10,10 @@
 // of common libraries (lucide-react, framer-motion, clsx) so Gemini-style
 // snippets render instead of crashing on missing imports.
 
-const HTML_DOC_RE = /<\s*(!doctype|html|head|body)\b/i;
+// Only treat as a full HTML document when the file *starts* with a doctype or
+// <html>/<head>/<body>. Matching anywhere caused false positives on React
+// snippets that mention `'<html'` inside string checks (e.g. Turtle LM).
+const HTML_DOC_RE = /^\s*(<!doctype\s+html|<\s*(html|head|body)\b)/i;
 
 // Strong signals that this is React/JSX source, not an HTML fragment.
 const STRONG_REACT_HINTS: RegExp[] = [

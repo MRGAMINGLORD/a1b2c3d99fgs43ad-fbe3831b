@@ -218,6 +218,172 @@ const NeonSnakeLoader = () => {
   );
 };
 
+// Falling golden waffles — for Golden Grid.
+const GoldenGridLoader = () => (
+  <div className="relative h-40 w-72 overflow-hidden bg-background">
+    <div
+      aria-hidden
+      className="absolute inset-0 opacity-30"
+      style={{
+        backgroundImage:
+          "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
+        backgroundSize: "18px 18px",
+      }}
+    />
+    {Array.from({ length: 6 }).map((_, i) => (
+      <div
+        key={i}
+        className="absolute h-4 w-4 rounded-sm bg-primary"
+        style={{
+          left: `${10 + i * 14}%`,
+          top: "-10%",
+          boxShadow: "0 0 8px hsl(var(--primary)), inset 0 0 0 1px hsl(var(--background))",
+          animation: "gg-fall 1.8s linear infinite",
+          animationDelay: `${i * 0.22}s`,
+        }}
+      />
+    ))}
+    <style>{`
+      @keyframes gg-fall {
+        0% { top: -10%; transform: rotate(0deg); }
+        100% { top: 110%; transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
+// Pixel jumper bounding over gaps — for Gravity Runner.
+const GravityRunnerLoader = () => (
+  <div className="relative h-40 w-72 overflow-hidden bg-background">
+    <div className="absolute inset-x-0 bottom-10 h-1 bg-primary/60" />
+    {Array.from({ length: 5 }).map((_, i) => (
+      <div
+        key={i}
+        className="absolute bottom-0 h-10 w-10 bg-primary/30"
+        style={{
+          left: `${i * 28 - 10}%`,
+          animation: "gr-scroll 1.6s linear infinite",
+          animationDelay: `${i * 0.32}s`,
+        }}
+      />
+    ))}
+    <div
+      className="absolute left-10 h-4 w-4 bg-primary"
+      style={{
+        bottom: "2.5rem",
+        boxShadow: "0 0 8px hsl(var(--primary))",
+        animation: "gr-jump 0.8s ease-in-out infinite",
+      }}
+    />
+    <style>{`
+      @keyframes gr-scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-28%)} }
+      @keyframes gr-jump { 0%,100%{bottom:2.5rem} 50%{bottom:5rem} }
+    `}</style>
+  </div>
+);
+
+// Spinning arcade cabinet stack — for Mini Games collection.
+const MiniGamesLoader = () => (
+  <div className="relative grid h-40 w-72 grid-cols-3 grid-rows-2 gap-2 p-4">
+    {["▲", "●", "■", "◆", "✦", "♥"].map((g, i) => (
+      <div
+        key={i}
+        className="flex items-center justify-center rounded-md border border-primary/60 bg-card/40 font-display text-2xl text-primary"
+        style={{
+          animation: "mg-pop 1.4s ease-in-out infinite",
+          animationDelay: `${i * 0.12}s`,
+          boxShadow: "0 0 8px hsl(var(--primary) / 0.4)",
+        }}
+      >
+        {g}
+      </div>
+    ))}
+    <style>{`
+      @keyframes mg-pop { 0%,100%{transform:scale(0.85);opacity:0.6} 50%{transform:scale(1.05);opacity:1} }
+    `}</style>
+  </div>
+);
+
+// Wise turtle in a top hat appearing from a book — for Bob the Turtle AI.
+const BobTurtleLoader = () => (
+  <div className="relative h-40 w-72 overflow-hidden bg-background">
+    <div className="absolute inset-x-8 bottom-4 h-8 rounded-sm border border-primary/60 bg-card/60" />
+    <div className="absolute left-1/2 bottom-8 -translate-x-1/2 text-5xl" style={{ animation: "bob-bob 2.2s ease-in-out infinite" }}>
+      🐢
+    </div>
+    <div
+      className="absolute left-1/2 top-6 -translate-x-1/2 font-display text-xs uppercase tracking-widest text-primary"
+      style={{ animation: "bob-think 1.5s ease-in-out infinite" }}
+    >
+      • • •
+    </div>
+    <style>{`
+      @keyframes bob-bob { 0%,100%{transform:translate(-50%,0)} 50%{transform:translate(-50%,-6px)} }
+      @keyframes bob-think { 0%,100%{opacity:0.3} 50%{opacity:1} }
+    `}</style>
+  </div>
+);
+
+// Hot waffle iron pressing — for Waffle Works.
+const WaffleWorksLoader = () => (
+  <div className="relative h-40 w-72 overflow-hidden bg-background">
+    <div
+      className="absolute left-1/2 top-1/2 h-20 w-32 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-primary bg-primary/20"
+      style={{
+        backgroundImage:
+          "linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)",
+        backgroundSize: "10px 10px",
+        animation: "ww-press 1.4s ease-in-out infinite",
+        boxShadow: "0 0 20px hsl(var(--primary) / 0.6)",
+      }}
+    />
+    {Array.from({ length: 4 }).map((_, i) => (
+      <div
+        key={i}
+        className="absolute h-1 w-1 rounded-full bg-primary/60"
+        style={{
+          left: `${40 + i * 5}%`,
+          top: "20%",
+          animation: "ww-steam 1.8s ease-out infinite",
+          animationDelay: `${i * 0.2}s`,
+        }}
+      />
+    ))}
+    <style>{`
+      @keyframes ww-press { 0%,100%{transform:translate(-50%,-50%) scaleY(1)} 50%{transform:translate(-50%,-50%) scaleY(0.85)} }
+      @keyframes ww-steam { 0%{transform:translateY(0);opacity:0.8} 100%{transform:translateY(-30px);opacity:0} }
+    `}</style>
+  </div>
+);
+
+// Patient turtle with letter blocks — for Turtle LM.
+const TurtleLMLoader = () => (
+  <div className="relative h-40 w-72 overflow-hidden bg-background">
+    <div className="absolute left-6 bottom-6 text-4xl" style={{ animation: "tlm-bob 2s ease-in-out infinite" }}>
+      🐢
+    </div>
+    {["L", "M"].map((c, i) => (
+      <div
+        key={c}
+        className="absolute flex h-8 w-8 items-center justify-center rounded-sm border border-primary bg-card/60 font-display text-lg text-primary"
+        style={{
+          right: `${20 + i * 36}px`,
+          top: "30%",
+          boxShadow: "0 0 8px hsl(var(--primary) / 0.5)",
+          animation: "tlm-float 2.4s ease-in-out infinite",
+          animationDelay: `${i * 0.3}s`,
+        }}
+      >
+        {c}
+      </div>
+    ))}
+    <style>{`
+      @keyframes tlm-bob { 0%,100%{transform:translateY(0) rotate(-2deg)} 50%{transform:translateY(-4px) rotate(2deg)} }
+      @keyframes tlm-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    `}</style>
+  </div>
+);
+
 // NeonSnakeLoader is keyed by custom-game slug below (not a built-in id).
 const LOADERS: Partial<Record<GameId, () => JSX.Element>> = {
   "turtle-trade-co": TurtleLoader,
@@ -226,6 +392,12 @@ const LOADERS: Partial<Record<GameId, () => JSX.Element>> = {
 };
 const CUSTOM_LOADERS: Record<string, () => JSX.Element> = {
   "neon-snake": NeonSnakeLoader,
+  "golden-grid": GoldenGridLoader,
+  "gravity-runner": GravityRunnerLoader,
+  "mini-games": MiniGamesLoader,
+  "bob-turtle-ai": BobTurtleLoader,
+  "waffle-works": WaffleWorksLoader,
+  "turtle-lm": TurtleLMLoader,
 };
 
 const BackButton = () => {
