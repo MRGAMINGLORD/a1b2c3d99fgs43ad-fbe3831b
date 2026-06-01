@@ -20,7 +20,7 @@ const HTML_DOC_RE = /^\s*(<!doctype\s+html|<\s*(html|head|body)\b)/i;
 // file on one physical line, which makes the iframe treat valid React/HTML
 // source as broken text. Detect that malformed shape and repair it before any
 // wrapper heuristics run.
-const normalizeEscapedSource = (source: string): string => {
+export const normalizeGameSource = (source: string): string => {
   const newlineCount = (source.match(/\n/g) ?? []).length;
   const escapedNewlineCount = (source.match(/\\n/g) ?? []).length;
   if (newlineCount > 2 || escapedNewlineCount < 8) return source;
@@ -333,7 +333,7 @@ const injectHtmlErrorForwarder = (html: string): string => {
  * - Bare HTML fragments are returned untouched.
  */
 export const prepareGameSource = (source: string): string => {
-  const normalized = normalizeEscapedSource(source);
+  const normalized = normalizeGameSource(source);
   if (!normalized.trim()) return normalized;
   if (looksLikeReact(normalized)) return wrapReactGame(normalized);
   if (looksLikeHtmlDoc(normalized)) return injectHtmlErrorForwarder(normalized);
