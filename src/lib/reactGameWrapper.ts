@@ -25,10 +25,93 @@ export const normalizeGameSource = (source: string): string => {
   const escapedNewlineCount = (source.match(/\\n/g) ?? []).length;
   if (newlineCount > 2 || escapedNewlineCount < 8) return source;
 
-  return source
-    .replace(/\\r\\n/g, "\n")
-    .replace(/\\n/g, "\n")
-    .replace(/\\t/g, "\t");
+  type Context =
+    | { type: "code" }
+    | { type: "single"; escaped: boolean }
+    | { type: "double"; escaped: boolean }
+    | { type: "template"; escaped: boolean }
+    | { type: "templateExpr"; braceDepth: number };
+
+  const out: string[] = [];
+  const stack: Context[] = [{ type: "code" }];
+
+  for (let i = 0; i < source.length; i += 1) {
+    const ch = source[i];
+    const next = source[i + 1] ?? "";
+    const current = stack[stack.length - 1];
+
+    if (current.type === "single" || current.type === "double" || current.type === "template") {
+      out.push(ch);
+
+      if (current.escaped) {
+        current.escaped = false;
+        continue;
+      }
+
+      if (ch === "\\") {
+        current.escaped = true;
+        continue;
+      }
+
+      if (
+        (current.type === "single" && ch === "'") ||
+        (current.type === "double" && ch === '"') ||
+        (current.type === "template" && ch === "`")
+      ) {
+        stack.pop();
+        continue;
+      }
+
+      if (current.type === "template" && ch === "$" && next === "{") {
+        out.push(next);
+        stack.push({ type: "templateExpr", braceDepth: 0 });
+        i += 1;
+      }
+      continue;
+    }
+
+    if (ch === "\\" && source.slice(i, i + 4) === "\\r\\n") {
+      out.push("\n");
+      i += 3;
+      continue;
+    }
+    if (ch === "\\" && next === "n") {
+      out.push("\n");
+      i += 1;
+      continue;
+    }
+    if (ch === "\\" && next === "t") {
+      out.push("\t");
+      i += 1;
+      continue;
+    }
+
+    out.push(ch);
+
+    if (ch === "'") {
+      stack.push({ type: "single", escaped: false });
+      continue;
+    }
+    if (ch === '"') {
+      stack.push({ type: "double", escaped: false });
+      continue;
+    }
+    if (ch === "`") {
+      stack.push({ type: "template", escaped: false });
+      continue;
+    }
+
+    if (current.type === "templateExpr") {
+      if (ch === "{") {
+        current.braceDepth += 1;
+      } else if (ch === "}") {
+        if (current.braceDepth === 0) stack.pop();
+        else current.braceDepth -= 1;
+      }
+    }
+  }
+
+  return out.join("");
 };
 
 // Strong signals that this is React/JSX source, not an HTML fragment.
