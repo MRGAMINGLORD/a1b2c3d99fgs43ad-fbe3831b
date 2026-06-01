@@ -26,7 +26,7 @@ const PlayTestGame = () => {
         setLoading(false);
         return;
       }
-      const blob = new Blob([row.html], { type: "text/html" });
+      const blob = new Blob([prepareGameSource(row.html)], { type: "text/html" });
       const url = URL.createObjectURL(blob);
       blobRef.current = url;
       setSrc(url);
