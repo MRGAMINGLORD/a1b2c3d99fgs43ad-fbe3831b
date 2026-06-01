@@ -15,6 +15,22 @@
 // snippets that mention `'<html'` inside string checks (e.g. Turtle LM).
 const HTML_DOC_RE = /^\s*(<!doctype\s+html|<\s*(html|head|body)\b)/i;
 
+// Some seeded test games were accidentally saved with literal escape
+// sequences (`\n`, `\t`) instead of real line breaks. That leaves the whole
+// file on one physical line, which makes the iframe treat valid React/HTML
+// source as broken text. Detect that malformed shape and repair it before any
+// wrapper heuristics run.
+const normalizeEscapedSource = (source: string): string => {
+  const newlineCount = (source.match(/\n/g) ?? []).length;
+  const escapedNewlineCount = (source.match(/\\n/g) ?? []).length;
+  if (newlineCount > 2 || escapedNewlineCount < 8) return source;
+
+  return source
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t");
+};
+
 // Strong signals that this is React/JSX source, not an HTML fragment.
 const STRONG_REACT_HINTS: RegExp[] = [
   /\bimport\s+[^;]*\bfrom\s+['"]react['"]/i,
@@ -317,8 +333,9 @@ const injectHtmlErrorForwarder = (html: string): string => {
  * - Bare HTML fragments are returned untouched.
  */
 export const prepareGameSource = (source: string): string => {
-  if (!source.trim()) return source;
-  if (looksLikeReact(source)) return wrapReactGame(source);
-  if (looksLikeHtmlDoc(source)) return injectHtmlErrorForwarder(source);
-  return source;
+  const normalized = normalizeEscapedSource(source);
+  if (!normalized.trim()) return normalized;
+  if (looksLikeReact(normalized)) return wrapReactGame(normalized);
+  if (looksLikeHtmlDoc(normalized)) return injectHtmlErrorForwarder(normalized);
+  return normalized;
 };
