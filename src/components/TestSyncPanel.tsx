@@ -31,7 +31,13 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { downloadGameData, importGameData } from "@/lib/gameStorage";
-import { isEditUnlocked, unlockEdit } from "@/lib/testAuth";
+import { isEditUnlocked, unlockEditAttempt } from "@/lib/testAuth";
+import {
+  formatPasswordGateLockout,
+  getPasswordGateLockoutUntil,
+  isPasswordGateLockedOut,
+  remainingPasswordGateAttempts,
+} from "@/lib/passwordGate";
 import { useTestGames } from "@/hooks/useTestGames";
 
 interface Props {
@@ -46,9 +52,12 @@ const TestSyncPanel = ({ onSynced }: Props) => {
   // Sync flow state
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState("");
-  const [pwErr, setPwErr] = useState(false);
+  const [pwErr, setPwErr] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [lockoutUntil, setLockoutUntil] = useState(() => getPasswordGateLockoutUntil("edit-access"));
+  const lockedOut = isPasswordGateLockedOut("edit-access");
+  const remaining = remainingPasswordGateAttempts("edit-access");
 
   // ---------- Save export / import ----------
   const handleExport = () => {
@@ -104,20 +113,28 @@ const TestSyncPanel = ({ onSynced }: Props) => {
       setConfirmOpen(true);
     } else {
       setPw("");
-      setPwErr(false);
+      setPwErr(null);
       setPwOpen(true);
     }
   };
 
   const submitPw = (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlockEdit(pw)) {
+    if (lockedOut) return;
+    const result = unlockEditAttempt(pw);
+    if (result.ok) {
       setPwOpen(false);
       setPw("");
-      setPwErr(false);
+      setPwErr(null);
       setConfirmOpen(true);
     } else {
-      setPwErr(true);
+      const failed = result as Exclude<typeof result, { ok: true }>;
+      setLockoutUntil(failed.lockoutUntil);
+      setPwErr(
+        failed.lockedOut
+          ? `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`
+          : `Wrong password. ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`,
+      );
       setPw("");
     }
   };
@@ -275,14 +292,16 @@ const TestSyncPanel = ({ onSynced }: Props) => {
               placeholder="Password"
               value={pw}
               onChange={setPw}
+              disabled={lockedOut}
               className={pwErr ? "border-destructive" : ""}
             />
-            {pwErr && <p className="text-xs text-destructive">Wrong password.</p>}
+            {pwErr && <p className="text-xs text-destructive">{pwErr}</p>}
+            {!lockedOut && <p className="text-[11px] text-muted-foreground">{remaining} of 3 attempts left today.</p>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setPwOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Unlock</Button>
+              <Button type="submit" disabled={lockedOut}>Unlock</Button>
             </DialogFooter>
           </form>
         </DialogContent>
