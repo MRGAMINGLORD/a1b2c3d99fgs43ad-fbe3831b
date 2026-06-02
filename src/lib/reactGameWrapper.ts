@@ -403,8 +403,8 @@ const HTML_ERROR_FORWARDER = `<script>(function(){
 
 const injectHtmlErrorForwarder = (html: string): string => {
   if (html.includes("__waffleGameError")) return html;
-  if (/<head[^>]*>/i.test(html)) {
-    return html.replace(/<head[^>]*>/i, (m) => `${m}\n${HTML_ERROR_FORWARDER}`);
+  if (/<head\b[^>]*>/i.test(html)) {
+    return html.replace(/<head\b[^>]*>/i, (m) => `${m}\n${HTML_ERROR_FORWARDER}`);
   }
   return `${HTML_ERROR_FORWARDER}\n${html}`;
 };
