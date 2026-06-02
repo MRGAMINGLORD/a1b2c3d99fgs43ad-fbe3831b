@@ -24,7 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { isEditUnlocked, unlockEdit } from "@/lib/testAuth";
+import { isEditUnlocked, unlockEditAttempt } from "@/lib/testAuth";
+import {
+  formatPasswordGateLockout,
+  getPasswordGateLockoutUntil,
+  isPasswordGateLockedOut,
+  remainingPasswordGateAttempts,
+} from "@/lib/passwordGate";
 
 interface ChatRow {
   id: string;
@@ -65,8 +71,11 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearPwOpen, setClearPwOpen] = useState(false);
   const [clearPw, setClearPw] = useState("");
-  const [clearPwErr, setClearPwErr] = useState(false);
+  const [clearPwErr, setClearPwErr] = useState<string | null>(null);
+  const [lockoutUntil, setLockoutUntil] = useState(() => getPasswordGateLockoutUntil("edit-access"));
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lockedOut = isPasswordGateLockedOut("edit-access");
+  const remaining = remainingPasswordGateAttempts("edit-access");
 
   // Persist username locally so testers don't have to re-enter every visit.
   useEffect(() => {
@@ -198,7 +207,7 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
                 if (isEditUnlocked()) setConfirmClear(true);
                 else {
                   setClearPw("");
-                  setClearPwErr(false);
+                  setClearPwErr(null);
                   setClearPwOpen(true);
                 }
               }}
@@ -354,13 +363,21 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (unlockEdit(clearPw)) {
+              if (lockedOut) return;
+              const result = unlockEditAttempt(clearPw);
+              if (result.ok) {
                 setClearPwOpen(false);
                 setClearPw("");
-                setClearPwErr(false);
+                setClearPwErr(null);
                 setConfirmClear(true);
               } else {
-                setClearPwErr(true);
+                const failed = result as Exclude<typeof result, { ok: true }>;
+                setLockoutUntil(failed.lockoutUntil);
+                setClearPwErr(
+                  failed.lockedOut
+                    ? `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`
+                    : `Wrong password. ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`,
+                );
                 setClearPw("");
               }
             }}
@@ -371,16 +388,16 @@ const TesterChat = ({ defaultUsername = "" }: { defaultUsername?: string }) => {
               placeholder="Password"
               value={clearPw}
               onChange={setClearPw}
+              disabled={lockedOut}
               className={clearPwErr ? "border-destructive" : ""}
             />
-            {clearPwErr && (
-              <p className="text-xs text-destructive">Wrong password.</p>
-            )}
+            {clearPwErr && <p className="text-xs text-destructive">{clearPwErr}</p>}
+            {!lockedOut && <p className="text-[11px] text-muted-foreground">{remaining} of 3 attempts left today.</p>}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setClearPwOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Unlock</Button>
+              <Button type="submit" disabled={lockedOut}>Unlock</Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -24,10 +24,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTestGames, type TestGameRow } from "@/hooks/useTestGames";
 import {
   isTestUnlocked,
-  unlockTest,
+  unlockTestAttempt,
   isEditUnlocked,
-  unlockEdit,
+  unlockEditAttempt,
 } from "@/lib/testAuth";
+import {
+  formatPasswordGateLockout,
+  getPasswordGateLockoutUntil,
+  isPasswordGateLockedOut,
+  remainingPasswordGateAttempts,
+} from "@/lib/passwordGate";
 import CoverImagePicker from "@/components/CoverImagePicker";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
 import GameCard from "@/components/GameCard";
@@ -51,17 +57,32 @@ const TestGate = ({
   const [username, setUsername] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [lockoutUntil, setLockoutUntil] = useState(() => getPasswordGateLockoutUntil("test-access"));
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!lockoutUntil || lockoutUntil <= Date.now()) return;
+    const id = window.setInterval(() => setTick((value) => value + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, [lockoutUntil]);
+
+  const lockedOut = isPasswordGateLockedOut("test-access");
+  const remaining = remainingPasswordGateAttempts("test-access");
 
   const tryUnlock = (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockedOut) return;
     const name = username.trim();
-    if (unlockTest(name, pw)) {
+    const result = unlockTestAttempt(name, pw);
+    if (result.ok) {
       setError(null);
       onUnlock(name);
     } else {
-      setError(
-        "Wrong username or password. Username is case-sensitive and must be one of the approved tester names.",
-      );
+      const failed = result as Exclude<typeof result, { ok: true }>;
+      setLockoutUntil(failed.lockoutUntil);
+      setError(failed.lockedOut
+        ? `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`
+        : `Wrong username or password. ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`);
       setPw("");
     }
   };
@@ -102,11 +123,18 @@ const TestGate = ({
             value={pw}
             onChange={setPw}
             className={error ? "border-destructive" : ""}
+            disabled={lockedOut}
           />
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
+        {lockedOut && (
+          <p className="text-xs text-destructive">
+            Locked out until reset window ends: {formatPasswordGateLockout(lockoutUntil)} remaining.
+          </p>
+        )}
+        {!lockedOut && <p className="text-[11px] text-muted-foreground">{remaining} of 3 attempts left today.</p>}
         <div className="flex gap-2">
-          <Button type="submit" className="flex-1">
+          <Button type="submit" className="flex-1" disabled={lockedOut}>
             Unlock
           </Button>
           <Button type="button" variant="outline" asChild>
@@ -129,17 +157,28 @@ const EditPasswordDialog = ({
   onSuccess: () => void;
 }) => {
   const [pw, setPw] = useState("");
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [lockoutUntil, setLockoutUntil] = useState(() => getPasswordGateLockoutUntil("edit-access"));
+  const lockedOut = isPasswordGateLockedOut("edit-access");
+  const remaining = remainingPasswordGateAttempts("edit-access");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlockEdit(pw)) {
+    if (lockedOut) return;
+    const result = unlockEditAttempt(pw);
+    if (result.ok) {
       setPw("");
-      setErr(false);
+      setErr(null);
       onOpenChange(false);
       onSuccess();
     } else {
-      setErr(true);
+      const failed = result as Exclude<typeof result, { ok: true }>;
+      setLockoutUntil(failed.lockoutUntil);
+      setErr(
+        failed.lockedOut
+          ? `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`
+          : `Wrong password. ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`,
+      );
       setPw("");
     }
   };
@@ -157,10 +196,12 @@ const EditPasswordDialog = ({
             value={pw}
             onChange={setPw}
             className={err ? "border-destructive" : ""}
+            disabled={lockedOut}
           />
-          {err && <p className="text-xs text-destructive">Wrong password.</p>}
+          {err && <p className="text-xs text-destructive">{err}</p>}
+          {!lockedOut && <p className="text-[11px] text-muted-foreground">{remaining} of 3 attempts left today.</p>}
           <DialogFooter>
-            <Button type="submit">Unlock</Button>
+            <Button type="submit" disabled={lockedOut}>Unlock</Button>
           </DialogFooter>
         </form>
       </DialogContent>

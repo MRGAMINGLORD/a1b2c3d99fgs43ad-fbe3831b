@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { submitPasswordGateAttempt, type PasswordGateResult } from "@/lib/passwordGate";
 
 export type DefconLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -18,24 +19,8 @@ export const DEFCON_LABELS: Record<DefconLevel, string> = {
 
 const DEFCON_PASSWORD = "WAFFLE";
 const GATE_KEY = "apocalypse-waffle:defcon1-unlocked";
-const ATTEMPTS_KEY = "apocalypse-waffle:defcon1-attempts";
-const LOCKOUT_KEY = "apocalypse-waffle:defcon1-lockout-until";
-// How many lockouts the user has racked up — drives the doubling schedule.
-// 1st lockout = 1 day, then 2, 4, 8, 16, 32, … (capped at 30 days).
-const LOCKOUT_COUNT_KEY = "apocalypse-waffle:defcon1-lockout-count";
-const MAX_ATTEMPTS = 3;
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const MAX_LOCKOUT_MS = 30 * ONE_DAY_MS;
-
-const getLockoutCount = (): number => {
-  try {
-    return Number(localStorage.getItem(LOCKOUT_COUNT_KEY) ?? "0") || 0;
-  } catch {
-    return 0;
-  }
-};
-const nextLockoutMs = (count: number): number =>
-  Math.min(MAX_LOCKOUT_MS, ONE_DAY_MS * Math.pow(2, Math.max(0, count)));
+const ATTEMPTS_KEY = "apocalypse-waffle:defcon-access:attempts";
+const LOCKOUT_KEY = "apocalypse-waffle:defcon-access:lockout-until";
 
 export const isDefconGateUnlocked = (): boolean => {
   try {
@@ -69,45 +54,23 @@ export type UnlockResult =
   | { ok: false; lockedOut: boolean; remaining: number; lockoutUntil: number };
 
 export const unlockDefconGate = (input: string): UnlockResult => {
-  if (isDefconLockedOut()) {
-    return {
-      ok: false,
-      lockedOut: true,
-      remaining: 0,
-      lockoutUntil: getDefconLockoutUntil(),
-    };
-  }
-  if (input === DEFCON_PASSWORD) {
+  const result = submitPasswordGateAttempt("defcon-access", input === DEFCON_PASSWORD);
+  if (result.ok) {
     try {
       sessionStorage.setItem(GATE_KEY, "1");
-      localStorage.removeItem(ATTEMPTS_KEY);
-      localStorage.removeItem(LOCKOUT_KEY);
     } catch {
       /* ignore */
     }
     return { ok: true };
+  } else {
+    const failed = result as Extract<PasswordGateResult, { ok: false }>;
+    return {
+      ok: false,
+      lockedOut: failed.lockedOut,
+      remaining: failed.remaining,
+      lockoutUntil: failed.lockoutUntil,
+    };
   }
-  const attempts = getDefconAttempts() + 1;
-  let lockoutUntil = 0;
-  try {
-    localStorage.setItem(ATTEMPTS_KEY, String(attempts));
-    if (attempts >= MAX_ATTEMPTS) {
-      // Escalating lockout: 1d → 2d → 4d → 8d → 16d → 32d (capped 30d).
-      const newCount = getLockoutCount() + 1;
-      lockoutUntil = Date.now() + nextLockoutMs(newCount - 1);
-      localStorage.setItem(LOCKOUT_COUNT_KEY, String(newCount));
-      localStorage.setItem(LOCKOUT_KEY, String(lockoutUntil));
-      localStorage.removeItem(ATTEMPTS_KEY);
-    }
-  } catch {
-    /* ignore */
-  }
-  return {
-    ok: false,
-    lockedOut: attempts >= MAX_ATTEMPTS,
-    remaining: Math.max(0, MAX_ATTEMPTS - attempts),
-    lockoutUntil,
-  };
 };
 
 export const useDefcon = () => {

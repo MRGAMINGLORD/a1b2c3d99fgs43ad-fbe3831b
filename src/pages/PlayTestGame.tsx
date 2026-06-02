@@ -7,6 +7,8 @@ import { isTestUnlocked } from "@/lib/testAuth";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 
+const TEST_UNLOCK_EVENT = "apocalypse-waffle:test-unlocked";
+
 const BUILTIN_TEST_ROUTES: Record<string, { title: string; src: string }> = {
   "turtle-lm": {
     title: "Turtle LM",
@@ -16,11 +18,22 @@ const BUILTIN_TEST_ROUTES: Record<string, { title: string; src: string }> = {
 
 const PlayTestGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const [testUnlocked, setTestUnlocked] = useState(isTestUnlocked());
   const [src, setSrc] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const blobRef = useMemo(() => ({ current: null as string | null }), []);
+
+  useEffect(() => {
+    const syncUnlock = () => setTestUnlocked(isTestUnlocked());
+    window.addEventListener(TEST_UNLOCK_EVENT, syncUnlock);
+    window.addEventListener("storage", syncUnlock);
+    return () => {
+      window.removeEventListener(TEST_UNLOCK_EVENT, syncUnlock);
+      window.removeEventListener("storage", syncUnlock);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -57,7 +70,7 @@ const PlayTestGame = () => {
   }, [gameId, blobRef]);
 
   // Test play is gated behind the same TEST password
-  if (!isTestUnlocked()) {
+  if (!testUnlocked) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-3 bg-background">
         <AlertTriangle className="h-10 w-10 text-primary" />
