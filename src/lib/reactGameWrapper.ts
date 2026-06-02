@@ -401,6 +401,9 @@ const HTML_ERROR_FORWARDER = `<script>(function(){
   console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
 })();</script>`;
 
+const stripLegacyHtmlErrorForwarder = (source: string): string =>
+  source.replaceAll(HTML_ERROR_FORWARDER, "");
+
 const injectHtmlErrorForwarder = (html: string): string => {
   if (html.includes("__waffleGameError")) return html;
   if (/<head\b[^>]*>/i.test(html)) {
@@ -418,7 +421,10 @@ const injectHtmlErrorForwarder = (html: string): string => {
 export const prepareGameSource = (source: string): string => {
   const normalized = normalizeGameSource(source);
   if (!normalized.trim()) return normalized;
-  if (looksLikeReact(normalized)) return wrapReactGame(normalized);
-  if (looksLikeHtmlDoc(normalized)) return injectHtmlErrorForwarder(normalized);
-  return normalized;
+  const repaired = looksLikeHtmlDoc(normalized)
+    ? normalized
+    : stripLegacyHtmlErrorForwarder(normalized);
+  if (looksLikeReact(repaired)) return wrapReactGame(repaired);
+  if (looksLikeHtmlDoc(repaired)) return injectHtmlErrorForwarder(repaired);
+  return repaired;
 };
