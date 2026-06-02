@@ -402,7 +402,7 @@ const HTML_ERROR_FORWARDER = `<script>(function(){
 })();</script>`;
 
 const stripLegacyHtmlErrorForwarder = (source: string): string =>
-  source.replaceAll(HTML_ERROR_FORWARDER, "");
+  source.split(HTML_ERROR_FORWARDER).join("");
 
 const injectHtmlErrorForwarder = (html: string): string => {
   if (html.includes("__waffleGameError")) return html;
