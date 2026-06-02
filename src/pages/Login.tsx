@@ -44,22 +44,23 @@ const Login = () => {
     setLoading(false);
     if (error) {
       const attempt = submitPasswordGateAttempt("admin-login", false);
+      const failed = attempt as Exclude<typeof attempt, { ok: true }>;
       const code = (error as { code?: string }).code;
-      setLockoutUntil(attempt.lockoutUntil);
+      setLockoutUntil(failed.lockoutUntil);
       if (code === "email_not_confirmed" || error.message.toLowerCase().includes("email not confirmed")) {
         toast({
           title: "Email not confirmed",
           description: "Click the confirmation link in your inbox, then sign in again.",
           variant: "destructive",
         });
-      } else if (attempt.lockedOut) {
+      } else if (failed.lockedOut) {
         toast({
           title: "Login locked",
-          description: `Too many failed attempts. Try again in ${formatPasswordGateLockout(attempt.lockoutUntil)}.`,
+          description: `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`,
           variant: "destructive",
         });
       } else {
-        toast({ title: "Login failed", description: `${error.message} ${attempt.remaining} attempt${attempt.remaining === 1 ? "" : "s"} remaining today.`, variant: "destructive" });
+        toast({ title: "Login failed", description: `${error.message} ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`, variant: "destructive" });
       }
     } else {
       submitPasswordGateAttempt("admin-login", true);
