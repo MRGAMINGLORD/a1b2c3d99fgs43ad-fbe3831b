@@ -78,8 +78,8 @@ const TestGate = ({
       setError(null);
       onUnlock(name);
     } else {
-      const failed = result;
-      setLockoutUntil(result.lockoutUntil);
+      const failed = result as Exclude<typeof result, { ok: true }>;
+      setLockoutUntil(failed.lockoutUntil);
       setError(failed.lockedOut
         ? `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`
         : `Wrong username or password. ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`);
@@ -157,17 +157,28 @@ const EditPasswordDialog = ({
   onSuccess: () => void;
 }) => {
   const [pw, setPw] = useState("");
-  const [err, setErr] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [lockoutUntil, setLockoutUntil] = useState(() => getPasswordGateLockoutUntil("edit-access"));
+  const lockedOut = isPasswordGateLockedOut("edit-access");
+  const remaining = remainingPasswordGateAttempts("edit-access");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (unlockEdit(pw)) {
+    if (lockedOut) return;
+    const result = unlockEditAttempt(pw);
+    if (result.ok) {
       setPw("");
-      setErr(false);
+      setErr(null);
       onOpenChange(false);
       onSuccess();
     } else {
-      setErr(true);
+      const failed = result as Exclude<typeof result, { ok: true }>;
+      setLockoutUntil(failed.lockoutUntil);
+      setErr(
+        failed.lockedOut
+          ? `Too many failed attempts. Try again in ${formatPasswordGateLockout(failed.lockoutUntil)}.`
+          : `Wrong password. ${failed.remaining} attempt${failed.remaining === 1 ? "" : "s"} remaining today.`,
+      );
       setPw("");
     }
   };
@@ -185,10 +196,12 @@ const EditPasswordDialog = ({
             value={pw}
             onChange={setPw}
             className={err ? "border-destructive" : ""}
+            disabled={lockedOut}
           />
-          {err && <p className="text-xs text-destructive">Wrong password.</p>}
+          {err && <p className="text-xs text-destructive">{err}</p>}
+          {!lockedOut && <p className="text-[11px] text-muted-foreground">{remaining} of 3 attempts left today.</p>}
           <DialogFooter>
-            <Button type="submit">Unlock</Button>
+            <Button type="submit" disabled={lockedOut}>Unlock</Button>
           </DialogFooter>
         </form>
       </DialogContent>
