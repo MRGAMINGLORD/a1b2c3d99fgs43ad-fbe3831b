@@ -404,8 +404,10 @@ const HTML_ERROR_FORWARDER = `<script>(function(){
   function post(kind,e){ try{ parent.postMessage({__waffleGameError:true,kind:kind,message:ser(e),time:Date.now()},'*'); }catch(_){} }
   window.addEventListener('error',function(e){ post('runtime', e.error||e.message); });
   window.addEventListener('unhandledrejection',function(e){ post('runtime', e.reason); });
-  var oe=console.error.bind(console);
-  console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
+  ['log','info','warn','error','debug'].forEach(function(m){
+    var o=console[m]?console[m].bind(console):null; if(!o) return;
+    console[m]=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post(m==='error'?'console':('console-'+m), p.join(' ')); }catch(_){} return o.apply(console,arguments); };
+  });
 })();</script>`;
 
 const stripLegacyHtmlErrorForwarder = (source: string): string =>
