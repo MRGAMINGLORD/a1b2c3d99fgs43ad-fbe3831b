@@ -16,6 +16,7 @@ import { SirWafflingtonChat } from "./components/SirWafflingtonChat";
 import { SirWafflingtonProvider } from "./components/SirWafflingtonContext";
 import { DefconGate } from "./components/DefconGate";
 import { FullscreenGate } from "./components/FullscreenGate";
+import { LockoutOverlay } from "./components/LockoutOverlay";
 
 const queryClient = new QueryClient();
 
