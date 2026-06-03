@@ -131,4 +131,62 @@
   .animate-door-shake      { animation: door-shake      0.45s ease-in-out; }
   .animate-vault-spin-fast { animation: vault-spin-fast 0.9s ease-out forwards; }
   .animate-flash-clear     { animation: flash-clear     0.7s ease-out forwards; }
+
+  /* ------ Lockout overlay animations ------ */
+  @keyframes lockout-slam-left {
+    0%   { transform: translateX(-110%); }
+    55%  { transform: translateX(2%); }
+    70%  { transform: translateX(-2%); }
+    100% { transform: translateX(0); }
+  }
+  @keyframes lockout-slam-right {
+    0%   { transform: translateX(110%); }
+    55%  { transform: translateX(-2%); }
+    70%  { transform: translateX(2%); }
+    100% { transform: translateX(0); }
+  }
+  @keyframes lockout-flash {
+    0%   { opacity: 0; }
+    10%  { opacity: 0.9; }
+    35%  { opacity: 0.2; }
+    55%  { opacity: 0.7; }
+    100% { opacity: 0; }
+  }
+  @keyframes lockout-shake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    15%      { transform: translate(-6px, 4px) rotate(-0.8deg); }
+    30%      { transform: translate(7px, -3px) rotate(0.6deg); }
+    45%      { transform: translate(-5px, 5px) rotate(-0.5deg); }
+    60%      { transform: translate(6px, -4px) rotate(0.4deg); }
+    75%      { transform: translate(-3px, 2px) rotate(-0.2deg); }
+  }
+  @keyframes lockout-stamp {
+    0%   { transform: scale(3) rotate(-12deg); opacity: 0; filter: blur(8px); }
+    35%  { transform: scale(1) rotate(-12deg); opacity: 1; filter: blur(0); }
+    45%  { transform: scale(1.06) rotate(-12deg); }
+    100% { transform: scale(1) rotate(-12deg); opacity: 1; filter: blur(0); }
+  }
+  @keyframes lockout-scan {
+    0%   { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
+  }
+  @keyframes lockout-fade-out {
+    0%, 80% { opacity: 1; }
+    100%    { opacity: 0; visibility: hidden; }
+  }
+  @keyframes lockout-padlock {
+    0%   { transform: translateY(-40px) scale(0.6) rotate(-25deg); opacity: 0; }
+    50%  { transform: translateY(6px)   scale(1.15) rotate(2deg);  opacity: 1; }
+    65%  { transform: translateY(-3px)  scale(1)    rotate(-1deg); }
+    100% { transform: translateY(0)     scale(1)    rotate(0);     opacity: 1; }
+  }
+
+  .animate-lockout-slam-left  { animation: lockout-slam-left  0.75s cubic-bezier(0.25, 0.9, 0.3, 1.2) forwards; }
+  .animate-lockout-slam-right { animation: lockout-slam-right 0.75s cubic-bezier(0.25, 0.9, 0.3, 1.2) forwards; }
+  .animate-lockout-flash      { animation: lockout-flash      1.2s ease-out forwards; }
+  .animate-lockout-shake      { animation: lockout-shake      0.55s ease-in-out 0.55s 2; }
+  .animate-lockout-stamp      { animation: lockout-stamp      0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 0.55s forwards; }
+  .animate-lockout-scan       { animation: lockout-scan       1.6s linear infinite; }
+  .animate-lockout-fadeout    { animation: lockout-fade-out   3.1s ease-in forwards; }
+  .animate-lockout-padlock    { animation: lockout-padlock    0.7s cubic-bezier(0.2, 1.5, 0.4, 1) 0.4s forwards; }
 }
