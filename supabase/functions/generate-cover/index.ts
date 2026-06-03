@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,18 +8,63 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Generates a cover image via the Lovable AI gateway and returns it as a
-// base64-encoded data URL the client can either preview or upload to storage.
+// Generates a cover image via the Lovable AI gateway. Admin-only:
+// callers must present a valid JWT belonging to a user with the admin role.
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { prompt } = await req.json();
+    // ---- AuthN: require a Supabase JWT ----
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    const jwt = authHeader.slice("bearer ".length).trim();
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Supabase env not configured");
+    }
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(jwt);
+    if (userErr || !userData?.user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ---- AuthZ: must have admin role ----
+    const { data: isAdmin, error: roleErr } = await supabaseAdmin.rpc("has_role", {
+      _user_id: userData.user.id,
+      _role: "admin",
+    });
+    if (roleErr || !isAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // ---- Input validation ----
+    const body = await req.json().catch(() => null);
+    const prompt = body?.prompt;
     if (!prompt || typeof prompt !== "string") {
       return new Response(
         JSON.stringify({ error: "prompt is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+    if (prompt.length > 500) {
+      return new Response(
+        JSON.stringify({ error: "prompt must be 500 characters or fewer" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
