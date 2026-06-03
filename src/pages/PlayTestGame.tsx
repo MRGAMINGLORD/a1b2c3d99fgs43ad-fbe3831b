@@ -140,6 +140,7 @@ const PlayTestGame = () => {
         >
           Exit to hub
         </ConfirmExitLink>
+        <GameConsolePanel gameTitle={title} gameId={gameId} />
       </div>
       <div className="relative h-full w-full overflow-hidden rounded-md border border-primary/50 bg-card border-glow">
         <iframe
