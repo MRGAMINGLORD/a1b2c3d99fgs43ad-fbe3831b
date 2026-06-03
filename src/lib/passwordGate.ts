@@ -113,6 +113,17 @@ export const submitPasswordGateAttempt = (
     writeNumber(gateKey(id, "lockout-count"), nextCount);
     writeNumber(gateKey(id, "lockout-until"), lockoutUntil);
     removeKey(gateKey(id, "attempts"));
+    try {
+      const detail: PasswordGateLockedOutDetail = {
+        id,
+        label: PASSWORD_GATE_LABELS[id],
+        lockoutUntil,
+        lockoutMs,
+      };
+      window.dispatchEvent(new CustomEvent(PASSWORD_GATE_LOCKED_OUT_EVENT, { detail }));
+    } catch {
+      /* ignore (SSR or no window) */
+    }
     return {
       ok: false,
       lockedOut: true,
