@@ -6,6 +6,7 @@ import { prepareGameSource } from "@/lib/reactGameWrapper";
 import { isTestUnlocked } from "@/lib/testAuth";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
+import { GameConsolePanel } from "@/components/GameConsolePanel";
 
 const TEST_UNLOCK_EVENT = "apocalypse-waffle:test-unlocked";
 
