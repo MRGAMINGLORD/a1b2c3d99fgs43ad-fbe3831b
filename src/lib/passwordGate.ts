@@ -2,6 +2,22 @@ type PasswordGateId = "admin-login" | "test-access" | "edit-access" | "defcon-ac
 
 export type { PasswordGateId };
 
+export const PASSWORD_GATE_LABELS: Record<PasswordGateId, string> = {
+  "admin-login": "Admin Login",
+  "test-access": "Tester Access",
+  "edit-access": "Editor Access",
+  "defcon-access": "DEFCON Bunker",
+};
+
+export const PASSWORD_GATE_LOCKED_OUT_EVENT = "password-gate:locked-out";
+
+export interface PasswordGateLockedOutDetail {
+  id: PasswordGateId;
+  label: string;
+  lockoutUntil: number;
+  lockoutMs: number;
+}
+
 export type PasswordGateResult =
   | { ok: true; remaining: number; lockoutUntil: 0; lockoutMs: 0 }
   | {
@@ -97,6 +113,17 @@ export const submitPasswordGateAttempt = (
     writeNumber(gateKey(id, "lockout-count"), nextCount);
     writeNumber(gateKey(id, "lockout-until"), lockoutUntil);
     removeKey(gateKey(id, "attempts"));
+    try {
+      const detail: PasswordGateLockedOutDetail = {
+        id,
+        label: PASSWORD_GATE_LABELS[id],
+        lockoutUntil,
+        lockoutMs,
+      };
+      window.dispatchEvent(new CustomEvent(PASSWORD_GATE_LOCKED_OUT_EVENT, { detail }));
+    } catch {
+      /* ignore (SSR or no window) */
+    }
     return {
       ok: false,
       lockedOut: true,

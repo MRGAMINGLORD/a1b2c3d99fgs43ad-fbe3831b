@@ -329,20 +329,27 @@ export const wrapReactGame = (source: string): string => {
       }
       window.addEventListener('error', function(e){ __showError(e.error || e.message); });
       window.addEventListener('unhandledrejection', function(e){ __showError(e.reason); });
-      // Forward console.error too so React's own warnings/errors surface.
+      // Forward console.error/warn/info/log/debug so the tester console panel
+      // can mirror everything the game logs.
       (function(){
-        var origErr = console.error.bind(console);
-        console.error = function(){
-          try {
-            var parts = [];
-            for (var i = 0; i < arguments.length; i++) {
-              var a = arguments[i];
-              parts.push(typeof a === 'string' ? a : __serializeError(a));
-            }
-            __postError('console', parts.join(' '));
-          } catch (_) {}
-          return origErr.apply(console, arguments);
-        };
+        var KINDS = ['log','info','warn','error','debug'];
+        KINDS.forEach(function(method){
+          var orig = console[method] ? console[method].bind(console) : null;
+          if (!orig) return;
+          console[method] = function(){
+            try {
+              var parts = [];
+              for (var i = 0; i < arguments.length; i++) {
+                var a = arguments[i];
+                parts.push(typeof a === 'string' ? a : __serializeError(a));
+              }
+              // Keep legacy 'console' kind for console.error so the error
+              // overlay keeps surfacing them; other levels get their own kind.
+              __postError(method === 'error' ? 'console' : ('console-' + method), parts.join(' '));
+            } catch (_) {}
+            return orig.apply(console, arguments);
+          };
+        });
       })();
     </script>
     <script type="text/babel" data-presets="env,react,typescript">
@@ -397,8 +404,10 @@ const HTML_ERROR_FORWARDER = `<script>(function(){
   function post(kind,e){ try{ parent.postMessage({__waffleGameError:true,kind:kind,message:ser(e),time:Date.now()},'*'); }catch(_){} }
   window.addEventListener('error',function(e){ post('runtime', e.error||e.message); });
   window.addEventListener('unhandledrejection',function(e){ post('runtime', e.reason); });
-  var oe=console.error.bind(console);
-  console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
+  ['log','info','warn','error','debug'].forEach(function(m){
+    var o=console[m]?console[m].bind(console):null; if(!o) return;
+    console[m]=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post(m==='error'?'console':('console-'+m), p.join(' ')); }catch(_){} return o.apply(console,arguments); };
+  });
 })();</script>`;
 
 const stripLegacyHtmlErrorForwarder = (source: string): string =>
