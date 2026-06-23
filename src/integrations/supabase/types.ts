@@ -173,6 +173,39 @@ export type Database = {
         }
         Relationships: []
       }
+      hub_sections: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+          sort_order: number
+          subtitle: string
+          title: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+          sort_order?: number
+          subtitle?: string
+          title: string
+          unit: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+          sort_order?: number
+          subtitle?: string
+          title?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patch_notes: {
         Row: {
           content: string
