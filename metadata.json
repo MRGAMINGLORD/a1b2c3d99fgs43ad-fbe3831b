@@ -1,6 +1,0 @@
-{
-  "name": "Waffle Arcade",
-  "description": "A classic retro arcade cabinet branded as Waffle Arcade, featuring high-fidelity HTML5 canvas remakes and an integrated AI tip assistant.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
