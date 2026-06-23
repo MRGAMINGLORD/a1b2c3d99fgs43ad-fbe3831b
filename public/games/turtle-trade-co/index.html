@@ -695,6 +695,20 @@ function uDTT(t){let p="";let s=0;if(t<=420){p="Day";s=t;}else if(t<=480){p="Dus
 function tD67(){if(!S)return;S.debug67=!S.debug67;let b=gI('btn-debug-67');b.innerText=S.debug67?'ON':'OFF';b.className=S.debug67?'px-3 py-1 bg-green-600 rounded font-bold text-xs':'px-3 py-1 bg-red-600 rounded font-bold text-xs';gI('debug-67-options').style.display=S.debug67?'block':'none';}
 function sADSChase(){let v=parseInt(gI('debug-ads-timer').value);if(isNaN(v)||v<=0)return;let eT=(S.timeOfDay+v)%840;if(eT<=480||eT>780){gI('ads-chase-status').innerText="Timer must end during the night (480-780)!";gI('ads-chase-status').className="text-xs mt-2 text-red-400";return;}S.adsChaseActive=!0;S.adsChaseTimer=v;gI('ads-chase-status').innerText=`Chase starts in ${v}s!`;gI('ads-chase-status').className="text-xs mt-2 text-green-400";}
 function wfT(){if(typeof THREE!=='undefined'){iGE();}else{setTimeout(wfT,100);}}
+// ----- Persistent world save -----
+const TTC_SAVE_KEY='ttc:worlds:v1';
+function ttcSerializeState(st){const out={};for(const k in st){const v=st[k];const t=typeof v;if(t==='string'||t==='number'||t==='boolean')out[k]=v;}return out;}
+function ttcSave(){try{const worlds=MI.map(is=>({name:is.name,state:ttcSerializeState(is.state)}));localStorage.setItem(TTC_SAVE_KEY,JSON.stringify({v:1,worlds}));}catch(e){}}
+function ttcMakeIsland(name,saved){const ns={name:name,state:cDS(name),worldGroup:new THREE.Group(),groups:{trees:new THREE.Group(),crates:new THREE.Group(),turtles:new THREE.Group(),customers:new THREE.Group(),boats:new THREE.Group(),food:new THREE.Group(),decoration:new THREE.Group(),harbor:new THREE.Group(),conditions:new THREE.Group(),fence:new THREE.Group(),shopInteract:new THREE.Group(),overflow:new THREE.Group(),pebbles:new THREE.Group()},shopMesh:null,cashierObj:null,shopDoorTarget:null,checkoutTarget:null,restroomTarget:null,storageTarget:null};for(const k in ns.groups)ns.worldGroup.add(ns.groups[k]);if(saved){for(const k in saved){const v=saved[k];const t=typeof v;if(t==='string'||t==='number'||t==='boolean')ns.state[k]=v;}ns.state.islandName=name;}return ns;}
+function ttcLoad(){try{const raw=localStorage.getItem(TTC_SAVE_KEY);if(!raw)return;const data=JSON.parse(raw);if(!data||!Array.isArray(data.worlds))return;data.worlds.forEach(w=>{if(w&&w.name)MI.push(ttcMakeIsland(w.name,w.state));});}catch(e){}}
+ttcLoad();
+const _ttc_cfCI=cfCI;cfCI=function(){_ttc_cfCI();ttcSave();};
+const _ttc_lI=lI;lI=function(ix){_ttc_lI(ix);ttcSave();};
+const _ttc_qTMM=qTMM;qTMM=function(){ttcSave();_ttc_qTMM();};
+setInterval(()=>{if(MI.length)ttcSave();},5000);
+window.addEventListener('pagehide',ttcSave);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')ttcSave();});
+
 wfT();
 window.bSh=bSh;window.bSt=bSt;window.uSh=uSh;window.uFe=uFe;window.uCo=uCo;window.uHa=uHa;window.uFor=uFor;window.uFo=uFo;window.oSM=oSM;window.cSM=cSM;window.uSC=uSC;window.cSh=cSh;window.oFM=oFM;window.cFM=cFM;window.fTu=fTu;window.bAF=bAF;window.tLo=tLo;window.pLo=pLo;window.hCa=hCa;window.qTMM=qTMM;window.oWM=oWM;window.cWM=cWM;window.uWC=uWC;window.cBW=cBW;window.cSW=cSW;window.sIL=sIL;window.bTS=bTS;window.sCI=sCI;window.cCI=cCI;window.cfCI=cfCI;window.oG=oG;window.cG=cG;window.oDA=oDA;window.cDA=cDA;window.cDP=cDP;window.oDM=oDM;window.cDM=cDM;window.sDS=sDS;window.sDU=sDU;window.sDT=sDT;window.tD67=tD67;window.sADSChase=sADSChase;window.uAx=uAx;
 </script>

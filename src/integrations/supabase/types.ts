@@ -206,6 +206,33 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard: {
+        Row: {
+          created_at: string
+          game_slug: string
+          id: string
+          mode: string
+          name: string
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          game_slug: string
+          id?: string
+          mode?: string
+          name: string
+          score: number
+        }
+        Update: {
+          created_at?: string
+          game_slug?: string
+          id?: string
+          mode?: string
+          name?: string
+          score?: number
+        }
+        Relationships: []
+      }
       patch_notes: {
         Row: {
           content: string
