@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Waffle Arcade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html, body, #root { margin: 0; height: 100%; background: #000; color: #fde68a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      /* Glitch helpers used by the WaffleAI/BackCloset panels */
+      .glitch-container { position: relative; }
+      .glitch-jitter { animation: glitch-jitter 0.25s infinite; }
+      .glitch-text-1 { text-shadow: 1px 0 #f0f, -1px 0 #0ff; }
+      .glitch-text-2 { text-shadow: 2px 0 #f0f, -2px 0 #0ff; animation: glitch-shift 1.5s infinite; }
+      @keyframes glitch-jitter {
+        0%,100% { transform: translate(0,0); }
+        25% { transform: translate(-1px,1px); }
+        50% { transform: translate(1px,-1px); }
+        75% { transform: translate(-1px,-1px); }
+      }
+      @keyframes glitch-shift {
+        0%,100% { text-shadow: 2px 0 #f0f, -2px 0 #0ff; }
+        50% { text-shadow: -2px 0 #f0f, 2px 0 #0ff; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./bundle.js"></script>
+  </body>
+</html>
