@@ -546,7 +546,7 @@ function App() {
       
       // Strict Imagen payload format
       const payload = { instances: { prompt: userText }, parameters: { sampleCount: 1 } };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: abortControllerRef.current.signal });
+      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': PROXY_APIKEY }, body: JSON.stringify({ kind: 'image', model: 'imagen-4.0-generate-001', payload }), signal: abortControllerRef.current.signal });
       
       if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
         const rawImageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
