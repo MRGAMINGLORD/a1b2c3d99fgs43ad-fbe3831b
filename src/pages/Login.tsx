@@ -22,6 +22,24 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [lockoutUntil, setLockoutUntil] = useState(() => getPasswordGateLockoutUntil("admin-login"));
   const navigate = useNavigate();
+
+  // Client-side lockout is stored in localStorage on the device. Visiting
+  // /login?unlock=1 clears it so a locked-out admin can get back in from
+  // their own browser without devtools.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("unlock") === "1") {
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("apocalypse-waffle:admin-login:"))
+          .forEach((k) => localStorage.removeItem(k));
+      } catch { /* ignore */ }
+      setLockoutUntil(0);
+      // Strip the param so a refresh doesn't keep "unlocking".
+      window.history.replaceState({}, "", "/login");
+    }
+  }, []);
+
   const lockedOut = isPasswordGateLockedOut("admin-login");
   const remaining = remainingPasswordGateAttempts("admin-login");
 
