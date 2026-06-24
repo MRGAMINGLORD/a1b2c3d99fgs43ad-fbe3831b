@@ -65,6 +65,17 @@ export const GAMES: GameMeta[] = [
     credits: "",
   },
   {
+    id: "arcade-games",
+    title: "Arcade Games",
+    description:
+      "A haunted Waffle Arcade cabinet packing high-fidelity remakes of Pong, Pac-Man, Donkey Kong, Galaga, and Space Invaders — plus a creepy AI tip-bot lurking in the back closet.",
+    cover: coverArcadeGames,
+    available: true,
+    playUrl: "/play/arcade-games",
+    category: "twist",
+    credits: "Arcade remakes & Waffle/Turtle AI persona by Apocalypse Waffle team · Tips powered by Google Gemini",
+  },
+  {
     id: "defense-of-belgium",
     title: "Defense of Belgium",
     description:
