@@ -92,7 +92,23 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-const apiKey = (typeof window !== 'undefined' && window.__gemini_api_key) || "AIzaSyDCZwAK0glrsNsUVZIS-gCVzux6pP3yVuQ";
+// Gemini key lives in the Lovable Cloud backend (GEMINI_API_KEY secret) and
+// is proxied through the `bob-turtle` edge function so it stays out of the
+// shipped client bundle.
+const PROXY_URL = "https://tjrpaguijfdzxxwzlxsg.supabase.co/functions/v1/bob-turtle";
+const PROXY_APIKEY = "sb_publishable_ZG9h4FzBIo14Orra9jv1-g_emx_Txuk";
+
+const callGemini = async (kind, payload, options = {}) => {
+  return fetch(PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': PROXY_APIKEY,
+    },
+    body: JSON.stringify({ kind, payload }),
+    signal: options.signal,
+  });
+};
 
 // Exponential backoff API call
 const fetchWithRetry = async (url, options, retries = 5) => {
