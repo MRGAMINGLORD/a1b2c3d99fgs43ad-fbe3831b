@@ -478,7 +478,7 @@ function App() {
     abortControllerRef.current = new AbortController();
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
+      const url = PROXY_URL;
       const contents = getFormattedHistory(); 
       
       const newParts = [];
