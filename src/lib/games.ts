@@ -6,6 +6,7 @@ import coverWaffleWorks from "@/assets/cover-waffle-works.jpg";
 import coverWaffleCraft from "@/assets/cover-waffle-craft.jpg";
 import coverDefenseOfBelgium from "@/assets/cover-defense-of-belgium.jpg";
 import coverBobTurtleAI from "@/assets/cover-bob-turtle-ai.jpg";
+import coverArcadeGames from "@/assets/cover-arcade-games.jpg";
 
 export interface GameMeta {
   id: string;
