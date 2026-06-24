@@ -490,7 +490,7 @@ function App() {
       contents.push({ role: 'user', parts: newParts });
 
       const payload = { contents, systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] } };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: abortControllerRef.current.signal });
+      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': PROXY_APIKEY }, body: JSON.stringify({ kind: 'text', model: allowedModelId, payload }), signal: abortControllerRef.current.signal });
 
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible.";
       let newTitle = activeChat.title;
