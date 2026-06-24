@@ -92,7 +92,23 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-const apiKey = (typeof window !== 'undefined' && window.__gemini_api_key) || "AIzaSyDCZwAK0glrsNsUVZIS-gCVzux6pP3yVuQ";
+// Gemini key lives in the Lovable Cloud backend (GEMINI_API_KEY secret) and
+// is proxied through the `bob-turtle` edge function so it stays out of the
+// shipped client bundle.
+const PROXY_URL = "https://tjrpaguijfdzxxwzlxsg.supabase.co/functions/v1/bob-turtle";
+const PROXY_APIKEY = "sb_publishable_ZG9h4FzBIo14Orra9jv1-g_emx_Txuk";
+
+const callGemini = async (kind, payload, options = {}) => {
+  return fetch(PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': PROXY_APIKEY,
+    },
+    body: JSON.stringify({ kind, payload }),
+    signal: options.signal,
+  });
+};
 
 // Exponential backoff API call
 const fetchWithRetry = async (url, options, retries = 5) => {
@@ -462,7 +478,7 @@ function App() {
     abortControllerRef.current = new AbortController();
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${allowedModelId}:generateContent?key=${apiKey}`;
+      const url = PROXY_URL;
       const contents = getFormattedHistory(); 
       
       const newParts = [];
@@ -474,7 +490,7 @@ function App() {
       contents.push({ role: 'user', parts: newParts });
 
       const payload = { contents, systemInstruction: { parts: [{ text: getDynamicSystemPrompt(aiMode) }] } };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: abortControllerRef.current.signal });
+      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': PROXY_APIKEY }, body: JSON.stringify({ kind: 'text', model: allowedModelId, payload }), signal: abortControllerRef.current.signal });
 
       const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || "The archives are currently inaccessible.";
       let newTitle = activeChat.title;
@@ -526,11 +542,11 @@ function App() {
     abortControllerRef.current = new AbortController();
     
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+      const url = PROXY_URL;
       
       // Strict Imagen payload format
       const payload = { instances: { prompt: userText }, parameters: { sampleCount: 1 } };
-      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: abortControllerRef.current.signal });
+      const result = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': PROXY_APIKEY }, body: JSON.stringify({ kind: 'image', model: 'imagen-4.0-generate-001', payload }), signal: abortControllerRef.current.signal });
       
       if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
         const rawImageUrl = `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`;
