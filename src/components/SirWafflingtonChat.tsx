@@ -188,18 +188,18 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   };
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open && unlocked} onOpenChange={(o) => unlocked && setOpen(o)}>
       <SheetTrigger asChild>
         <button
           aria-label="Ask Sir Wafflington the 67th"
-          aria-hidden={hidden}
-          tabIndex={hidden ? -1 : 0}
+          aria-hidden={effectiveHidden}
+          tabIndex={effectiveHidden ? -1 : 0}
           className={cn(
             "group fixed bottom-5 right-5 z-50 flex items-center gap-2",
             "rounded-full border-2 border-primary bg-card pl-1.5 pr-4 py-1.5",
             "shadow-[0_0_24px_hsl(48_100%_50%/0.35)] hover:shadow-[0_0_36px_hsl(48_100%_50%/0.55)]",
             "transition-all duration-500 hover:scale-105",
-            hidden
+            effectiveHidden
               ? "opacity-0 translate-y-4 pointer-events-none"
               : "opacity-100 translate-y-0",
           )}
