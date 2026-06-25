@@ -407,7 +407,7 @@ const BackButton = () => {
       ariaLabel="Back to hub"
       title="Leave the game?"
       description="Your in-game progress may not be saved. Are you sure you want to head back to the hub?"
-      confirmLabel="Yes, exit"
+      leaveLabel="Leave"
       cancelLabel="Keep playing"
       className="absolute left-4 top-4 z-50 flex items-center gap-2 rounded-md border border-primary/60 bg-background/80 px-3 py-2 font-display text-xs uppercase tracking-wider text-primary backdrop-blur transition-colors hover:bg-primary hover:text-primary-foreground"
     >
