@@ -16,6 +16,12 @@ import { toast } from "@/hooks/use-toast";
 import { MessageSquare, Clock } from "lucide-react";
 import { useDefcon } from "@/hooks/useDefcon";
 import { useEffect } from "react";
+import {
+  messageContainsSecret,
+  setWafflingtonUnlocked,
+  isWafflingtonUnlocked,
+} from "@/lib/wafflingtonUnlock";
+import BugReportForm from "@/components/BugReportForm";
 
 const THROTTLE_KEY = "apocalypse-waffle:feedback-last-sent";
 const THROTTLE_MS = 10 * 60 * 1000; // 10 minutes
@@ -62,6 +68,21 @@ const FeedbackForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Secret summoning phrase — reveals Sir Wafflington's chat button instead
+    // of submitting feedback. Case-insensitive match anywhere in the message.
+    if (messageContainsSecret(message)) {
+      const already = isWafflingtonUnlocked();
+      setWafflingtonUnlocked(true);
+      toast({
+        title: already ? "He's already here" : "A distinguished arrival",
+        description: already
+          ? "Sir Wafflington the 67th is already at your service in the bottom-right."
+          : "Sir Wafflington the 67th has heard your summons and is now available in the bottom-right.",
+      });
+      setMessage("");
+      return;
+    }
 
     if (defcon <= 4 && cooldownLeft > 0) {
       toast({
@@ -113,10 +134,13 @@ const FeedbackForm = () => {
 
   return (
     <section className="mx-auto max-w-md px-6 pb-20 pt-4">
-      <h2 className="mb-6 text-center font-display text-3xl text-primary sm:text-4xl">
+      <h2 className="mb-2 text-center font-display text-3xl text-primary sm:text-4xl">
         <MessageSquare className="mx-auto mb-2 h-8 w-8" />
         Send Feedback
       </h2>
+      <div className="mb-6 flex justify-center">
+        <BugReportForm />
+      </div>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-border bg-card p-6">
         <div className="space-y-2">
           <Label htmlFor="feedback-category">What's this about?</Label>
