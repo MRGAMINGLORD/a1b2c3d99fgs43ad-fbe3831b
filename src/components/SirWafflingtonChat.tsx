@@ -22,6 +22,7 @@ import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { SirWafflingtonAvatar } from "./SirWafflingtonAvatar";
 import { useSirWafflington, type ChatMsg } from "./SirWafflingtonContext";
+import { useWafflingtonUnlocked } from "@/lib/wafflingtonUnlock";
 
 const STARTER_PROMPTS = [
   "What games are available?",
@@ -34,6 +35,10 @@ const ENDPOINT = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sir-waffling
 export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => {
   const { open, setOpen, input, setInput, messages, setMessages, streaming, setStreaming } =
     useSirWafflington();
+  const unlocked = useWafflingtonUnlocked();
+  // Treat as hidden whenever the route hides him OR he hasn't been summoned yet
+  // via the secret phrase in the feedback form.
+  const effectiveHidden = hidden || !unlocked;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [confirmClear, setConfirmClear] = useState(false);
 
