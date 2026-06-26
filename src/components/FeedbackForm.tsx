@@ -75,10 +75,10 @@ const FeedbackForm = () => {
       const already = isWafflingtonUnlocked();
       setWafflingtonUnlocked(true);
       toast({
-        title: already ? "He's already here" : "A distinguished arrival",
+        title: already ? "He's already here" : "Sir Wafflington summoned",
         description: already
-          ? "Sir Wafflington the 67th is already at your service in the bottom-right."
-          : "Sir Wafflington the 67th has heard your summons and is now available in the bottom-right.",
+          ? "Sir Wafflington the 67th is already available — the button is in the bottom-right."
+          : "Sir Wafflington the 67th has arrived. The button in the bottom-right is now available.",
       });
       setMessage("");
       return;
