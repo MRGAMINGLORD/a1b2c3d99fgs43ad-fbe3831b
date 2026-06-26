@@ -23,6 +23,16 @@ import { cn } from "@/lib/utils";
 import { SirWafflingtonAvatar } from "./SirWafflingtonAvatar";
 import { useSirWafflington, type ChatMsg } from "./SirWafflingtonContext";
 import { useWafflingtonUnlocked } from "@/lib/wafflingtonUnlock";
+import { areGamesUnlocked, unlockGames } from "@/lib/gamesUnlock";
+
+const PASSWORD = "67 IS GREAT"; // case-sensitive
+const DENY_LINES = [
+  "*Sir Wafflington raises a powdered eyebrow.* I haven't the foggiest notion what 'keys' you speak of, dear visitor. Perhaps you'd be happier on one of those *other* gaming sites — they have such delightful pop-ups, I hear.",
+  "*sighs theatrically* Still on about keys? There are no keys. Truly, you'd save yourself such heartache by simply closing this tab and visiting Coolmath, or whatever the children play these days.",
+  "I shall say it once more, in the plainest English: there. are. no. keys. Run along, find another wasteland. This one is, regrettably, all out of games for you.",
+];
+const GRANT_LINE =
+  "*A long pause. Sir Wafflington dabs his monocle with a silk handkerchief.* …Very well. You have proven *unreasonably* persistent, and I do so admire that in a visitor. Consider the Games unlocked. Close this chat and they shall appear, as if by magic — because, in a sense, they did.";
 
 const STARTER_PROMPTS = [
   "What games are available?",
@@ -41,6 +51,8 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const effectiveHidden = hidden || !unlocked;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const passwordAttempts = useRef(0);
+  const pendingUnlock = useRef(false);
 
 
   // Auto-scroll to bottom on new tokens
@@ -56,6 +68,29 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text || streaming) return;
+
+    // Secret games-unlock flow: case-sensitive match on the password phrase.
+    if (!areGamesUnlocked() && text.includes(PASSWORD)) {
+      const userMsg: ChatMsg = { role: "user", content: text };
+      setInput("");
+      const attempt = passwordAttempts.current + 1;
+      passwordAttempts.current = attempt;
+      let reply: string;
+      if (attempt >= 4) {
+        reply = GRANT_LINE;
+        pendingUnlock.current = true;
+      } else {
+        reply = DENY_LINES[Math.min(attempt - 1, DENY_LINES.length - 1)];
+      }
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        { role: "assistant", content: reply },
+      ]);
+      return;
+    }
+
+
 
     const userMsg: ChatMsg = { role: "user", content: text };
     const next = [...messages, userMsg];
@@ -188,7 +223,22 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   };
 
   return (
-    <Sheet open={open && unlocked} onOpenChange={(o) => unlocked && setOpen(o)}>
+    <Sheet
+      open={open && unlocked}
+      onOpenChange={(o) => {
+        if (!unlocked) return;
+        setOpen(o);
+        if (!o && pendingUnlock.current) {
+          pendingUnlock.current = false;
+          passwordAttempts.current = 0;
+          unlockGames();
+          toast({
+            title: "Games unlocked",
+            description: "The locked sections are now available.",
+          });
+        }
+      }}
+    >
       <SheetTrigger asChild>
         <button
           aria-label="Ask Sir Wafflington the 67th"
