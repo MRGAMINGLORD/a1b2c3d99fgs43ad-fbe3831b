@@ -148,7 +148,7 @@ const FeedbackForm = () => {
       <div className="mb-6 flex justify-center">
         <BugReportForm />
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-border bg-card p-6">
+      <form onSubmit={handleSubmit} noValidate className="space-y-4 rounded-lg border border-border bg-card p-6">
         <div className="space-y-2">
           <Label htmlFor="feedback-category">What's this about?</Label>
           <Select value={category} onValueChange={setCategory}>
