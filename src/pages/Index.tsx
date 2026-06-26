@@ -13,9 +13,12 @@ import {
 } from "@/components/ui/accordion";
 import { GAMES } from "@/lib/games";
 import { useCustomGames } from "@/hooks/useCustomGames";
+import { LockedSectionOverlay } from "@/components/LockedSectionOverlay";
+import { useGamesUnlocked } from "@/lib/gamesUnlock";
 
 const Index = () => {
   const { games: customGames } = useCustomGames();
+  const gamesUnlocked = useGamesUnlocked();
   const allGames = [...GAMES, ...customGames];
   const tycoonGames = allGames.filter((g) => g.category === "tycoon");
   const twistGames = allGames.filter((g) => g.category === "twist");
