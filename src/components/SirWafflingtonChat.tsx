@@ -51,6 +51,8 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const effectiveHidden = hidden || !unlocked;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const passwordAttempts = useRef(0);
+  const pendingUnlock = useRef(false);
 
 
   // Auto-scroll to bottom on new tokens
@@ -66,6 +68,29 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text || streaming) return;
+
+    // Secret games-unlock flow: case-sensitive match on the password phrase.
+    if (!areGamesUnlocked() && text.includes(PASSWORD)) {
+      const userMsg: ChatMsg = { role: "user", content: text };
+      setInput("");
+      const attempt = passwordAttempts.current + 1;
+      passwordAttempts.current = attempt;
+      let reply: string;
+      if (attempt >= 4) {
+        reply = GRANT_LINE;
+        pendingUnlock.current = true;
+      } else {
+        reply = DENY_LINES[Math.min(attempt - 1, DENY_LINES.length - 1)];
+      }
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        { role: "assistant", content: reply },
+      ]);
+      return;
+    }
+
+
 
     const userMsg: ChatMsg = { role: "user", content: text };
     const next = [...messages, userMsg];
