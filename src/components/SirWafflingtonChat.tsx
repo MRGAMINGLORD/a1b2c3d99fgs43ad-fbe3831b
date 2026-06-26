@@ -23,6 +23,16 @@ import { cn } from "@/lib/utils";
 import { SirWafflingtonAvatar } from "./SirWafflingtonAvatar";
 import { useSirWafflington, type ChatMsg } from "./SirWafflingtonContext";
 import { useWafflingtonUnlocked } from "@/lib/wafflingtonUnlock";
+import { areGamesUnlocked, unlockGames } from "@/lib/gamesUnlock";
+
+const PASSWORD = "67 IS GREAT"; // case-sensitive
+const DENY_LINES = [
+  "*Sir Wafflington raises a powdered eyebrow.* I haven't the foggiest notion what 'keys' you speak of, dear visitor. Perhaps you'd be happier on one of those *other* gaming sites — they have such delightful pop-ups, I hear.",
+  "*sighs theatrically* Still on about keys? There are no keys. Truly, you'd save yourself such heartache by simply closing this tab and visiting Coolmath, or whatever the children play these days.",
+  "I shall say it once more, in the plainest English: there. are. no. keys. Run along, find another wasteland. This one is, regrettably, all out of games for you.",
+];
+const GRANT_LINE =
+  "*A long pause. Sir Wafflington dabs his monocle with a silk handkerchief.* …Very well. You have proven *unreasonably* persistent, and I do so admire that in a visitor. Consider the Games unlocked. Close this chat and they shall appear, as if by magic — because, in a sense, they did.";
 
 const STARTER_PROMPTS = [
   "What games are available?",
