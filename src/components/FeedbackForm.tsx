@@ -47,6 +47,7 @@ const FeedbackForm = () => {
   const [loading, setLoading] = useState(false);
   const { level: defcon } = useDefcon();
   const [cooldownLeft, setCooldownLeft] = useState(0);
+  const [wafflingtonAnnouncement, setWafflingtonAnnouncement] = useState("");
 
   useEffect(() => {
     if (defcon > 4) {
@@ -74,11 +75,14 @@ const FeedbackForm = () => {
     if (messageContainsSecret(message)) {
       const already = isWafflingtonUnlocked();
       setWafflingtonUnlocked(true);
+      const announcement = already
+        ? "Sir Wafflington the 67th is already available. The button is in the bottom-right."
+        : "Sir Wafflington the 67th has arrived. The button in the bottom-right is now available.";
+      setWafflingtonAnnouncement("");
+      window.setTimeout(() => setWafflingtonAnnouncement(announcement), 50);
       toast({
         title: already ? "He's already here" : "Sir Wafflington summoned",
-        description: already
-          ? "Sir Wafflington the 67th is already available — the button is in the bottom-right."
-          : "Sir Wafflington the 67th has arrived. The button in the bottom-right is now available.",
+        description: announcement,
       });
       setMessage("");
       return;
@@ -138,6 +142,9 @@ const FeedbackForm = () => {
         <MessageSquare className="mx-auto mb-2 h-8 w-8" />
         Send Feedback
       </h2>
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        {wafflingtonAnnouncement}
+      </p>
       <div className="mb-6 flex justify-center">
         <BugReportForm />
       </div>
