@@ -223,7 +223,22 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   };
 
   return (
-    <Sheet open={open && unlocked} onOpenChange={(o) => unlocked && setOpen(o)}>
+    <Sheet
+      open={open && unlocked}
+      onOpenChange={(o) => {
+        if (!unlocked) return;
+        setOpen(o);
+        if (!o && pendingUnlock.current) {
+          pendingUnlock.current = false;
+          passwordAttempts.current = 0;
+          unlockGames();
+          toast({
+            title: "Games unlocked",
+            description: "The locked sections are now available.",
+          });
+        }
+      }}
+    >
       <SheetTrigger asChild>
         <button
           aria-label="Ask Sir Wafflington the 67th"
