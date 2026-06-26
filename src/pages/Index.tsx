@@ -117,6 +117,9 @@ const Index = () => {
           Games
         </h2>
 
+        <div className="relative">
+        {!gamesUnlocked && <LockedSectionOverlay />}
+        <div className={!gamesUnlocked ? "pointer-events-none select-none" : ""} aria-hidden={!gamesUnlocked}>
         <Accordion
           type="multiple"
           defaultValue={["tycoon", "twist", "other"]}
