@@ -61,7 +61,8 @@ export const hasAnySave = (): boolean => {
     // Fallback: check known game keys directly
     return Boolean(
       localStorage.getItem("ttc:save:v1") ||
-        localStorage.getItem("dob:save:v1"),
+        localStorage.getItem("dob:save:v1") ||
+        localStorage.getItem("gg:save:v1"),
     );
   } catch {
     return false;
