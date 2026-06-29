@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   PASSWORD_GATE_LABELS,
   PASSWORD_GATE_LOCKED_OUT_EVENT,
