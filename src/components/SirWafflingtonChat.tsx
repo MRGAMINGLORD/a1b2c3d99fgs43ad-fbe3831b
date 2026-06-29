@@ -53,6 +53,11 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const [confirmClear, setConfirmClear] = useState(false);
   const passwordAttempts = useRef(0);
   const pendingUnlock = useRef(false);
+  const fakePasswordAwaitingGame = useRef(false);
+
+  const FAKE_PASSWORD_REGEX =
+    /\b(?:i\s*(?:have|know|got)\s*(?:the)?\s*password|password\s*is|the\s*password)\b/i;
+
 
 
   // Auto-scroll to bottom on new tokens
