@@ -53,6 +53,11 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
   const [confirmClear, setConfirmClear] = useState(false);
   const passwordAttempts = useRef(0);
   const pendingUnlock = useRef(false);
+  const fakePasswordAwaitingGame = useRef(false);
+
+  const FAKE_PASSWORD_REGEX =
+    /\b(?:i\s*(?:have|know|got)\s*(?:the)?\s*password|password\s*is|the\s*password)\b/i;
+
 
 
   // Auto-scroll to bottom on new tokens
@@ -69,10 +74,11 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
     const text = (textOverride ?? input).trim();
     if (!text || streaming) return;
 
-    // Secret games-unlock flow: case-sensitive match on the password phrase.
+    // Secret games-unlock flow: case-sensitive match on the real password phrase.
     if (!areGamesUnlocked() && text.includes(PASSWORD)) {
       const userMsg: ChatMsg = { role: "user", content: text };
       setInput("");
+      fakePasswordAwaitingGame.current = false;
       const attempt = passwordAttempts.current + 1;
       passwordAttempts.current = attempt;
       let reply: string;
@@ -89,6 +95,44 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
       ]);
       return;
     }
+
+    // If they previously *claimed* to have a password (without the real one)
+    // and Sir Wafflington asked which game they wanted — the next reply is
+    // their game request. Politely inform them it is not available.
+    if (fakePasswordAwaitingGame.current) {
+      const userMsg: ChatMsg = { role: "user", content: text };
+      setInput("");
+      fakePasswordAwaitingGame.current = false;
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        {
+          role: "assistant",
+          content:
+            "*flips through a pocket ledger, frowns regretfully.* Ah — I'm dreadfully sorry, that one isn't available, I'm afraid. Do try another time.",
+        },
+      ]);
+      return;
+    }
+
+    // Visitor claims to have *a* password (but not the correct one). Play
+    // along: ask which game they want.
+    if (!areGamesUnlocked() && FAKE_PASSWORD_REGEX.test(text)) {
+      const userMsg: ChatMsg = { role: "user", content: text };
+      setInput("");
+      fakePasswordAwaitingGame.current = true;
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        {
+          role: "assistant",
+          content:
+            "*tips his top hat in delighted surprise.* Sure! Which game would you like, dear visitor?",
+        },
+      ]);
+      return;
+    }
+
 
 
 

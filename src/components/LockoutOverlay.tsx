@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   PASSWORD_GATE_LABELS,
   PASSWORD_GATE_LOCKED_OUT_EVENT,
@@ -21,40 +22,55 @@ import {
  *   - Loop restarts.
  */
 
-const GATE_IDS: PasswordGateId[] = [
-  "admin-login",
-  "test-access",
-  "edit-access",
-  "defcon-access",
-];
-
 interface ActiveLock {
   id: PasswordGateId;
   label: string;
   lockoutUntil: number;
 }
 
-const findActiveLock = (): ActiveLock | null => {
-  const now = Date.now();
-  let soonest: ActiveLock | null = null;
-  for (const id of GATE_IDS) {
-    const until = getPasswordGateLockoutUntil(id);
-    if (until > now && (!soonest || until < soonest.lockoutUntil)) {
-      soonest = { id, label: PASSWORD_GATE_LABELS[id], lockoutUntil: until };
-    }
-  }
-  return soonest;
-};
+
+// Routes that should trigger the lockout cinematic + redirect.
+const ROUTE_GATES: { match: (path: string) => boolean; gate: PasswordGateId }[] = [
+  { match: (p) => p === "/login" || p.startsWith("/admin"), gate: "admin-login" },
+  { match: (p) => p === "/test" || p.startsWith("/play-test"), gate: "test-access" },
+];
+
+const KICK_AFTER_MS = 8000; // one full animation cycle
 
 export const LockoutOverlay = () => {
-  const [active, setActive] = useState<ActiveLock | null>(() => findActiveLock());
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determine which gate (if any) is locking the *current* route.
+  const routeLock = useMemo<ActiveLock | null>(() => {
+    const now = Date.now();
+    for (const entry of ROUTE_GATES) {
+      if (!entry.match(location.pathname)) continue;
+      const until = getPasswordGateLockoutUntil(entry.gate);
+      if (until > now) {
+        return { id: entry.gate, label: PASSWORD_GATE_LABELS[entry.gate], lockoutUntil: until };
+      }
+    }
+    return null;
+  }, [location.pathname]);
+
+  const [active, setActive] = useState<ActiveLock | null>(routeLock);
   const [, setTick] = useState(0);
 
-  // Listen for new lockouts.
+  // Sync with route changes.
+  useEffect(() => {
+    setActive(routeLock);
+  }, [routeLock]);
+
+  // Listen for fresh lockouts triggered from a gate the user is on right now.
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<PasswordGateLockedOutDetail>).detail;
       if (!detail) return;
+      const onLockedRoute = ROUTE_GATES.some(
+        (r) => r.gate === detail.id && r.match(location.pathname),
+      );
+      if (!onLockedRoute) return;
       setActive({
         id: detail.id,
         label: detail.label,
@@ -63,22 +79,21 @@ export const LockoutOverlay = () => {
     };
     window.addEventListener(PASSWORD_GATE_LOCKED_OUT_EVENT, handler);
     return () => window.removeEventListener(PASSWORD_GATE_LOCKED_OUT_EVENT, handler);
-  }, []);
+  }, [location.pathname]);
 
-  // While locked, re-check every minute to update the countdown and to
-  // auto-dismiss when the lockout expires. One interval total, cleared
-  // when inactive — bounded memory.
+  // After one animation cycle, kick the visitor back to the main site.
   useEffect(() => {
     if (!active) return;
-    const id = window.setInterval(() => {
-      if (active.lockoutUntil <= Date.now()) {
-        setActive(null);
-      } else {
-        setTick((t) => t + 1);
-      }
+    const kick = window.setTimeout(() => navigate("/", { replace: true }), KICK_AFTER_MS);
+    const tick = window.setInterval(() => {
+      if (active.lockoutUntil <= Date.now()) setActive(null);
+      else setTick((t) => t + 1);
     }, 60_000);
-    return () => window.clearInterval(id);
-  }, [active]);
+    return () => {
+      window.clearTimeout(kick);
+      window.clearInterval(tick);
+    };
+  }, [active, navigate]);
 
   if (!active) return null;
 
