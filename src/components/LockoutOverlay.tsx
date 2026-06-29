@@ -22,30 +22,12 @@ import {
  *   - Loop restarts.
  */
 
-const GATE_IDS: PasswordGateId[] = [
-  "admin-login",
-  "test-access",
-  "edit-access",
-  "defcon-access",
-];
-
 interface ActiveLock {
   id: PasswordGateId;
   label: string;
   lockoutUntil: number;
 }
 
-const findActiveLock = (): ActiveLock | null => {
-  const now = Date.now();
-  let soonest: ActiveLock | null = null;
-  for (const id of GATE_IDS) {
-    const until = getPasswordGateLockoutUntil(id);
-    if (until > now && (!soonest || until < soonest.lockoutUntil)) {
-      soonest = { id, label: PASSWORD_GATE_LABELS[id], lockoutUntil: until };
-    }
-  }
-  return soonest;
-};
 
 // Routes that should trigger the lockout cinematic + redirect.
 const ROUTE_GATES: { match: (path: string) => boolean; gate: PasswordGateId }[] = [
