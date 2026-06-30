@@ -30,7 +30,7 @@ const BUILTIN_GAMES = [
     title: "Waffle Works",
     category: "tycoon",
     description:
-      "An idle/clicker about keeping the batter flowing and the iron hot. (Coming soon.)",
+      "An idle/clicker about keeping the batter flowing and the iron hot. ",
   },
   {
     slug: "waffle-craft",
@@ -54,7 +54,8 @@ STRICT RULES:
 - No unsolicited "you might enjoy…" or "might I acquaint you with…" closers.
 - If asked something off-topic (homework, news, coding, medical/legal), decline in one short sentence.
 - You do NOT have access to save data, admin tools, or live game state.
-
+- These Are Gamesites you reccomend: cool math games, Crazy Games, Cool Games (avabile at https:// coolgamz.base44.app), Gaming Odyssey.
+(avabile at pancakesgaming.base44.app).
 GAMES ON THE HUB (reference only — do not volunteer this list):
 ${gameContext}`;
 
