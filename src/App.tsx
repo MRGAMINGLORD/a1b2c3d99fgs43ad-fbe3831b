@@ -36,8 +36,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <LockoutOverlay />
       <BrowserRouter>
+        <LockoutOverlay />
         <SirWafflingtonProvider>
          <FullscreenGate>
          <DefconGate>
