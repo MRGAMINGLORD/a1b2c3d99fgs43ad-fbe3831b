@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Trash2, Plus, Pencil, FileCode, Eye, FolderUp, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,59 @@ import GameProfileDialog from "@/components/GameProfileDialog";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
 import { GAMES } from "@/lib/games";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
+
+// Files whose type is not detected by the browser get a best-effort
+// content-type from their extension. Everything else falls back to
+// `application/octet-stream`, which the iframe won't execute but which is
+// safe to store.
+const EXT_CONTENT_TYPES: Record<string, string> = {
+  html: "text/html; charset=utf-8",
+  htm: "text/html; charset=utf-8",
+  css: "text/css; charset=utf-8",
+  js: "application/javascript; charset=utf-8",
+  mjs: "application/javascript; charset=utf-8",
+  json: "application/json; charset=utf-8",
+  svg: "image/svg+xml",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  ico: "image/x-icon",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  webm: "video/webm",
+  mp4: "video/mp4",
+  wasm: "application/wasm",
+  txt: "text/plain; charset=utf-8",
+  md: "text/plain; charset=utf-8",
+  tsx: "text/plain; charset=utf-8",
+  ts: "text/plain; charset=utf-8",
+  jsx: "text/plain; charset=utf-8",
+  gitignore: "text/plain; charset=utf-8",
+};
+
+const contentTypeFor = (file: File, relPath: string): string => {
+  if (file.type) return file.type;
+  const ext = relPath.split(".").pop()?.toLowerCase() ?? "";
+  return EXT_CONTENT_TYPES[ext] ?? "application/octet-stream";
+};
+
+// Chrome/Edge/Safari expose the folder-relative path via a nonstandard
+// property. Fall back to plain name for multi-file picks.
+const relPathOf = (f: File): string => {
+  const rel = (f as unknown as { webkitRelativePath?: string }).webkitRelativePath;
+  if (rel && rel.length > 0) {
+    // Strip the top-level folder so uploads land at <slug>/<file>, not
+    // <slug>/<folder-name>/<file>.
+    const idx = rel.indexOf("/");
+    return idx >= 0 ? rel.slice(idx + 1) : rel;
+  }
+  return f.name;
+};
+
+
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
 const BUILTIN_SLUGS = new Set(GAMES.map((g) => g.id));
@@ -40,6 +93,12 @@ const CustomGamesAdmin = () => {
   const [html, setHtml] = useState("");
   const [credits, setCredits] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Bundle uploads: full folder or hand-picked files. When present, these
+  // are uploaded verbatim into game-files/<slug>/… and take precedence over
+  // any HTML pasted into the source textarea.
+  const [bundleFiles, setBundleFiles] = useState<File[]>([]);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
 
@@ -67,6 +126,9 @@ const CustomGamesAdmin = () => {
     setCategory("other");
     setHtml("");
     setCredits("");
+    setBundleFiles([]);
+    if (folderInputRef.current) folderInputRef.current.value = "";
+    if (filesInputRef.current) filesInputRef.current.value = "";
   };
 
   const startEdit = async (row: CustomGameRow) => {
@@ -129,6 +191,43 @@ const CustomGamesAdmin = () => {
     return `${data.publicUrl}?v=${Date.now()}`;
   };
 
+  // Upload every file in a picked folder (or hand-picked file list) into
+  // game-files/<slug>/<relative-path>. Returns the public URL of the entry
+  // file — index.html at the root when available, otherwise the first .html
+  // encountered, otherwise the first file (rare — usually a missing entry).
+  const uploadBundle = async (
+    slug: string,
+    files: File[],
+  ): Promise<string> => {
+    // Clean up the whole folder first so removed files don't linger.
+    const existing = await supabase.storage
+      .from(GAME_FILES_BUCKET)
+      .list(slug, { limit: 1000 });
+    if (existing.data && existing.data.length > 0) {
+      const toRemove = existing.data.map((o) => `${slug}/${o.name}`);
+      await supabase.storage.from(GAME_FILES_BUCKET).remove(toRemove).catch(() => {});
+    }
+
+    let entryPath: string | null = null;
+    for (const file of files) {
+      const rel = relPathOf(file);
+      const path = `${slug}/${rel}`;
+      const type = contentTypeFor(file, rel);
+      const { error } = await supabase.storage
+        .from(GAME_FILES_BUCKET)
+        .upload(path, file, { upsert: true, contentType: type, cacheControl: "60" });
+      if (error) throw new Error(`${rel}: ${error.message}`);
+      if (rel === "index.html") entryPath = path;
+      else if (!entryPath && rel.toLowerCase().endsWith(".html")) entryPath = path;
+    }
+    if (!entryPath) {
+      // Fall back to the first uploaded file so the row at least records something.
+      entryPath = `${slug}/${relPathOf(files[0])}`;
+    }
+    const { data } = supabase.storage.from(GAME_FILES_BUCKET).getPublicUrl(entryPath);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -148,31 +247,30 @@ const CustomGamesAdmin = () => {
       return;
     }
 
+    const usingBundle = bundleFiles.length > 0;
     const confirmMsg = editingId
-      ? `Save changes to "${title.trim()}"?\n\nThis will overwrite /game-files/${slug}/index.html.`
-      : `Post "${title.trim()}" as a new game at /play/${slug}?\n\nA file will be created at /game-files/${slug}/index.html.`;
+      ? `Save changes to "${title.trim()}"?\n\nThis will ${usingBundle ? `replace ${bundleFiles.length} file(s) under` : "overwrite"} /game-files/${slug}/${usingBundle ? "" : "index.html"}.`
+      : `Post "${title.trim()}" as a new game at /play/${slug}?\n\n${usingBundle ? `${bundleFiles.length} file(s) will be uploaded to /game-files/${slug}/.` : `A file will be created at /game-files/${slug}/index.html.`}`;
     if (!confirm(confirmMsg)) return;
 
     setSubmitting(true);
 
-    // Upload the game file first (only when there's actual HTML to host).
     let storedValue = "";
-    if (html.trim()) {
-      try {
+    try {
+      if (usingBundle) {
+        // Folder / multi-file upload wins — ignore any pasted HTML.
+        storedValue = await uploadBundle(slug, bundleFiles);
+      } else if (html.trim()) {
         // Auto-wrap pasted React/JSX into a self-contained HTML doc so it
         // runs in the same iframe used for built-in HTML games.
         const finalSource = prepareGameSource(html);
         storedValue = await uploadGameFile(slug, finalSource);
-      } catch (err) {
-        setSubmitting(false);
-        const msg = err instanceof Error ? err.message : String(err);
-        toast({
-          title: "Upload failed",
-          description: msg,
-          variant: "destructive",
-        });
-        return;
       }
+    } catch (err) {
+      setSubmitting(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Upload failed", description: msg, variant: "destructive" });
+      return;
     }
 
     if (editingId) {
@@ -286,8 +384,107 @@ const CustomGamesAdmin = () => {
             ))}
           </div>
         </div>
+        <div className="rounded-md border border-primary/40 bg-background/40 p-3">
+          <Label className="font-display text-xs uppercase tracking-wider text-primary">
+            Upload folder or files (optional)
+          </Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pick a whole folder — every file (HTML, CSS, JS, TSX, JSON,
+            .gitignore, images, audio…) uploads to <span className="font-mono text-primary">/game-files/{slugify(title) || "your-slug"}/</span>.
+            The entry point is <span className="font-mono">index.html</span> (or the first
+            .html found). When files are picked here they take precedence over the pasted source below.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => folderInputRef.current?.click()}
+            >
+              <FolderUp className="mr-1 h-4 w-4" /> Pick folder
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => filesInputRef.current?.click()}
+            >
+              <Upload className="mr-1 h-4 w-4" /> Add files
+            </Button>
+            {bundleFiles.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setBundleFiles([]);
+                  if (folderInputRef.current) folderInputRef.current.value = "";
+                  if (filesInputRef.current) filesInputRef.current.value = "";
+                }}
+              >
+                <X className="mr-1 h-4 w-4" /> Clear
+              </Button>
+            )}
+          </div>
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
+            hidden
+            // Nonstandard but supported in Chromium/WebKit for folder selection.
+            {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+            onChange={(e) => {
+              const list = Array.from(e.target.files ?? []);
+              if (list.length > 0) setBundleFiles(list);
+            }}
+          />
+          <input
+            ref={filesInputRef}
+            type="file"
+            multiple
+            hidden
+            onChange={(e) => {
+              const list = Array.from(e.target.files ?? []);
+              if (list.length > 0) {
+                setBundleFiles((prev) => [...prev, ...list]);
+              }
+            }}
+          />
+          {bundleFiles.length > 0 && (
+            <div className="mt-2 max-h-40 overflow-y-auto rounded border border-primary/30 bg-background/60 p-2 font-mono text-[11px]">
+              {bundleFiles.map((f, i) => (
+                <div key={`${relPathOf(f)}-${i}`} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-primary">{relPathOf(f)}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {(f.size / 1024).toFixed(1)} KB
+                  </span>
+                  <button
+                    type="button"
+                    className="text-destructive hover:opacity-80"
+                    onClick={() => setBundleFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    aria-label={`Remove ${relPathOf(f)}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <div className="mt-1 text-muted-foreground">
+                {bundleFiles.length} file(s) ready · entry:{" "}
+                <span className="text-primary">
+                  {bundleFiles.find((f) => relPathOf(f) === "index.html")
+                    ? "index.html"
+                    : bundleFiles.find((f) => relPathOf(f).toLowerCase().endsWith(".html"))
+                      ? relPathOf(bundleFiles.find((f) => relPathOf(f).toLowerCase().endsWith(".html"))!)
+                      : "⚠ no .html found"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
         <div>
-          <Label htmlFor="cg-html">Game source — HTML or React/JSX</Label>
+          <Label htmlFor="cg-html">
+            Game source — HTML or React/JSX {bundleFiles.length > 0 && <span className="text-muted-foreground">(ignored while files are picked above)</span>}
+          </Label>
           <Textarea
             id="cg-html"
             placeholder="Paste either a full <html>...</html> document OR a React component (e.g. function Game() { return <div>…</div> } — with or without `export default`). React snippets are auto-wrapped with React + Babel CDN scripts so they run in the same /play/<slug> tab."
@@ -295,6 +492,7 @@ const CustomGamesAdmin = () => {
             onChange={(e) => setHtml(e.target.value)}
             rows={8}
             className="font-mono text-xs"
+            disabled={bundleFiles.length > 0}
           />
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <FileCode className="h-3 w-3" />
