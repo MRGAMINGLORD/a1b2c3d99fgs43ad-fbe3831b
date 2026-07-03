@@ -191,6 +191,43 @@ const CustomGamesAdmin = () => {
     return `${data.publicUrl}?v=${Date.now()}`;
   };
 
+  // Upload every file in a picked folder (or hand-picked file list) into
+  // game-files/<slug>/<relative-path>. Returns the public URL of the entry
+  // file — index.html at the root when available, otherwise the first .html
+  // encountered, otherwise the first file (rare — usually a missing entry).
+  const uploadBundle = async (
+    slug: string,
+    files: File[],
+  ): Promise<string> => {
+    // Clean up the whole folder first so removed files don't linger.
+    const existing = await supabase.storage
+      .from(GAME_FILES_BUCKET)
+      .list(slug, { limit: 1000 });
+    if (existing.data && existing.data.length > 0) {
+      const toRemove = existing.data.map((o) => `${slug}/${o.name}`);
+      await supabase.storage.from(GAME_FILES_BUCKET).remove(toRemove).catch(() => {});
+    }
+
+    let entryPath: string | null = null;
+    for (const file of files) {
+      const rel = relPathOf(file);
+      const path = `${slug}/${rel}`;
+      const type = contentTypeFor(file, rel);
+      const { error } = await supabase.storage
+        .from(GAME_FILES_BUCKET)
+        .upload(path, file, { upsert: true, contentType: type, cacheControl: "60" });
+      if (error) throw new Error(`${rel}: ${error.message}`);
+      if (rel === "index.html") entryPath = path;
+      else if (!entryPath && rel.toLowerCase().endsWith(".html")) entryPath = path;
+    }
+    if (!entryPath) {
+      // Fall back to the first uploaded file so the row at least records something.
+      entryPath = `${slug}/${relPathOf(files[0])}`;
+    }
+    const { data } = supabase.storage.from(GAME_FILES_BUCKET).getPublicUrl(entryPath);
+    return `${data.publicUrl}?v=${Date.now()}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -210,31 +247,30 @@ const CustomGamesAdmin = () => {
       return;
     }
 
+    const usingBundle = bundleFiles.length > 0;
     const confirmMsg = editingId
-      ? `Save changes to "${title.trim()}"?\n\nThis will overwrite /game-files/${slug}/index.html.`
-      : `Post "${title.trim()}" as a new game at /play/${slug}?\n\nA file will be created at /game-files/${slug}/index.html.`;
+      ? `Save changes to "${title.trim()}"?\n\nThis will ${usingBundle ? `replace ${bundleFiles.length} file(s) under` : "overwrite"} /game-files/${slug}/${usingBundle ? "" : "index.html"}.`
+      : `Post "${title.trim()}" as a new game at /play/${slug}?\n\n${usingBundle ? `${bundleFiles.length} file(s) will be uploaded to /game-files/${slug}/.` : `A file will be created at /game-files/${slug}/index.html.`}`;
     if (!confirm(confirmMsg)) return;
 
     setSubmitting(true);
 
-    // Upload the game file first (only when there's actual HTML to host).
     let storedValue = "";
-    if (html.trim()) {
-      try {
+    try {
+      if (usingBundle) {
+        // Folder / multi-file upload wins — ignore any pasted HTML.
+        storedValue = await uploadBundle(slug, bundleFiles);
+      } else if (html.trim()) {
         // Auto-wrap pasted React/JSX into a self-contained HTML doc so it
         // runs in the same iframe used for built-in HTML games.
         const finalSource = prepareGameSource(html);
         storedValue = await uploadGameFile(slug, finalSource);
-      } catch (err) {
-        setSubmitting(false);
-        const msg = err instanceof Error ? err.message : String(err);
-        toast({
-          title: "Upload failed",
-          description: msg,
-          variant: "destructive",
-        });
-        return;
       }
+    } catch (err) {
+      setSubmitting(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Upload failed", description: msg, variant: "destructive" });
+      return;
     }
 
     if (editingId) {
