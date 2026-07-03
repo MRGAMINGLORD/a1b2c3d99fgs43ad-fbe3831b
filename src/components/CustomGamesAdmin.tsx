@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Trash2, Plus, Pencil, FileCode, Eye, FolderUp, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,59 @@ import GameProfileDialog from "@/components/GameProfileDialog";
 import type { CustomGameRow } from "@/hooks/useCustomGames";
 import { GAMES } from "@/lib/games";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
+
+// Files whose type is not detected by the browser get a best-effort
+// content-type from their extension. Everything else falls back to
+// `application/octet-stream`, which the iframe won't execute but which is
+// safe to store.
+const EXT_CONTENT_TYPES: Record<string, string> = {
+  html: "text/html; charset=utf-8",
+  htm: "text/html; charset=utf-8",
+  css: "text/css; charset=utf-8",
+  js: "application/javascript; charset=utf-8",
+  mjs: "application/javascript; charset=utf-8",
+  json: "application/json; charset=utf-8",
+  svg: "image/svg+xml",
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  ico: "image/x-icon",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  webm: "video/webm",
+  mp4: "video/mp4",
+  wasm: "application/wasm",
+  txt: "text/plain; charset=utf-8",
+  md: "text/plain; charset=utf-8",
+  tsx: "text/plain; charset=utf-8",
+  ts: "text/plain; charset=utf-8",
+  jsx: "text/plain; charset=utf-8",
+  gitignore: "text/plain; charset=utf-8",
+};
+
+const contentTypeFor = (file: File, relPath: string): string => {
+  if (file.type) return file.type;
+  const ext = relPath.split(".").pop()?.toLowerCase() ?? "";
+  return EXT_CONTENT_TYPES[ext] ?? "application/octet-stream";
+};
+
+// Chrome/Edge/Safari expose the folder-relative path via a nonstandard
+// property. Fall back to plain name for multi-file picks.
+const relPathOf = (f: File): string => {
+  const rel = (f as unknown as { webkitRelativePath?: string }).webkitRelativePath;
+  if (rel && rel.length > 0) {
+    // Strip the top-level folder so uploads land at <slug>/<file>, not
+    // <slug>/<folder-name>/<file>.
+    const idx = rel.indexOf("/");
+    return idx >= 0 ? rel.slice(idx + 1) : rel;
+  }
+  return f.name;
+};
+
+
 
 const CATEGORIES = ["tycoon", "twist", "other"] as const;
 const BUILTIN_SLUGS = new Set(GAMES.map((g) => g.id));
