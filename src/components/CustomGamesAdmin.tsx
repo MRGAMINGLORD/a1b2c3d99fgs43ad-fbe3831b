@@ -93,6 +93,12 @@ const CustomGamesAdmin = () => {
   const [html, setHtml] = useState("");
   const [credits, setCredits] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Bundle uploads: full folder or hand-picked files. When present, these
+  // are uploaded verbatim into game-files/<slug>/… and take precedence over
+  // any HTML pasted into the source textarea.
+  const [bundleFiles, setBundleFiles] = useState<File[]>([]);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
 
