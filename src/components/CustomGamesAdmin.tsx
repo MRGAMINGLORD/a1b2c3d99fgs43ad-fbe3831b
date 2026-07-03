@@ -384,8 +384,107 @@ const CustomGamesAdmin = () => {
             ))}
           </div>
         </div>
+        <div className="rounded-md border border-primary/40 bg-background/40 p-3">
+          <Label className="font-display text-xs uppercase tracking-wider text-primary">
+            Upload folder or files (optional)
+          </Label>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pick a whole folder — every file (HTML, CSS, JS, TSX, JSON,
+            .gitignore, images, audio…) uploads to <span className="font-mono text-primary">/game-files/{slugify(title) || "your-slug"}/</span>.
+            The entry point is <span className="font-mono">index.html</span> (or the first
+            .html found). When files are picked here they take precedence over the pasted source below.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => folderInputRef.current?.click()}
+            >
+              <FolderUp className="mr-1 h-4 w-4" /> Pick folder
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => filesInputRef.current?.click()}
+            >
+              <Upload className="mr-1 h-4 w-4" /> Add files
+            </Button>
+            {bundleFiles.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setBundleFiles([]);
+                  if (folderInputRef.current) folderInputRef.current.value = "";
+                  if (filesInputRef.current) filesInputRef.current.value = "";
+                }}
+              >
+                <X className="mr-1 h-4 w-4" /> Clear
+              </Button>
+            )}
+          </div>
+          <input
+            ref={folderInputRef}
+            type="file"
+            multiple
+            hidden
+            // Nonstandard but supported in Chromium/WebKit for folder selection.
+            {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+            onChange={(e) => {
+              const list = Array.from(e.target.files ?? []);
+              if (list.length > 0) setBundleFiles(list);
+            }}
+          />
+          <input
+            ref={filesInputRef}
+            type="file"
+            multiple
+            hidden
+            onChange={(e) => {
+              const list = Array.from(e.target.files ?? []);
+              if (list.length > 0) {
+                setBundleFiles((prev) => [...prev, ...list]);
+              }
+            }}
+          />
+          {bundleFiles.length > 0 && (
+            <div className="mt-2 max-h-40 overflow-y-auto rounded border border-primary/30 bg-background/60 p-2 font-mono text-[11px]">
+              {bundleFiles.map((f, i) => (
+                <div key={`${relPathOf(f)}-${i}`} className="flex items-center justify-between gap-2">
+                  <span className="truncate text-primary">{relPathOf(f)}</span>
+                  <span className="shrink-0 text-muted-foreground">
+                    {(f.size / 1024).toFixed(1)} KB
+                  </span>
+                  <button
+                    type="button"
+                    className="text-destructive hover:opacity-80"
+                    onClick={() => setBundleFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    aria-label={`Remove ${relPathOf(f)}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              <div className="mt-1 text-muted-foreground">
+                {bundleFiles.length} file(s) ready · entry:{" "}
+                <span className="text-primary">
+                  {bundleFiles.find((f) => relPathOf(f) === "index.html")
+                    ? "index.html"
+                    : bundleFiles.find((f) => relPathOf(f).toLowerCase().endsWith(".html"))
+                      ? relPathOf(bundleFiles.find((f) => relPathOf(f).toLowerCase().endsWith(".html"))!)
+                      : "⚠ no .html found"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
         <div>
-          <Label htmlFor="cg-html">Game source — HTML or React/JSX</Label>
+          <Label htmlFor="cg-html">
+            Game source — HTML or React/JSX {bundleFiles.length > 0 && <span className="text-muted-foreground">(ignored while files are picked above)</span>}
+          </Label>
           <Textarea
             id="cg-html"
             placeholder="Paste either a full <html>...</html> document OR a React component (e.g. function Game() { return <div>…</div> } — with or without `export default`). React snippets are auto-wrapped with React + Babel CDN scripts so they run in the same /play/<slug> tab."
@@ -393,6 +492,7 @@ const CustomGamesAdmin = () => {
             onChange={(e) => setHtml(e.target.value)}
             rows={8}
             className="font-mono text-xs"
+            disabled={bundleFiles.length > 0}
           />
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
             <FileCode className="h-3 w-3" />
