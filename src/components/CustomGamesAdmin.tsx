@@ -126,6 +126,9 @@ const CustomGamesAdmin = () => {
     setCategory("other");
     setHtml("");
     setCredits("");
+    setBundleFiles([]);
+    if (folderInputRef.current) folderInputRef.current.value = "";
+    if (filesInputRef.current) filesInputRef.current.value = "";
   };
 
   const startEdit = async (row: CustomGameRow) => {
