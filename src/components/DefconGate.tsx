@@ -10,6 +10,7 @@ import { Loader2, Lock, ShieldAlert, KeyRound, AlertTriangle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { SecretInput } from "@/components/ui/secret-input";
 import defcon0Image from "@/assets/defcon0-unpublished.png.asset.json";
+import { PasswordGateDecor } from "@/components/PasswordGateDecor";
 import {
   useDefcon,
   isDefconGateUnlocked,
@@ -275,6 +276,8 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
+      <>
+        <PasswordGateDecor />
       <BlastDoor
         variant="primary"
         label="DEFCON 2"
@@ -327,8 +330,10 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
           </form>
         )}
       </BlastDoor>
+      </>
     );
   }
+
 
   // Lockout persists across DEFCON level changes — once you're locked out,
   // dropping the level back to 4 doesn't grant access until the timer expires.
