@@ -12,6 +12,7 @@ import {
   remainingPasswordGateAttempts,
   submitPasswordGateAttempt,
 } from "@/lib/passwordGate";
+import { PasswordGateDecor } from "@/components/PasswordGateDecor";
 
 // Admin login only. New admin accounts are NOT created here — they must be
 // provisioned by an existing admin from the backend Users panel. This keeps
