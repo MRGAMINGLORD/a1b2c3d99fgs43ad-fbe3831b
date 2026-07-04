@@ -89,10 +89,11 @@ const TestGate = ({
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-6">
+      <PasswordGateDecor />
       <form
         onSubmit={tryUnlock}
-        className="w-full max-w-sm space-y-4 rounded-lg border border-primary/40 bg-card/60 p-6 border-glow"
+        className="relative z-10 w-full max-w-sm space-y-4 rounded-lg border border-primary/40 bg-card/60 p-6 border-glow"
       >
         <div className="flex items-center gap-2">
           <Lock className="h-5 w-5 text-primary" />
