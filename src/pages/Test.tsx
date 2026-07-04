@@ -38,6 +38,7 @@ import CoverImagePicker from "@/components/CoverImagePicker";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
 import GameCard from "@/components/GameCard";
 import TesterChat from "@/components/TesterChat";
+import { PasswordGateDecor } from "@/components/PasswordGateDecor";
 import TestSyncPanel from "@/components/TestSyncPanel";
 import { GAMES, type GameMeta } from "@/lib/games";
 import { useDefcon } from "@/hooks/useDefcon";
