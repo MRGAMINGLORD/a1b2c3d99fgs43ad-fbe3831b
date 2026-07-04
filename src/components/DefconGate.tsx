@@ -330,8 +330,10 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
           </form>
         )}
       </BlastDoor>
+      </>
     );
   }
+
 
   // Lockout persists across DEFCON level changes — once you're locked out,
   // dropping the level back to 4 doesn't grant access until the timer expires.
