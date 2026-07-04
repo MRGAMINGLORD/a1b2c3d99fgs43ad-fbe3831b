@@ -276,6 +276,8 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
+      <>
+        <PasswordGateDecor />
       <BlastDoor
         variant="primary"
         label="DEFCON 2"
