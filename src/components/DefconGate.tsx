@@ -9,6 +9,8 @@ import { useLocation } from "react-router-dom";
 import { Loader2, Lock, ShieldAlert, KeyRound, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SecretInput } from "@/components/ui/secret-input";
+import defcon0Image from "@/assets/defcon0-unpublished.png.asset.json";
+import { SecretInput } from "@/components/ui/secret-input";
 import {
   useDefcon,
   isDefconGateUnlocked,
