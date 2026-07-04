@@ -10,6 +10,7 @@ import { Loader2, Lock, ShieldAlert, KeyRound, AlertTriangle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { SecretInput } from "@/components/ui/secret-input";
 import defcon0Image from "@/assets/defcon0-unpublished.png.asset.json";
+import { PasswordGateDecor } from "@/components/PasswordGateDecor";
 import {
   useDefcon,
   isDefconGateUnlocked,
