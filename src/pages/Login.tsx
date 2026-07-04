@@ -88,8 +88,9 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-8">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-6">
+      <PasswordGateDecor />
+      <form onSubmit={handleSubmit} className="relative z-10 w-full max-w-sm space-y-4 rounded-lg border border-border bg-card p-8">
         <h1 className="text-center font-display text-2xl text-primary">Admin Login</h1>
         <p className="text-center text-xs text-muted-foreground">
           Admin or co-admin sign-in. Public sign-up is disabled.
