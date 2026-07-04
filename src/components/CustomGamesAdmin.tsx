@@ -248,10 +248,6 @@ const CustomGamesAdmin = () => {
     }
 
     const usingBundle = bundleFiles.length > 0;
-    const confirmMsg = editingId
-      ? `Save changes to "${title.trim()}"?\n\nThis will ${usingBundle ? `replace ${bundleFiles.length} file(s) under` : "overwrite"} /game-files/${slug}/${usingBundle ? "" : "index.html"}.`
-      : `Post "${title.trim()}" as a new game at /play/${slug}?\n\n${usingBundle ? `${bundleFiles.length} file(s) will be uploaded to /game-files/${slug}/.` : `A file will be created at /game-files/${slug}/index.html.`}`;
-    if (!confirm(confirmMsg)) return;
 
     setSubmitting(true);
 
