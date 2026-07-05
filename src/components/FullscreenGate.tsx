@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useDefcon } from "@/hooks/useDefcon";
+
 
 /**
  * Auto-requests fullscreen on the first user gesture. The moment the user
