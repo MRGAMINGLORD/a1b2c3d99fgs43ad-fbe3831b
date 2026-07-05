@@ -604,7 +604,7 @@ const PlayGame = () => {
   if (notFound || !resolved) return <GameNotFound gameId={gameId} />;
 
   const Loader = builtIn
-    ? LOADERS[gameId as GameId]
+    ? LOADERS[gameId as GameId] ?? (gameId && CUSTOM_LOADERS[gameId]) ?? null
     : (gameId && CUSTOM_LOADERS[gameId]) || null;
 
   return (
