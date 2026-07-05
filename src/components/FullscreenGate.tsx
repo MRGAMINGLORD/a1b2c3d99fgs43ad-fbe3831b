@@ -12,9 +12,15 @@ import { useDefcon } from "@/hooks/useDefcon";
 export const FullscreenGate = ({ children }: { children: ReactNode }) => {
   const [terminated, setTerminated] = useState(false);
   const hasEnteredOnceRef = useRef(false);
+  const { level } = useDefcon();
+  // DEFCON 0 disguises the site as unpublished — the tab must survive normal
+  // refresh/minimize behaviour, so fullscreen enforcement is disabled.
+  const disabled = level === 0;
 
   // Auto-enter fullscreen on the first user gesture.
   useEffect(() => {
+    if (disabled) return;
+
     const tryEnter = async () => {
       if (document.fullscreenElement) return;
       try {
