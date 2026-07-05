@@ -32,6 +32,7 @@ const BlastDoor = ({
   icon,
   children,
   doorState = "closed",
+  transparentBg = false,
 }: {
   variant?: "primary" | "warning";
   label: string;
@@ -39,6 +40,7 @@ const BlastDoor = ({
   icon: React.ReactNode;
   children: React.ReactNode;
   doorState?: "closed" | "shake" | "opening";
+  transparentBg?: boolean;
 }) => {
   const stripeColor = "hsl(var(--foreground))";
   const accentClass = "text-foreground";
@@ -53,7 +55,8 @@ const BlastDoor = ({
         : "";
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+    <div className={`relative flex min-h-screen items-center justify-center overflow-hidden p-4 ${transparentBg ? "" : "bg-background"}`}>
+
       {/* Background grid + vignette */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
