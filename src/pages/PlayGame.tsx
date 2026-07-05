@@ -6,12 +6,18 @@ import { fetchCustomGame } from "@/hooks/useCustomGames";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 
-type GameId = "turtle-trade-co" | "defense-of-belgium" | "waffle-craft";
+type GameId =
+  | "turtle-trade-co"
+  | "defense-of-belgium"
+  | "waffle-craft"
+  | "golden-grid"
+  | "neon-snake"
+  | "gravity-runner"
+  | "mini-games";
 
-// Only games with real files in /public/games/<slug>/index.html belong here.
-// Custom admin-created games (like "neon-snake") live in the database and are
-// resolved via fetchCustomGame below — DO NOT add them here or the lookup will
-// short-circuit and load a non-existent /games/<slug>/index.html (→ 404).
+// Games with real files in /public/games/<slug>/index.html. Baked-in copies of
+// previously-custom games live here too so the hub still works if this repo
+// is forked without its original database.
 const GAMES: Record<GameId, { src: string; title: string; loadingFlavor: string }> = {
   "turtle-trade-co": {
     src: "/games/turtle-trade-co/index.html",
@@ -27,6 +33,26 @@ const GAMES: Record<GameId, { src: string; title: string; loadingFlavor: string 
     src: "/games/waffle-craft/index.html",
     title: "Waffle Craft",
     loadingFlavor: "Riding the minecart into the mines...",
+  },
+  "golden-grid": {
+    src: "/games/golden-grid/index.html",
+    title: "Golden Grid",
+    loadingFlavor: "Stacking golden waffles...",
+  },
+  "neon-snake": {
+    src: "/games/neon-snake/index.html",
+    title: "Neon Snake",
+    loadingFlavor: "Powering up the neon grid...",
+  },
+  "gravity-runner": {
+    src: "/games/gravity-runner/index.html",
+    title: "Gravity runner",
+    loadingFlavor: "Flipping gravity...",
+  },
+  "mini-games": {
+    src: "/games/mini-games/index.html",
+    title: "Mini Games",
+    loadingFlavor: "Loading the arcade cabinet...",
   },
 };
 
