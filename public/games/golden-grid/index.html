@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){
+  function ser(e){ if(!e) return 'Unknown error'; if(typeof e==='string') return e; return (e.stack||e.message||String(e)); }
+  function post(kind,e){ try{ parent.postMessage({__waffleGameError:true,kind:kind,message:ser(e),time:Date.now()},'*'); }catch(_){} }
+  window.addEventListener('error',function(e){ post('runtime', e.error||e.message); });
+  window.addEventListener('unhandledrejection',function(e){ post('runtime', e.reason); });
+  var oe=console.error.bind(console);
+  console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Golden Grid</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #000; touch-action: none; overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+        .canvas-bg { background: radial-gradient(circle at center, #111 0%, #000 100%); }
+        canvas { display: block; touch-action: none; }
+        .hidden { display: none !important; }
+        .menu-btn {
+            width: 260px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            font-weight: 900;
+            font-size: 1.25rem;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .blink { animation: blink 1s infinite; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex justify-center items-center font-sans text-white">
+
+    <div id="game-container" class="relative w-full h-full max-w-5xl canvas-bg shadow-2xl overflow-hidden flex flex-col">
+        
+        <canvas id="gameCanvas" class="block w-full flex-1 z-0"></canvas>
+
+        <!-- HUD -->
+        <div id="hud" class="absolute top-0 left-0 right-0 p-4 flex justify-between items-start pointer-events-none z-10 hidden">
+            <button id="btn-home" class="pointer-events-auto bg-zinc-900/80 border border-zinc-800 text-zinc-400 p-2 rounded-lg active:scale-90 transition-transform">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+            </button>
+            <div class="bg-zinc-900/90 border border-zinc-800 px-6 py-2 rounded-2xl text-center pointer-events-auto shadow-xl flex flex-col items-center min-w-[160px]">
+                <div class="flex justify-between w-full text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1 gap-4">
+                    <span id="hud-highscore">BEST: 0</span>
+                    <span id="hud-rank" class="text-yellow-500 hidden">PLACE: -</span>
+                    <span id="hud-timer">00:00</span>
+                </div>
+                <div class="text-yellow-400 font-black text-3xl leading-none" id="hud-value">0</div>
+                <div class="text-orange-400 font-bold text-sm mt-1 hidden" id="hud-combo">COMBO x2</div>
+                <div class="text-cyan-400 font-bold text-xs mt-1 hidden" id="hud-extra">GEMS: 0/5</div>
+            </div>
+            <div class="pointer-events-auto">
+                <button onclick="showTutorial()" class="bg-zinc-900/80 border border-zinc-800 text-zinc-400 p-2 rounded-lg active:scale-90 transition-transform flex items-center justify-center w-10 h-10 font-black text-xl">
+                    ?
+                </button>
+            </div>
+        </div>
+
+        <!-- MAIN MENU -->
+        <div id="screen-menu" class="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-20">
+            <div class="mb-8 text-center">
+                <h1 class="text-6xl font-black text-yellow-500 tracking-tighter italic">GOLDEN<span class="text-white">GRID</span></h1>
+                <p class="text-zinc-500 text-xs font-bold tracking-[0.4em]">PARTICLE EDITION</p>
+            </div>
+            
+            <button onclick="startGame('regular')" class="menu-btn bg-yellow-500 text-black shadow-[0_5px_0_#a16207] active:translate-y-1 active:shadow-none">Classic Grid</button>
+            <button onclick="startGame('sand')" class="menu-btn bg-orange-500 text-black shadow-[0_5px_0_#9a3412] active:translate-y-1 active:shadow-none">Sandfall</button>
+            <button onclick="startGame('color')" class="menu-btn bg-zinc-100 text-black shadow-[0_5px_0_#555] active:translate-y-1 active:shadow-none">Color Clash</button>
+            <button onclick="showCampaign()" class="menu-btn bg-zinc-800 text-yellow-500 shadow-[0_5px_0_#000] active:translate-y-1 active:shadow-none">Quest Mode</button>
+            
+            <button onclick="showLeaderboards()" class="mt-4 text-zinc-500 hover:text-yellow-500 font-bold text-xs uppercase tracking-widest transition-colors">Leaderboards</button>
+        </div>
+
+        <!-- CAMPAIGN SELECT -->
+        <div id="screen-campaign" class="absolute inset-0 flex flex-col bg-zinc-950 z-20 hidden">
+            <div class="p-6 flex items-center justify-between border-b border-zinc-900">
+                <button onclick="showScreen('menu')" class="text-zinc-400 font-bold bg-zinc-900 px-4 py-2 rounded-lg">BACK</button>
+                <h2 class="text-xl font-black text-yellow-500 tracking-widest">LEVELS</h2>
+                <div class="w-12"></div>
+            </div>
+            <div class="p-6 grid grid-cols-4 gap-3 overflow-y-auto pb-24" id="campaign-grid"></div>
+        </div>
+
+        <!-- LEADERBOARDS -->
+        <div id="screen-leaderboard" class="absolute inset-0 flex flex-col bg-zinc-950 z-20 hidden">
+            <div class="p-6 flex items-center justify-between border-b border-zinc-900">
+                <button id="lb-back-btn" onclick="showScreen('menu')" class="text-zinc-400 font-bold bg-zinc-900 px-4 py-2 rounded-lg">BACK</button>
+                <h2 id="lb-title" class="text-xl font-black text-yellow-500">RECORDS</h2>
+                <div class="w-12"></div>
+            </div>
+            <div id="leaderboard-content" class="p-6 space-y-4 overflow-y-auto w-full max-w-lg mx-auto"></div>
+        </div>
+
+        <!-- GAME OVER -->
+        <div id="screen-gameover" class="absolute inset-0 flex flex-col items-center justify-center bg-black/95 z-30 hidden backdrop-blur-md">
+            <h2 id="go-title" class="text-5xl font-black text-white mb-2 italic">FINISH</h2>
+            <div class="text-zinc-500 text-xs font-black tracking-widest mb-1">SCORE / TIME</div>
+            <div class="text-yellow-500 text-6xl font-black mb-12" id="go-score">0</div>
+            
+            <div id="new-record-container" class="hidden flex-col items-center mb-6 w-full max-w-xs">
+                <div class="text-green-400 font-bold text-sm mb-2 blink text-center">NEW LEADERBOARD RECORD!</div>
+                <input type="text" id="player-name" placeholder="ENTER NAME" maxlength="10" class="w-full bg-zinc-900 border border-zinc-700 text-white p-3 rounded mb-2 text-center font-bold tracking-widest focus:outline-none focus:border-yellow-500 uppercase">
+                <div class="flex gap-2 w-full mt-2">
+                    <button onclick="submitScore()" class="bg-green-500 text-black font-black p-3 rounded-xl flex-1 text-sm tracking-widest active:scale-95 transition-transform">SUBMIT</button>
+                    <button onclick="skipSubmit()" class="bg-zinc-800 text-white font-black p-3 rounded-xl flex-1 text-sm tracking-widest active:scale-95 transition-transform">SKIP</button>
+                </div>
+            </div>
+
+            <div id="standard-go-buttons" class="flex flex-col items-center w-full max-w-xs">
+                <button id="btn-restart" class="menu-btn bg-yellow-500 text-black w-full">TRY AGAIN</button>
+                <button onclick="showScreen('menu')" class="menu-btn bg-zinc-800 text-white mt-2 w-full">MENU</button>
+            </div>
+        </div>
+
+        <!-- DEBUG MENU -->
+        <div id="debug-menu" class="absolute inset-0 bg-black/95 z-50 hidden flex-col items-center justify-center p-8 backdrop-blur-md">
+            <h2 class="text-red-500 font-black text-3xl mb-8 tracking-widest">DEBUG ACCESS</h2>
+            <div class="bg-zinc-900 p-6 rounded-xl border border-red-900/50 w-full max-w-sm space-y-4">
+                <div>
+                    <label class="text-xs text-zinc-500 font-bold">JUMP TO CAMPAIGN LEVEL (1-100)</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="number" id="debug-level-input" min="1" max="100" class="bg-black border border-zinc-700 text-white p-2 rounded flex-1 focus:outline-none focus:border-red-500">
+                        <button onclick="debugJumpLevel()" class="bg-red-600 text-white font-bold px-4 rounded hover:bg-red-500">GO</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-500 font-bold">SET CURRENT SCORE</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="number" id="debug-score-input" class="bg-black border border-zinc-700 text-white p-2 rounded flex-1 focus:outline-none focus:border-red-500">
+                        <button onclick="debugSetScore()" class="bg-red-600 text-white font-bold px-4 rounded hover:bg-red-500">SET</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-500 font-bold">REMOVE RECORD (TYPE NAME)</label>
+                    <div class="flex gap-2 mt-1">
+                        <input type="text" id="debug-remove-name" placeholder="PLAYER NAME" class="bg-black border border-zinc-700 text-white p-2 rounded flex-1 focus:outline-none focus:border-red-500 uppercase">
+                        <button onclick="promptRemoveScore('text')" class="bg-red-600 text-white font-bold px-4 rounded hover:bg-red-500">DEL</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-zinc-500 font-bold">REMOVE RECORD (SELECT FROM LIST)</label>
+                    <div class="flex gap-2 mt-1">
+                        <select id="debug-remove-mode" onchange="updateDebugNameDropdown()" class="bg-black border border-zinc-700 text-white p-2 rounded w-1/3 focus:outline-none focus:border-red-500">
+                            <option value="regular">Classic</option>
+                            <option value="sand">Sandfall</option>
+                            <option value="color">Color</option>
+                        </select>
+                        <select id="debug-remove-dropdown" class="bg-black border border-zinc-700 text-white p-2 rounded flex-1 focus:outline-none focus:border-red-500 text-sm">
+                            <!-- Populated dynamically -->
+                        </select>
+                        <button onclick="promptRemoveScore('dropdown')" class="bg-red-600 text-white font-bold px-4 rounded hover:bg-red-500">DEL</button>
+                    </div>
+                </div>
+                <div id="debug-error" class="text-red-500 text-xs font-bold text-center hidden"></div>
+                <button onclick="document.getElementById('debug-menu').classList.add('hidden')" class="w-full bg-zinc-800 text-white font-bold p-3 rounded mt-2 hover:bg-zinc-700">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- PASSWORD MODAL (Fixes iframe prompt blocking) -->
+        <div id="password-modal" class="absolute inset-0 bg-black/95 z-[60] hidden flex-col items-center justify-center p-8 backdrop-blur-md">
+            <div class="bg-zinc-900 p-6 rounded-xl border border-red-900/50 w-full max-w-sm text-center">
+                <h3 class="text-red-500 font-black text-xl mb-4 tracking-widest">SYSTEM LOGIN</h3>
+                <input type="password" id="debug-password-input" placeholder="ENTER PASSWORD" class="w-full bg-black border border-zinc-700 text-white p-3 rounded mb-4 text-center tracking-widest focus:outline-none focus:border-red-500">
+                <div class="flex gap-2">
+                    <button onclick="document.getElementById('password-modal').classList.add('hidden')" class="flex-1 bg-zinc-800 text-zinc-400 font-bold p-3 rounded hover:bg-zinc-700">CANCEL</button>
+                    <button onclick="verifyDebugPassword()" class="flex-1 bg-red-600 text-white font-bold p-3 rounded hover:bg-red-500">ACCESS</button>
+                </div>
+                <div id="password-error" class="text-red-500 text-xs font-bold mt-2 hidden">INCORRECT PASSWORD</div>
+            </div>
+        </div>
+
+        <!-- REMOVE SCORE PASSWORD MODAL -->
+        <div id="remove-password-modal" class="absolute inset-0 bg-black/95 z-[60] hidden flex-col items-center justify-center p-8 backdrop-blur-md">
+            <div class="bg-zinc-900 p-6 rounded-xl border border-red-900/50 w-full max-w-sm text-center">
+                <h3 class="text-red-500 font-black text-xl mb-4 tracking-widest">AUTHORIZATION REQUIRED</h3>
+                <input type="password" id="remove-password-input" placeholder="ENTER SECONDARY PASSWORD" class="w-full bg-black border border-zinc-700 text-white p-3 rounded mb-4 text-center tracking-widest focus:outline-none focus:border-red-500">
+                <div class="flex gap-2">
+                    <button onclick="document.getElementById('remove-password-modal').classList.add('hidden')" class="flex-1 bg-zinc-800 text-zinc-400 font-bold p-3 rounded hover:bg-zinc-700">CANCEL</button>
+                    <button onclick="executeRemoveScore()" class="flex-1 bg-red-600 text-white font-bold p-3 rounded hover:bg-red-500">VERIFY</button>
+                </div>
+                <div id="remove-password-error" class="text-red-500 text-xs font-bold mt-2 hidden">INCORRECT PASSWORD</div>
+            </div>
+        </div>
+
+        <!-- TUTORIAL MODAL -->
+        <div id="tutorial-modal" class="absolute inset-0 bg-black/95 z-[70] hidden flex-col items-center justify-center p-8 backdrop-blur-md">
+            <div class="bg-zinc-900 p-6 rounded-xl border border-yellow-500/50 w-full max-w-sm text-center">
+                <h3 id="tutorial-title" class="text-yellow-500 font-black text-xl mb-4 tracking-widest">HOW TO PLAY</h3>
+                <p id="tutorial-text" class="text-white text-sm mb-6 leading-relaxed font-bold"></p>
+                <button onclick="document.getElementById('tutorial-modal').classList.add('hidden')" class="w-full bg-yellow-500 text-black font-black p-3 rounded hover:bg-yellow-400">GOT IT</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONSTANTS & DATA ---
+        const GRID_SIZE = 10;
+        const SUB_RES = 5; // Pixels per grid cell side (5x5 particles per cell)
+        const PARTICLE_TOTAL = GRID_SIZE * SUB_RES;
+        const DANGER_ROW = 2 * SUB_RES; // Line 2 cells down where sand game ends
+        
+        const COLORS = {
+            yellow: '#EAB308',
+            cyan: '#06B6D4',
+            magenta: '#D946EF',
+            green: '#22C55E',
+            orange: '#F97316',
+            red: '#EF4444',
+            purple: '#A855F7',
+            gem: '#22D3EE',
+            bg: '#111',
+            grid: '#1a1a1a'
+        };
+
+        const PALETTE = [COLORS.yellow, COLORS.cyan, COLORS.magenta, COLORS.green, COLORS.orange, COLORS.red, COLORS.purple];
+
+        const SHAPES = [
+            {m:[[1,1],[1,1]]}, {m:[[1,1,1,1]]}, {m:[[1],[1],[1],[1]]},
+            {m:[[1,0],[1,0],[1,1]]}, {m:[[0,1],[0,1],[1,1]]},
+            {m:[[1,1,1],[0,1,0]]}, {m:[[1]]}, {m:[[1,1]]}, {m:[[1],[1]]},
+            {m:[[1,1,1],[1,0,0],[1,0,0]]}, // large L
+            {m:[[1,1,1],[0,0,1],[0,0,1]]}, // large reverse L
+            {m:[[1,1,1],[1,1,1],[1,1,1]]}, // 3x3 block
+            {m:[[0,1,0],[1,1,1],[0,1,0]]}, // plus
+            {m:[[1,1,1,1,1]]}, {m:[[1],[1],[1],[1],[1]]}, // 5-line
+            {m:[[1,1,0],[0,1,1]]}, {m:[[0,1,1],[1,1,0]]}  // Z shapes
+        ];
+
+        const memory = {
+            leaderboards: { 
+                regular: [], 
+                sand: [], 
+                color: [] 
+            },
+            campaign: {}
+        };
+
+        // ===== APOCALYPSE WAFFLE: PERSISTENCE LAYER =====
+        const SAVE_KEY = 'gg:save:v1';
+        const SB_URL = 'https://tjrpaguijfdzxxwzlxsg.supabase.co';
+        const SB_KEY = 'sb_publishable_ZG9h4FzBIo14Orra9jv1-g_emx_Txuk';
+        const GAME_SLUG = 'golden-grid';
+        const LB_MODES = ['regular','sand','color'];
+        const lbCache = { regular: null, sand: null, color: null };
+        function ggSave() {
+            try {
+                localStorage.setItem(SAVE_KEY, JSON.stringify({
+                    campaign: memory.campaign,
+                    lastMode: (typeof currentMode !== 'undefined') ? currentMode : 'regular',
+                    lastLevel: (typeof currentLevel !== 'undefined') ? currentLevel : 1,
+                    savedAt: Date.now()
+                }));
+            } catch(e) {}
+        }
+        function ggLoad() {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (!raw) return;
+                const d = JSON.parse(raw);
+                if (d && typeof d === 'object') {
+                    if (d.campaign && typeof d.campaign === 'object') memory.campaign = d.campaign;
+                    if (typeof d.lastLevel === 'number') currentLevel = d.lastLevel;
+                    if (typeof d.lastMode === 'string') currentMode = d.lastMode;
+                }
+            } catch(e) {}
+        }
+        async function lbFetch(mode) {
+            try {
+                const url = SB_URL + '/rest/v1/leaderboard?select=name,score&game_slug=eq.' + GAME_SLUG + '&mode=eq.' + mode + '&order=score.desc&limit=10';
+                const r = await fetch(url, { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }});
+                if (!r.ok) return [];
+                const rows = await r.json();
+                lbCache[mode] = rows;
+                memory.leaderboards[mode] = rows;
+                return rows;
+            } catch(e) { return []; }
+        }
+        async function lbSubmit(mode, name, score) {
+            try {
+                const r = await fetch(SB_URL + '/rest/v1/leaderboard', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, Prefer: 'return=minimal' },
+                    body: JSON.stringify({ game_slug: GAME_SLUG, mode, name: String(name).slice(0,24), score: Math.max(0, Math.floor(score)) })
+                });
+                return r.ok;
+            } catch(e) { return false; }
+        }
+        function lbRefreshAll() { LB_MODES.forEach(lbFetch); }
+        try {
+            const bc = new BroadcastChannel('apocalypse-waffle');
+            bc.onmessage = (ev) => { if (ev && ev.data && ev.data.type === 'save-now') ggSave(); };
+        } catch(e) {}
+        window.addEventListener('pagehide', ggSave);
+        window.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') ggSave(); });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => { ggLoad(); lbRefreshAll(); });
+        } else { setTimeout(() => { ggLoad(); lbRefreshAll(); }, 0); }
+        // ===== END PERSISTENCE LAYER =====
+
+
+
+        // --- STATE ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        let gameState = 'MENU';
+        let currentMode = 'regular'; // regular, sand, color, campaign
+        let score = 0;
+        let combo = 0;
+        let streak = 0;
+        let roundHasClear = false;
+        let sandBlocksPlaced = 0;
+        let gameStartTime = 0;
+        let elapsedTime = 0;
+        let lastTime = 0;
+        
+        let isDragging = false;
+        let dragX = 0, dragY = 0;
+        let draggedIndex = -1;
+        let availableShapes = [null, null, null];
+
+        // Sand Mode specific state
+        let sandActiveShape = null;
+        let sandShapeX = 0;
+        let isPositioningSand = false;
+        let sandFalling = false;
+        let justDropped = false;
+        
+        // Grid stores: 0 (empty), hex string (color), or special (3=obstacle, 2=gem)
+        let grid = []; 
+        let gemGrid = []; // Stores true/false for gems embedded in blocks
+        let sandGrid = []; 
+        
+        // Campaign Target Entities
+        let collectedGems = 0;
+        let targetGems = 0;
+        let turtles = [];
+        let collectedTurtles = 0;
+        let targetTurtles = 0;
+        let currentLevel = 1;
+
+        // Visuals & Animations
+        let floatingTexts = [];
+        let cellSize, gridX, gridY, slotY;
+
+        // Debug state
+        let debugQCount = 0;
+        let debugTimer = null;
+        let pendingDeleteName = "";
+        let pendingDeleteMode = "";
+
+        // --- INIT ---
+        function init() {
+            resize();
+            window.addEventListener('resize', resize);
+            canvas.addEventListener('pointerdown', onDown);
+            canvas.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+            document.getElementById('btn-home').onclick = () => showScreen('menu');
+            
+            // Hidden Debug Listener
+            window.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'q') {
+                    e.preventDefault(); 
+                    debugQCount++;
+                    clearTimeout(debugTimer);
+                    debugTimer = setTimeout(() => { debugQCount = 0; }, 1000); 
+                    
+                    if (debugQCount >= 2) {
+                        debugQCount = 0;
+                        // Using a custom modal instead of prompt() to bypass iframe restrictions
+                        document.getElementById('password-modal').classList.remove('hidden');
+                        document.getElementById('debug-password-input').value = '';
+                        document.getElementById('password-error').classList.add('hidden');
+                        setTimeout(() => document.getElementById('debug-password-input').focus(), 100);
+                    }
+                }
+            });
+
+            lastTime = performance.now();
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            const r = canvas.parentElement.getBoundingClientRect();
+            canvas.width = r.width;
+            canvas.height = r.height;
+            
+            const topOffset = 140; // Increased space for HUD to prevent overlaps
+            const bottomOffset = 180; // Space for the 3 selectable blocks
+            const maxGridHeight = canvas.height - topOffset - bottomOffset; 
+            const maxGridWidth = canvas.width - 40; 
+            
+            cellSize = Math.floor(Math.min(maxGridWidth, maxGridHeight) / GRID_SIZE);
+            gridX = (canvas.width - cellSize * GRID_SIZE) / 2;
+            
+            gridY = topOffset + (maxGridHeight - cellSize * GRID_SIZE) / 2; 
+            slotY = canvas.height - 90;
+        }
+
+        function showScreen(s) {
+            ['screen-menu', 'screen-campaign', 'screen-leaderboard', 'screen-gameover', 'hud'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            if(s !== 'none') document.getElementById('screen-' + s).classList.remove('hidden');
+            if(s === 'none') document.getElementById('hud').classList.remove('hidden');
+        }
+
+        function showTutorial() {
+            let title = "HOW TO PLAY";
+            let text = "";
+            if (currentMode === 'regular') {
+                title = "CLASSIC GRID";
+                text = "Drag and drop blocks onto the grid. Fill complete rows or columns to clear them and score points. Keep the board from filling up!";
+            } else if (currentMode === 'sand') {
+                title = "SANDFALL";
+                text = "Move your cursor or finger to position the sand block at the top. Tap to drop it. Match colors touching both the left and right walls to clear them. Don't let the sand pile up past the red dashed line!";
+            } else if (currentMode === 'color') {
+                title = "COLOR CLASH";
+                text = "Place blocks onto the grid. To clear lines, the entire row or column must be completely filled with the EXACT SAME color!";
+            } else if (currentMode === 'campaign') {
+                title = "QUEST MODE";
+                if (currentLevel <= 50) {
+                    text = "Clear lines that contain the glowing Gems to collect them! Collect the target number of Gems to beat the level.";
+                } else {
+                    text = "Trap the Turtles! Turtles move to an adjacent empty square every time you place a block. Surround them completely so they cannot move. If a Turtle touches the outer edge and it's their turn, they escape and you lose!";
+                }
+            }
+            document.getElementById('tutorial-title').innerText = title;
+            document.getElementById('tutorial-text').innerText = text;
+            document.getElementById('tutorial-modal').classList.remove('hidden');
+        }
+
+        function showCampaign() {
+            const g = document.getElementById('campaign-grid');
+            g.innerHTML = '';
+            for(let i=1; i<=100; i++) {
+                const b = document.createElement('button');
+                const best = memory.campaign[i];
+                const unlocked = i === 1 || memory.campaign[i-1];
+                
+                b.className = `aspect-square rounded-xl flex flex-col items-center justify-center border-2 ${best ? 'border-yellow-500 bg-yellow-500/10' : (unlocked ? 'border-zinc-800 bg-zinc-900' : 'border-zinc-900 bg-zinc-950 opacity-50 pointer-events-none')} active:scale-95 transition-all`;
+                
+                b.innerHTML = `<span class="text-xl font-black ${unlocked ? 'text-white' : 'text-zinc-700'}">${i}</span><span class="text-[8px] opacity-50">${best ? 'BEST:'+best : (unlocked ? 'UNLOCKED' : 'LOCKED')}</span>`;
+                
+                // Show a tiny icon indicator for gem vs turtle levels
+                let iconStr = i <= 50 ? '<div class="w-2 h-2 rounded bg-cyan-400 mt-1"></div>' : '<div class="w-2 h-2 rounded bg-green-500 mt-1"></div>';
+                b.innerHTML += iconStr;
+
+                if(unlocked) b.onclick = () => startGame('campaign', i);
+                g.appendChild(b);
+            }
+            showScreen('campaign');
+        }
+
+        function showLeaderboards(viewMode = null) {
+            const c = document.getElementById('leaderboard-content');
+            if (!viewMode) {
+                c.innerHTML = `
+                    <div class="space-y-3">
+                        <button onclick="showLeaderboards('regular')" class="w-full bg-zinc-900 p-4 rounded-xl border border-zinc-800 hover:border-yellow-500 text-left transition-colors flex justify-between items-center">
+                            <div>
+                                <div class="text-zinc-500 text-xs font-black">CLASSIC GRID</div>
+                                <div class="text-xl font-black text-yellow-500">TOP 10</div>
+                            </div>
+                            <span class="text-zinc-600 font-bold">▶</span>
+                        </button>
+                        <button onclick="showLeaderboards('sand')" class="w-full bg-zinc-900 p-4 rounded-xl border border-zinc-800 hover:border-orange-500 text-left transition-colors flex justify-between items-center">
+                            <div>
+                                <div class="text-zinc-500 text-xs font-black">SANDFALL</div>
+                                <div class="text-xl font-black text-orange-500">TOP 10</div>
+                            </div>
+                            <span class="text-zinc-600 font-bold">▶</span>
+                        </button>
+                        <button onclick="showLeaderboards('color')" class="w-full bg-zinc-900 p-4 rounded-xl border border-zinc-800 hover:border-white text-left transition-colors flex justify-between items-center">
+                            <div>
+                                <div class="text-zinc-500 text-xs font-black">COLOR CLASH</div>
+                                <div class="text-xl font-black text-white">TOP 10</div>
+                            </div>
+                            <span class="text-zinc-600 font-bold">▶</span>
+                        </button>
+                    </div>
+                `;
+                document.getElementById('lb-back-btn').onclick = () => showScreen('menu');
+                document.getElementById('lb-title').innerText = "RECORDS";
+            } else {
+                let board = memory.leaderboards[viewMode] || [];
+                let title = viewMode === 'regular' ? 'CLASSIC GRID' : viewMode === 'sand' ? 'SANDFALL' : 'COLOR CLASH';
+                let colorClass = viewMode === 'regular' ? 'text-yellow-500' : viewMode === 'sand' ? 'text-orange-500' : 'text-white';
+                
+                let listHTML = board.length === 0 ? '<div class="text-center text-zinc-500 mt-8 font-bold">NO RECORDS YET</div>' : board.map((entry, idx) => `
+                    <div class="flex justify-between items-center bg-zinc-900 p-3 rounded-lg border border-zinc-800 mb-2">
+                        <div class="flex items-center gap-4">
+                            <div class="w-6 text-center font-black ${idx === 0 ? colorClass : 'text-zinc-500'}">#${idx+1}</div>
+                            <div class="font-bold text-white uppercase tracking-wider">${entry.name}</div>
+                        </div>
+                        <div class="font-black ${colorClass}">${entry.score}</div>
+                    </div>
+                `).join('');
+
+                c.innerHTML = `
+                    <div class="mb-4 text-xs font-black text-zinc-500 tracking-widest uppercase text-center border-b border-zinc-800 pb-2">TOP 10 PLAYERS</div>
+                    ${listHTML}
+                `;
+                document.getElementById('lb-title').innerText = title;
+                document.getElementById('lb-back-btn').onclick = () => showLeaderboards(null);
+            }
+            showScreen('leaderboard');
+        }
+
+        // --- ANIMATION SYSTEM ---
+        function addFloatingText(x, y, lines, color) {
+            floatingTexts.push({ x, y, lines, color, life: 1.5 });
+        }
+
+        // --- SCORE & RANKING ---
+        function getRank(mode, s) {
+            if (mode === 'campaign' || s <= 0) return '-';
+            const board = memory.leaderboards[mode];
+            if (!board) return '-';
+            let rank = 1;
+            for (let entry of board) {
+                if (s > entry.score) break;
+                rank++;
+            }
+            return rank <= 10 ? rank : '-';
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-value').innerText = score;
+            if (currentMode !== 'campaign') {
+                let r = getRank(currentMode, score);
+                const rankEl = document.getElementById('hud-rank');
+                if (r !== '-') {
+                    rankEl.innerText = `PLACE: #${r}`;
+                    rankEl.classList.remove('hidden');
+                } else {
+                    rankEl.innerText = `PLACE: -`;
+                    rankEl.classList.add('hidden');
+                }
+            } else {
+                document.getElementById('hud-rank').classList.add('hidden');
+            }
+        }
+
+        function submitScore() {
+            let name = document.getElementById('player-name').value.trim().toUpperCase() || 'ANON';
+            let board = memory.leaderboards[currentMode];
+            board.push({ name: name, score: score }); try { lbSubmit(currentMode, name, score).then(()=>lbFetch(currentMode).then(()=>{ try{ showLeaderboards(currentMode); }catch(_){} })); } catch(_){}
+            board.sort((a, b) => b.score - a.score);
+            if (board.length > 10) board.pop(); // Keep top 10
+
+            skipSubmit();
+            showLeaderboards(currentMode);
+        }
+
+        function skipSubmit() {
+            document.getElementById('new-record-container').classList.add('hidden');
+            document.getElementById('standard-go-buttons').classList.remove('hidden');
+            document.getElementById('btn-restart').onclick = () => startGame(currentMode, currentLevel);
+        }
+
+        // --- GAMEPLAY ---
+        function startGame(mode, level = 1) {
+            currentMode = mode; currentLevel = level; try { ggSave(); } catch(_){}
+            score = 0;
+            combo = 0;
+            streak = 0;
+            roundHasClear = false;
+            sandBlocksPlaced = 0;
+            gameState = 'PLAYING';
+            availableShapes = [null, null, null];
+            floatingTexts = [];
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+            sandGrid = Array(PARTICLE_TOTAL).fill().map(() => Array(PARTICLE_TOTAL).fill(0));
+            gemGrid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+            turtles = [];
+            collectedGems = 0;
+            collectedTurtles = 0;
+            
+            updateHUD();
+            document.getElementById('hud-extra').classList.add('hidden');
+            document.getElementById('hud-combo').classList.add('hidden');
+            
+            let best = currentMode === 'campaign' ? (memory.campaign[level] || 0) : (memory.leaderboards[currentMode][0]?.score || 0);
+            document.getElementById('hud-highscore').innerText = `BEST: ${best}`;
+            
+            gameStartTime = performance.now();
+            elapsedTime = 0;
+            lastTime = performance.now();
+
+            if(mode === 'campaign') {
+                currentLevel = level;
+                document.getElementById('hud-extra').classList.remove('hidden');
+                
+                if (level <= 50) {
+                    // GEM LEVELS
+                    targetTurtles = 0;
+                    targetGems = 2 + Math.floor(level * 0.5); // Re-scaled so late levels fit on the board
+                    
+                    let blocksPlaced = 0;
+                    let attempts = 0;
+                    
+                    while(blocksPlaced < targetGems && attempts < 400) {
+                        let s = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+                        let x = Math.floor(Math.random()*GRID_SIZE);
+                        let y = Math.floor(Math.random()*GRID_SIZE);
+                        
+                        if(canPlace(s.m, x, y)) {
+                            let color = PALETTE[Math.floor(Math.random()*PALETTE.length)];
+                            let blockCells = [];
+                            for(let r=0; r<s.m.length; r++) {
+                                for(let c=0; c<s.m[0].length; c++) {
+                                    if(s.m[r][c]) {
+                                        grid[y+r][x+c] = color;
+                                        blockCells.push({r: y+r, c: x+c});
+                                    }
+                                }
+                            }
+                            if(blockCells.length > 0) {
+                                let gemCell = blockCells[Math.floor(Math.random()*blockCells.length)];
+                                gemGrid[gemCell.r][gemCell.c] = true;
+                                blocksPlaced++;
+                            }
+                        }
+                        attempts++;
+                    }
+                    targetGems = blocksPlaced;
+                    updateCampaignHUD(collectedGems, targetGems, "GEMS");
+                } else {
+                    // TURTLE LEVELS
+                    targetGems = 0;
+                    targetTurtles = 2 + Math.floor((level - 50) * 0.2); // Gradual scaling
+                    if (targetTurtles > 10) targetTurtles = 10;
+                    
+                    // Add some random static blocks for a maze
+                    let obstacles = Math.floor((level - 50) * 0.4);
+                    for(let i=0; i<obstacles; i++) {
+                        let rx = Math.floor(Math.random()*GRID_SIZE);
+                        let ry = Math.floor(Math.random()*GRID_SIZE);
+                        grid[ry][rx] = PALETTE[Math.floor(Math.random()*PALETTE.length)];
+                    }
+
+                    // Spawn turtles in empty spots, guaranteed at least 2 squares from the edge
+                    let attempts = 0;
+                    while(turtles.length < targetTurtles && attempts < 200) {
+                        // Math.floor(Math.random() * (10 - 4)) + 2  -> yields 2 through 7
+                        let rx = Math.floor(Math.random() * (GRID_SIZE - 4)) + 2;
+                        let ry = Math.floor(Math.random() * (GRID_SIZE - 4)) + 2;
+                        
+                        if(grid[ry][rx] === 0 && !turtles.some(t => t.x === rx && t.y === ry)) {
+                            turtles.push({
+                                x: rx, y: ry, 
+                                displayX: rx, displayY: ry, 
+                                trapped: false, opacity: 1.0
+                            });
+                        }
+                        attempts++;
+                    }
+                    targetTurtles = turtles.length;
+                    updateCampaignHUD(collectedTurtles, targetTurtles, "TURTLES");
+                }
+            }
+
+            if (mode === 'sand') {
+                spawnSandShape();
+            } else {
+                genShapes();
+            }
+            
+            showScreen('none');
+        }
+
+        function updateCampaignHUD(current, target, type) {
+            document.getElementById('hud-extra').innerText = `${type}: ${current}/${target}`;
+            document.getElementById('hud-extra').className = `font-bold text-xs mt-1 ${type==='GEMS' ? 'text-cyan-400' : 'text-green-500'}`;
+        }
+
+        function spawnSandShape() {
+            const s = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+            sandActiveShape = {
+                matrix: s.m,
+                color: PALETTE[Math.floor(Math.random()*PALETTE.length)]
+            };
+            sandShapeX = Math.floor(GRID_SIZE / 2) - Math.floor(s.m[0].length / 2);
+            if(sandShapeX < 0) sandShapeX = 0;
+        }
+
+        function canPlaceOn(m, x, y, testGrid) {
+            for(let r=0; r<m.length; r++) {
+                for(let c=0; c<m[0].length; c++) {
+                    if(m[r][c]) {
+                        if(x+c < 0 || x+c >= GRID_SIZE || y+r < 0 || y+r >= GRID_SIZE) return false;
+                        if(testGrid[y+r][x+c] !== 0) return false;
+                        // For turtle levels, pretend turtle cells are occupied
+                        if(currentMode === 'campaign' && turtles.some(t => !t.trapped && t.x === x+c && t.y === y+r)) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function findFit(m, testGrid) {
+            for(let y=0; y<GRID_SIZE; y++) {
+                for(let x=0; x<GRID_SIZE; x++) {
+                    if(canPlaceOn(m, x, y, testGrid)) return {x, y};
+                }
+            }
+            return null;
+        }
+
+        function genShapes() {
+            let tempGrid = grid.map(row => [...row]);
+
+            for(let i=0; i<3; i++) {
+                let s = null;
+                let color = (currentMode === 'color') ? PALETTE[Math.floor(Math.random()*PALETTE.length)] : COLORS.yellow;
+                let fits = false;
+                let attempts = 0;
+
+                while(!fits && attempts < 50) {
+                    s = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+                    let pos = findFit(s.m, tempGrid);
+                    if(pos) {
+                        fits = true;
+                        for(let r=0; r<s.m.length; r++) {
+                            for(let c=0; c<s.m[0].length; c++) {
+                                if(s.m[r][c]) tempGrid[pos.y+r][pos.x+c] = 1;
+                            }
+                        }
+                    }
+                    attempts++;
+                }
+
+                if(!fits) { s = {m:[[1]]}; }
+
+                availableShapes[i] = { matrix: s.m, color: color };
+            }
+        }
+
+        function onDown(e) {
+            if(gameState !== 'PLAYING') return;
+            const r = canvas.getBoundingClientRect();
+            const px = e.clientX - r.left;
+            const py = e.clientY - r.top;
+
+            if (currentMode === 'sand') {
+                isPositioningSand = true;
+                sandShapeX = Math.floor((px - gridX) / cellSize);
+                if(sandActiveShape) {
+                    if(sandShapeX < 0) sandShapeX = 0;
+                    if(sandShapeX + sandActiveShape.matrix[0].length > GRID_SIZE) sandShapeX = GRID_SIZE - sandActiveShape.matrix[0].length;
+                }
+                return;
+            }
+
+            if(py > canvas.height - 180) {
+                const idx = Math.floor(px / (canvas.width/3));
+                if(availableShapes[idx]) {
+                    draggedIndex = idx;
+                    isDragging = true;
+                    dragX = px;
+                    dragY = py; 
+                }
+            }
+        }
+
+        function onMove(e) {
+            const r = canvas.getBoundingClientRect();
+            const px = e.clientX - r.left;
+
+            if (currentMode === 'sand' && (isPositioningSand || e.pointerType === 'mouse')) {
+                sandShapeX = Math.floor((px - gridX) / cellSize);
+                if(sandActiveShape) {
+                    if(sandShapeX < 0) sandShapeX = 0;
+                    if(sandShapeX + sandActiveShape.matrix[0].length > GRID_SIZE) sandShapeX = GRID_SIZE - sandActiveShape.matrix[0].length;
+                }
+            }
+
+            if(!isDragging) return;
+            dragX = px;
+            dragY = e.clientY - r.top; 
+        }
+
+        function onUp() {
+            if (currentMode === 'sand') {
+                if(isPositioningSand && sandActiveShape) dropSandShape();
+                isPositioningSand = false;
+                return;
+            }
+
+            if(!isDragging) return;
+            const s = availableShapes[draggedIndex];
+            const gx = Math.round((dragX - (s.matrix[0].length * cellSize)/2 - gridX) / cellSize);
+            const gy = Math.round((dragY - (s.matrix.length * cellSize)/2 - gridY) / cellSize);
+
+            if(canPlace(s.matrix, gx, gy)) {
+                place(s, gx, gy);
+                availableShapes[draggedIndex] = null;
+                
+                let cleared = checkClears();
+                if(!cleared) {
+                    streak = 0; 
+                    if (combo <= 1) {
+                        document.getElementById('hud-combo').classList.add('hidden');
+                    } else {
+                        document.getElementById('hud-combo').innerText = `COMBO ${combo}`;
+                    }
+                }
+
+                moveTurtles(); // Move turtles after every placement
+                
+                if(availableShapes.every(x => x === null)) {
+                    if (!roundHasClear) {
+                        combo = 0;
+                        if (combo <= 1) document.getElementById('hud-combo').classList.add('hidden');
+                    }
+                    roundHasClear = false;
+                    genShapes();
+                }
+                
+                // Only check for standard game over if a turtle didn't just escape
+                if (gameState === 'PLAYING') {
+                    checkGameOver();
+                }
+            }
+
+            isDragging = false;
+            draggedIndex = -1;
+        }
+
+        function canPlace(m, x, y) {
+            for(let r=0; r<m.length; r++) {
+                for(let c=0; c<m[0].length; c++) {
+                    if(m[r][c]) {
+                        if(x+c < 0 || x+c >= GRID_SIZE || y+r < 0 || y+r >= GRID_SIZE) return false;
+                        if(currentMode !== 'sand' && grid[y+r][x+c] !== 0) return false;
+                        
+                        // Prevent placing on turtles
+                        if(currentMode === 'campaign' && turtles.some(t => !t.trapped && t.x === x+c && t.y === y+r)) return false;
+
+                        if(currentMode === 'sand') {
+                            for(let sy=0; sy<SUB_RES; sy++) {
+                                for(let sx=0; sx<SUB_RES; sx++) {
+                                    if(sandGrid[(y+r)*SUB_RES + sy][(x+c)*SUB_RES + sx] !== 0) return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function moveTurtles() {
+            if (currentMode !== 'campaign' || targetTurtles === 0) return;
+            let newlyTrapped = 0;
+            let turtleEscaped = false;
+
+            turtles.forEach(t => {
+                if (t.trapped || turtleEscaped) return;
+                
+                // Escape condition: If turtle is ALREADY on the edge at the start of its turn, it escapes!
+                if (t.x === 0 || t.x === GRID_SIZE - 1 || t.y === 0 || t.y === GRID_SIZE - 1) {
+                    turtleEscaped = true;
+                    return;
+                }
+                
+                const dirs = [[0,-1], [0,1], [-1,0], [1,0]]; // up, down, left, right
+                let validMoves = [];
+                
+                dirs.forEach(d => {
+                    let nx = t.x + d[0];
+                    let ny = t.y + d[1];
+                    // Check if space is inside grid and empty
+                    if(nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE && grid[ny][nx] === 0) {
+                        // Check not occupied by another untrapped turtle
+                        if(!turtles.some(other => !other.trapped && other.x === nx && other.y === ny)) {
+                            validMoves.push({x: nx, y: ny});
+                        }
+                    }
+                });
+
+                if (validMoves.length > 0) {
+                    // Pick a random valid move
+                    let move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                    t.x = move.x;
+                    t.y = move.y;
+                } else {
+                    // Trapped!
+                    t.trapped = true;
+                    newlyTrapped++;
+                    collectedTurtles++;
+                    score += 500;
+                    addFloatingText(gridX + t.x*cellSize + cellSize/2, gridY + t.y*cellSize, ["TRAPPED!", "+500"], COLORS.green);
+                }
+            });
+
+            if (turtleEscaped) {
+                endGame('escape');
+                return;
+            }
+
+            if (newlyTrapped > 0) {
+                updateHUD();
+                updateCampaignHUD(collectedTurtles, targetTurtles, "TURTLES");
+                if (collectedTurtles >= targetTurtles) {
+                    setTimeout(() => winCampaign(), 1000);
+                }
+            }
+        }
+
+        function dropSandShape() {
+            sandBlocksPlaced++;
+            const m = sandActiveShape.matrix;
+            for(let r=0; r<m.length; r++) {
+                for(let c=0; c<m[0].length; c++) {
+                    if(m[r][c]) {
+                        for(let sy=0; sy<SUB_RES; sy++) {
+                            for(let sx=0; sx<SUB_RES; sx++) {
+                                if(sandGrid[r*SUB_RES + sy][(sandShapeX+c)*SUB_RES + sx] === 0) {
+                                    sandGrid[r*SUB_RES + sy][(sandShapeX+c)*SUB_RES + sx] = sandActiveShape.color;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            score += 10;
+            updateHUD();
+            sandActiveShape = null;
+            sandFalling = true;
+            justDropped = true;
+            
+            setTimeout(() => {
+                if(gameState === 'PLAYING') spawnSandShape();
+            }, 250); 
+        }
+
+        function place(s, x, y) {
+            const m = s.matrix;
+            for(let r=0; r<m.length; r++) {
+                for(let c=0; c<m[0].length; c++) {
+                    if(m[r][c]) {
+                        if(currentMode === 'sand') {
+                            for(let sy=0; sy<SUB_RES; sy++) {
+                                for(let sx=0; sx<SUB_RES; sx++) {
+                                    sandGrid[(y+r)*SUB_RES + sy][(x+c)*SUB_RES + sx] = s.color;
+                                }
+                            }
+                        } else {
+                            grid[y+r][x+c] = s.color;
+                        }
+                    }
+                }
+            }
+            score += 10;
+            updateHUD();
+        }
+
+        function checkClears() {
+            if(currentMode === 'sand') return false; 
+
+            let rows = [], cols = [];
+            for(let i=0; i<GRID_SIZE; i++) {
+                if(grid[i].every(v => v !== 0 && v !== 3)) {
+                    if(currentMode === 'color') {
+                        if(grid[i].every(v => v === grid[i][0])) rows.push(i);
+                    } else rows.push(i);
+                }
+                
+                let colFull = true;
+                let firstColor = grid[0][i];
+                for(let j=0; j<GRID_SIZE; j++) {
+                    if(grid[j][i] === 0 || grid[j][i] === 3) colFull = false;
+                    if(currentMode === 'color' && grid[j][i] !== firstColor) colFull = false;
+                }
+                if(colFull) cols.push(i);
+            }
+
+            let clearedCells = new Set();
+            rows.forEach(r => { for(let c=0; c<GRID_SIZE; c++) clearedCells.add(`${r},${c}`); });
+            cols.forEach(c => { for(let r=0; r<GRID_SIZE; r++) clearedCells.add(`${r},${c}`); });
+
+            if(clearedCells.size > 0) {
+                let sumX = 0, sumY = 0;
+
+                clearedCells.forEach(key => {
+                    let [r, c] = key.split(',').map(Number);
+                    grid[r][c] = 0;
+                    sumX += gridX + c*cellSize + cellSize/2;
+                    sumY += gridY + r*cellSize + cellSize/2;
+                    
+                    if(currentMode === 'campaign' && targetGems > 0 && gemGrid[r][c]) {
+                        gemGrid[r][c] = false;
+                        collectedGems++;
+                    }
+                });
+
+                let cx = sumX / clearedCells.size;
+                let cy = sumY / clearedCells.size;
+
+                let linesCleared = rows.length + cols.length;
+
+                combo++;
+                streak += linesCleared;
+                roundHasClear = true;
+
+                let basePoints = clearedCells.size * 10;
+                let comboBonus = (combo > 1) ? (combo - 1) * 150 : 0;
+                let points = basePoints + comboBonus;
+                
+                if (streak > 1) {
+                    points = Math.floor(points * Math.pow(2, streak - 1));
+                }
+                
+                score += points;
+                updateHUD();
+                
+                let lines = [linesCleared > 1 ? `${linesCleared} LINES!` : "CLEARED!", `+${points}`];
+                if(combo > 1) lines.push(`COMBO ${combo}`);
+                if(streak > 1) lines.push(`STREAK x${Math.pow(2, streak - 1)}!`);
+                addFloatingText(cx, cy, lines, COLORS.cyan);
+                
+                if(combo > 1 || streak > 1) {
+                    let comboText = `COMBO ${combo}`;
+                    if (streak > 1) comboText += ` • STREAK x${Math.pow(2, streak - 1)}`;
+                    document.getElementById('hud-combo').innerText = comboText;
+                    document.getElementById('hud-combo').classList.remove('hidden');
+                }
+                
+                if(currentMode === 'campaign' && targetGems > 0) {
+                    updateCampaignHUD(collectedGems, targetGems, "GEMS");
+                    if(collectedGems >= targetGems) {
+                        setTimeout(() => winCampaign(), 1000); // Give time for animation
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        function checkGameOver() {
+            if (currentMode === 'sand') return;
+
+            let anyFits = false;
+            for(let s of availableShapes) {
+                if(!s) continue;
+                for(let y=0; y<GRID_SIZE; y++) {
+                    for(let x=0; x<GRID_SIZE; x++) {
+                        if(canPlace(s.matrix, x, y)) { anyFits = true; break; }
+                    }
+                    if(anyFits) break;
+                }
+                if(anyFits) break;
+            }
+            if(!anyFits && availableShapes.some(s => s !== null)) {
+                endGame();
+            }
+        }
+
+        function endGame(reason) {
+            gameState = 'GAMEOVER';
+            
+            let titleEl = document.getElementById('go-title');
+            if (reason === 'escape') {
+                titleEl.innerText = "ESCAPED!";
+                titleEl.className = "text-5xl font-black text-red-500 mb-2 italic";
+            } else {
+                titleEl.innerText = "FINISH";
+                titleEl.className = "text-5xl font-black text-white mb-2 italic";
+            }
+            
+            document.getElementById('go-score').innerText = score;
+            
+            let rank = getRank(currentMode, score);
+            const isTop10 = currentMode !== 'campaign' && rank !== '-' && score > 0;
+            
+            if (isTop10) {
+                document.getElementById('new-record-container').classList.remove('hidden');
+                document.getElementById('new-record-container').classList.add('flex');
+                document.getElementById('standard-go-buttons').classList.add('hidden');
+                document.getElementById('player-name').value = '';
+                setTimeout(() => document.getElementById('player-name').focus(), 100);
+            } else {
+                document.getElementById('new-record-container').classList.add('hidden');
+                document.getElementById('new-record-container').classList.remove('flex');
+                document.getElementById('standard-go-buttons').classList.remove('hidden');
+                document.getElementById('btn-restart').onclick = () => startGame(currentMode, currentLevel);
+            }
+            
+            showScreen('gameover');
+        }
+
+        function winCampaign() {
+            gameState = 'GAMEOVER';
+            const oldBest = memory.campaign[currentLevel] || 0;
+            if(score > oldBest) memory.campaign[currentLevel] = score; try { ggSave(); } catch(_){}
+            
+            let titleEl = document.getElementById('go-title');
+            titleEl.innerText = "LEVEL CLEARED!";
+            titleEl.className = "text-5xl font-black text-cyan-400 mb-2 italic";
+            
+            document.getElementById('go-score').innerText = score;
+            
+            document.getElementById('btn-restart').innerText = "NEXT LEVEL";
+            document.getElementById('btn-restart').onclick = () => {
+                if(currentLevel < 100) startGame('campaign', currentLevel + 1);
+                else showScreen('menu');
+            };
+            showScreen('gameover');
+        }
+
+        // --- PHYSICS & LOOP ---
+        function updateSand() {
+            let moved = false;
+            for(let y=PARTICLE_TOTAL-2; y>=0; y--) {
+                for(let x=0; x<PARTICLE_TOTAL; x++) {
+                    if(sandGrid[y][x] !== 0) {
+                        const color = sandGrid[y][x];
+                        if(sandGrid[y+1][x] === 0) {
+                            sandGrid[y+1][x] = color; sandGrid[y][x] = 0; moved = true;
+                        } 
+                        else {
+                            let dir = Math.random() < 0.5 ? 1 : -1;
+                            if(x+dir >= 0 && x+dir < PARTICLE_TOTAL && sandGrid[y+1][x+dir] === 0) {
+                                sandGrid[y+1][x+dir] = color; sandGrid[y][x] = 0; moved = true;
+                            } else if(x-dir >= 0 && x-dir < PARTICLE_TOTAL && sandGrid[y+1][x-dir] === 0) {
+                                sandGrid[y+1][x-dir] = color; sandGrid[y][x] = 0; moved = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(moved) {
+                sandFalling = true;
+                return; 
+            }
+
+            if(!sandFalling) return;
+            sandFalling = false;
+
+            let toClear = [];
+            let visited = Array(PARTICLE_TOTAL).fill().map(() => Array(PARTICLE_TOTAL).fill(false));
+
+            for(let y = 0; y < PARTICLE_TOTAL; y++) {
+                if(sandGrid[y][0] !== 0 && !visited[y][0]) {
+                    let color = sandGrid[y][0];
+                    let comp = [];
+                    let q = [[0, y]];
+                    visited[y][0] = true;
+                    let spansRight = false;
+
+                    let head = 0;
+                    while(head < q.length) {
+                        let [cx, cy] = q[head++];
+                        comp.push([cx, cy]);
+                        if(cx === PARTICLE_TOTAL - 1) spansRight = true;
+
+                        const dirs = [[1,0], [-1,0], [0,1], [0,-1]];
+                        for(let d=0; d<4; d++) {
+                            let nx = cx + dirs[d][0];
+                            let ny = cy + dirs[d][1];
+                            if(nx >= 0 && nx < PARTICLE_TOTAL && ny >= 0 && ny < PARTICLE_TOTAL) {
+                                if(sandGrid[ny][nx] === color && !visited[ny][nx]) {
+                                    visited[ny][nx] = true;
+                                    q.push([nx, ny]);
+                                }
+                            }
+                        }
+                    }
+
+                    if(spansRight) {
+                        toClear.push(...comp);
+                    }
+                }
+            }
+
+            if(toClear.length > 0) {
+                combo++;
+                streak++;
+                roundHasClear = true;
+                justDropped = false;
+                
+                let sumX = 0, sumY = 0;
+                toClear.forEach(([cx, cy]) => {
+                    sandGrid[cy][cx] = 0;
+                    sumX += gridX + cx*(cellSize/SUB_RES);
+                    sumY += gridY + cy*(cellSize/SUB_RES);
+                });
+                
+                let centX = sumX / toClear.length;
+                let centY = sumY / toClear.length;
+
+                let basePoints = toClear.length * 2;
+                let comboBonus = (combo > 1) ? (combo - 1) * 150 : 0;
+                let points = basePoints + comboBonus;
+                
+                if (streak > 1) {
+                    points = Math.floor(points * Math.pow(2, streak - 1));
+                }
+                
+                score += points;
+                updateHUD();
+                
+                let lines = ["MATCH!", `+${points}`];
+                if(combo > 1) lines.push(`COMBO ${combo}`);
+                if(streak > 1) lines.push(`STREAK x${Math.pow(2, streak - 1)}!`);
+                addFloatingText(centX, centY, lines, COLORS.orange);
+
+                if(combo > 1 || streak > 1) {
+                    let comboText = `COMBO ${combo}`;
+                    if (streak > 1) comboText += ` • STREAK x${Math.pow(2, streak - 1)}`;
+                    document.getElementById('hud-combo').innerText = comboText;
+                    document.getElementById('hud-combo').classList.remove('hidden');
+                }
+
+                if (sandBlocksPlaced >= 3) {
+                    sandBlocksPlaced = 0;
+                    roundHasClear = false;
+                }
+            } else {
+                if (justDropped) {
+                    streak = 0; 
+                    if (sandBlocksPlaced >= 3) {
+                        if (!roundHasClear) {
+                            combo = 0;
+                        }
+                        sandBlocksPlaced = 0;
+                        roundHasClear = false;
+                    }
+                    justDropped = false;
+                    
+                    if (combo <= 1) {
+                        document.getElementById('hud-combo').classList.add('hidden');
+                    } else {
+                        document.getElementById('hud-combo').innerText = `COMBO ${combo}`;
+                        document.getElementById('hud-combo').classList.remove('hidden');
+                    }
+                }
+            }
+
+            let dangerCrossed = false;
+            for(let y = 0; y <= DANGER_ROW; y++) {
+                for(let x = 0; x < PARTICLE_TOTAL; x++) {
+                    if(sandGrid[y][x] !== 0) {
+                        dangerCrossed = true;
+                        break;
+                    }
+                }
+                if(dangerCrossed) break;
+            }
+
+            if(dangerCrossed && gameState === 'PLAYING') {
+                endGame();
+            }
+        }
+
+        function formatTime(ms) {
+            let totalSeconds = Math.floor(ms / 1000);
+            let m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            let s = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function loop(timestamp) {
+            const dt = timestamp - lastTime || 0;
+            lastTime = timestamp;
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            if(gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+                
+                if(gameState === 'PLAYING') {
+                    elapsedTime = timestamp - gameStartTime;
+                    document.getElementById('hud-timer').innerText = formatTime(elapsedTime);
+                }
+
+                if(currentMode === 'sand') updateSand();
+
+                // Draw Grid BG
+                for(let r=0; r<GRID_SIZE; r++) {
+                    for(let c=0; c<GRID_SIZE; c++) {
+                        ctx.fillStyle = COLORS.grid;
+                        ctx.fillRect(gridX + c*cellSize + 1, gridY + r*cellSize + 1, cellSize - 2, cellSize - 2);
+                        
+                        // Draw Static Blocks
+                        if(grid[r][c] !== 0) {
+                            ctx.fillStyle = grid[r][c];
+                            ctx.fillRect(gridX + c*cellSize + 2, gridY + r*cellSize + 2, cellSize - 4, cellSize - 4);
+                            
+                            // Draw Gem overlay if one exists here
+                            if(gemGrid[r][c]) {
+                                ctx.fillStyle = COLORS.gem;
+                                const cx = gridX + c*cellSize + cellSize/2;
+                                const cy = gridY + r*cellSize + cellSize/2;
+                                const gs = cellSize * 0.4;
+                                ctx.beginPath();
+                                ctx.moveTo(cx, cy - gs/2);
+                                ctx.lineTo(cx + gs/2, cy);
+                                ctx.lineTo(cx, cy + gs/2);
+                                ctx.lineTo(cx - gs/2, cy);
+                                ctx.fill();
+                            }
+                        }
+                    }
+                }
+
+                // Draw Turtles (Campaign Mode)
+                turtles.forEach(t => {
+                    if(t.trapped && t.opacity <= 0) return; 
+                    
+                    // Smooth visual movement interpolation
+                    t.displayX += (t.x - t.displayX) * 0.2;
+                    t.displayY += (t.y - t.displayY) * 0.2;
+                    
+                    let tx = gridX + t.displayX * cellSize + cellSize/2;
+                    let ty = gridY + t.displayY * cellSize + cellSize/2;
+                    
+                    ctx.save();
+                    if(t.trapped) {
+                        t.opacity -= 0.02; // Fade out once trapped
+                        if(t.opacity < 0) t.opacity = 0;
+                        ctx.globalAlpha = t.opacity;
+                    }
+                    
+                    ctx.font = `${cellSize*0.6}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText("🐢", tx, ty + 5);
+                    ctx.restore();
+                });
+
+                // Draw Sand Particles
+                if(currentMode === 'sand') {
+                    const pSize = cellSize / SUB_RES;
+                    for(let y=0; y<PARTICLE_TOTAL; y++) {
+                        for(let x=0; x<PARTICLE_TOTAL; x++) {
+                            if(sandGrid[y][x] !== 0) {
+                                ctx.fillStyle = sandGrid[y][x];
+                                ctx.fillRect(gridX + x*pSize, gridY + y*pSize, pSize, pSize);
+                            }
+                        }
+                    }
+
+                    // Draw Danger Line
+                    ctx.strokeStyle = '#ef4444'; // Red
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([8, 8]);
+                    ctx.beginPath();
+                    const lineY = gridY + (DANGER_ROW / SUB_RES) * cellSize;
+                    ctx.moveTo(gridX, lineY);
+                    ctx.lineTo(gridX + GRID_SIZE * cellSize, lineY);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Draw Active Shape hovering at top
+                    if(sandActiveShape) {
+                        const w = sandActiveShape.matrix[0].length * cellSize;
+                        const h = sandActiveShape.matrix.length * cellSize;
+                        drawShape(sandActiveShape.matrix, gridX + sandShapeX*cellSize + w/2, gridY - h/2 - 10, cellSize, sandActiveShape.color);
+                    }
+                }
+
+                // Draw Slots (Only outside of sand mode)
+                if (currentMode !== 'sand') {
+                    for(let i=0; i<3; i++) {
+                        if(isDragging && draggedIndex === i) continue;
+                        const s = availableShapes[i];
+                        if(s) {
+                            const sx = (i * canvas.width/3) + (canvas.width/6);
+                            drawShape(s.matrix, sx, slotY, cellSize * 0.85, s.color);
+                        }
+                    }
+                }
+
+                // Draw Dragging
+                if(isDragging && currentMode !== 'sand') {
+                    const s = availableShapes[draggedIndex];
+                    drawShape(s.matrix, dragX, dragY, cellSize, s.color);
+                }
+
+                // Draw Floating Texts/Animations on Top
+                for(let i = floatingTexts.length - 1; i >= 0; i--) {
+                    let ft = floatingTexts[i];
+                    ft.life -= dt * 0.001; 
+                    ft.y -= dt * 0.06; // Float upward
+                    
+                    if(ft.life <= 0) {
+                        floatingTexts.splice(i, 1);
+                        continue;
+                    }
+                    
+                    ctx.save();
+                    ctx.globalAlpha = Math.min(1.0, ft.life * 2); // Fade out near the end
+                    ctx.textAlign = 'center';
+                    
+                    ft.lines.forEach((line, idx) => {
+                        ctx.font = idx === 0 ? "900 24px sans-serif" : "900 18px sans-serif";
+                        ctx.fillStyle = idx === 0 ? ft.color : '#fff';
+                        ctx.lineWidth = 4;
+                        ctx.strokeStyle = '#000';
+                        ctx.lineJoin = "round";
+                        
+                        let lineY = ft.y + idx * 26;
+                        ctx.strokeText(line, ft.x, lineY);
+                        ctx.fillText(line, ft.x, lineY);
+                    });
+                    
+                    ctx.restore();
+                }
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        function drawShape(m, x, y, size, color) {
+            const w = m[0].length * size;
+            const h = m.length * size;
+            ctx.fillStyle = color;
+            for(let r=0; r<m.length; r++) {
+                for(let c=0; c<m[0].length; c++) {
+                    if(m[r][c]) {
+                        ctx.fillRect(x - w/2 + c*size + 1, y - h/2 + r*size + 1, size - 2, size - 2);
+                    }
+                }
+            }
+        }
+
+        // --- DEBUG FUNCTIONS ---
+        function verifyDebugPassword() {
+            const pwd = document.getElementById('debug-password-input').value;
+            if (pwd === "TESTER") {
+                document.getElementById('password-modal').classList.add('hidden');
+                document.getElementById('debug-menu').classList.remove('hidden');
+                document.getElementById('debug-score-input').value = score;
+                document.getElementById('debug-level-input').value = currentMode === 'campaign' ? currentLevel : 1;
+                document.getElementById('debug-error').classList.add('hidden');
+                updateDebugNameDropdown(); // Populate dropdown immediately upon opening
+            } else {
+                document.getElementById('password-error').classList.remove('hidden');
+            }
+        }
+
+        function debugJumpLevel() {
+            let lvl = parseInt(document.getElementById('debug-level-input').value);
+            const err = document.getElementById('debug-error');
+            if (lvl >= 1 && lvl <= 100) {
+                for(let i = 1; i < lvl; i++) {
+                    if(!memory.campaign[i]) memory.campaign[i] = 1; 
+                }
+                document.getElementById('debug-menu').classList.add('hidden');
+                err.classList.add('hidden');
+                startGame('campaign', lvl);
+            } else {
+                err.innerText = "INVALID LEVEL (1-100 ONLY)";
+                err.classList.remove('hidden');
+            }
+        }
+
+        function debugSetScore() {
+            let s = parseInt(document.getElementById('debug-score-input').value);
+            const err = document.getElementById('debug-error');
+            if (!isNaN(s) && gameState === 'PLAYING') {
+                score = s;
+                updateHUD();
+                document.getElementById('debug-menu').classList.add('hidden');
+                err.classList.add('hidden');
+            } else if (gameState !== 'PLAYING') {
+                err.innerText = "START A GAME FIRST TO SET SCORE";
+                err.classList.remove('hidden');
+            }
+        }
+
+        function updateDebugNameDropdown() {
+            const mode = document.getElementById('debug-remove-mode').value;
+            const dropdown = document.getElementById('debug-remove-dropdown');
+            const board = memory.leaderboards[mode] || [];
+            
+            if (board.length === 0) {
+                dropdown.innerHTML = '<option value="">-- EMPTY --</option>';
+                dropdown.disabled = true;
+            } else {
+                dropdown.innerHTML = board.map(entry => `<option value="${entry.name}">${entry.name} (${entry.score})</option>`).join('');
+                dropdown.disabled = false;
+            }
+        }
+
+        function promptRemoveScore(method) {
+            if (method === 'text') {
+                pendingDeleteName = document.getElementById('debug-remove-name').value.trim().toUpperCase();
+                pendingDeleteMode = 'all';
+            } else {
+                pendingDeleteName = document.getElementById('debug-remove-dropdown').value;
+                pendingDeleteMode = document.getElementById('debug-remove-mode').value;
+            }
+            
+            if (!pendingDeleteName) return; // Ignore if no name selected
+            
+            document.getElementById('remove-password-modal').classList.remove('hidden');
+            document.getElementById('remove-password-input').value = '';
+            document.getElementById('remove-password-error').classList.add('hidden');
+            setTimeout(() => document.getElementById('remove-password-input').focus(), 100);
+        }
+
+        function executeRemoveScore() {
+            const pwd = document.getElementById('remove-password-input').value;
+            if (pwd === "LATTEISCUTE") {
+                if (pendingDeleteMode === 'all') {
+                    // Remove from all modes if typed manually
+                    ['regular', 'sand', 'color'].forEach(mode => {
+                        memory.leaderboards[mode] = memory.leaderboards[mode].filter(entry => entry.name !== pendingDeleteName);
+                    });
+                } else {
+                    // Remove only from the specifically selected mode
+                    memory.leaderboards[pendingDeleteMode] = memory.leaderboards[pendingDeleteMode].filter(entry => entry.name !== pendingDeleteName);
+                }
+                
+                document.getElementById('remove-password-modal').classList.add('hidden');
+                document.getElementById('debug-remove-name').value = '';
+                updateDebugNameDropdown(); // Refresh the dropdown list
+                
+                const err = document.getElementById('debug-error');
+                err.innerText = `RECORD '${pendingDeleteName}' DELETED`;
+                err.classList.remove('hidden');
+                err.classList.replace('text-red-500', 'text-green-500');
+                
+                setTimeout(() => { 
+                    err.classList.add('hidden');
+                    err.classList.replace('text-green-500', 'text-red-500'); 
+                }, 3000);
+            } else {
+                document.getElementById('remove-password-error').classList.remove('hidden');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

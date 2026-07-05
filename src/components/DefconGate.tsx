@@ -32,6 +32,7 @@ const BlastDoor = ({
   icon,
   children,
   doorState = "closed",
+  transparentBg = false,
 }: {
   variant?: "primary" | "warning";
   label: string;
@@ -39,6 +40,7 @@ const BlastDoor = ({
   icon: React.ReactNode;
   children: React.ReactNode;
   doorState?: "closed" | "shake" | "opening";
+  transparentBg?: boolean;
 }) => {
   const stripeColor = "hsl(var(--foreground))";
   const accentClass = "text-foreground";
@@ -53,7 +55,8 @@ const BlastDoor = ({
         : "";
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4">
+    <div className={`relative flex min-h-screen items-center justify-center overflow-hidden p-4 ${transparentBg ? "" : "bg-background"}`}>
+
       {/* Background grid + vignette */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -71,7 +74,7 @@ const BlastDoor = ({
       )}
 
       {/* Two-leaf door wrapper */}
-      <div className="relative w-full max-w-md" style={{ perspective: "1200px" }}>
+      <div className="relative z-10 w-full max-w-md" style={{ perspective: "1200px" }}>
         {/* Left leaf */}
         <div
           className={`absolute inset-y-0 left-0 w-1/2 origin-left ${doorState === "opening" ? "animate-door-open-left" : ""} ${doorAnim}`}
@@ -284,6 +287,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
         sublabel={lockedOut ? "Access revoked" : "Authorized personnel only"}
         icon={<Lock className="h-12 w-12" />}
         doorState={doorState}
+        transparentBg
       >
         {lockedOut ? (
           <div className="rounded-sm border border-foreground/50 bg-foreground/10 p-4 text-center">
