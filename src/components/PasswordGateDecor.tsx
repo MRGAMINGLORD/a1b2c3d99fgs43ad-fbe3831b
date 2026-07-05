@@ -232,7 +232,7 @@ export const PasswordGateDecor = () => {
   }, []);
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-[60]">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
       <canvas
         ref={topRef}
         className="absolute left-0 right-0 top-0 border-b border-primary/30"
