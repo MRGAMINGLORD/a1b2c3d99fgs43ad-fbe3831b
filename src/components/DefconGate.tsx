@@ -287,6 +287,7 @@ export const DefconGate = ({ children }: { children: React.ReactNode }) => {
         sublabel={lockedOut ? "Access revoked" : "Authorized personnel only"}
         icon={<Lock className="h-12 w-12" />}
         doorState={doorState}
+        transparentBg
       >
         {lockedOut ? (
           <div className="rounded-sm border border-foreground/50 bg-foreground/10 p-4 text-center">
