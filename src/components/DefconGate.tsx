@@ -74,7 +74,7 @@ const BlastDoor = ({
       )}
 
       {/* Two-leaf door wrapper */}
-      <div className="relative w-full max-w-md" style={{ perspective: "1200px" }}>
+      <div className="relative z-10 w-full max-w-md" style={{ perspective: "1200px" }}>
         {/* Left leaf */}
         <div
           className={`absolute inset-y-0 left-0 w-1/2 origin-left ${doorState === "opening" ? "animate-door-open-left" : ""} ${doorAnim}`}
