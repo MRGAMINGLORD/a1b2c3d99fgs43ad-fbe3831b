@@ -97,6 +97,50 @@ export const GAMES: GameMeta[] = [
     category: "education",
     credits: "Powered by Google Gemini · Tutor persona by Apocalypse Waffle",
   },
+  // --- Baked-in custom games (persisted to repo so they survive forks) ---
+  {
+    id: "golden-grid",
+    title: "Golden Grid",
+    description:
+      "a tetris style game, with Waffles, and many many, modes and versions!",
+    cover: "/placeholder.svg",
+    available: true,
+    playUrl: "/play/golden-grid",
+    category: "twist",
+    credits: "",
+  },
+  {
+    id: "neon-snake",
+    title: "Neon Snake",
+    description: "a neon take on the classic snake game",
+    cover: "/games/neon-snake/cover.png",
+    available: true,
+    playUrl: "/play/neon-snake",
+    category: "other",
+    credits: "",
+  },
+  {
+    id: "gravity-runner",
+    title: "Gravity runner",
+    description:
+      "a game where you must avoid the spikes but every click changes gravity!",
+    cover: "/games/gravity-runner/cover.png",
+    available: true,
+    playUrl: "/play/gravity-runner",
+    category: "other",
+    credits: "",
+  },
+  {
+    id: "mini-games",
+    title: "Mini Games",
+    description:
+      "a game with other games inside, including pac-man, a volcano game and more!",
+    cover: "/games/mini-games/cover.png",
+    available: true,
+    playUrl: "/play/mini-games",
+    category: "other",
+    credits: "",
+  },
 ];
 
 export const getGame = (id: string): GameMeta | undefined =>
