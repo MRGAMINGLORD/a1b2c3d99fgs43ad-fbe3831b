@@ -39,10 +39,11 @@ export const FullscreenGate = ({ children }: { children: ReactNode }) => {
       window.removeEventListener("keydown", handler);
       window.removeEventListener("touchstart", handler);
     };
-  }, []);
+  }, [disabled]);
 
   // Watch for fullscreen exit → kill the tab.
   useEffect(() => {
+    if (disabled) return;
     const closeTab = () => {
       // Browsers only honor window.close() for windows opened via script.
       // Try every escape hatch, then fall back to a "tab dead" screen.
