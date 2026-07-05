@@ -74,7 +74,7 @@ export const FullscreenGate = ({ children }: { children: ReactNode }) => {
       document.removeEventListener("fullscreenchange", onChange);
       if (pending !== null) window.clearTimeout(pending);
     };
-  }, []);
+  }, [disabled]);
 
   if (terminated) {
     return (
