@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){
+  function ser(e){ if(!e) return 'Unknown error'; if(typeof e==='string') return e; return (e.stack||e.message||String(e)); }
+  function post(kind,e){ try{ parent.postMessage({__waffleGameError:true,kind:kind,message:ser(e),time:Date.now()},'*'); }catch(_){} }
+  window.addEventListener('error',function(e){ post('runtime', e.error||e.message); });
+  window.addEventListener('unhandledrejection',function(e){ post('runtime', e.reason); });
+  var oe=console.error.bind(console);
+  console.error=function(){ try{ var p=[]; for(var i=0;i<arguments.length;i++){ var a=arguments[i]; p.push(typeof a==='string'?a:ser(a)); } post('console',p.join(' ')); }catch(_){} return oe.apply(console,arguments); };
+})();</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gravity Dash - Arcade Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #a1c4fd;
+            font-family: 'Nunito', sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+        #gameCanvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+        }
+        .stats-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 12px;
+            pointer-events: none;
+            z-index: 20;
+        }
+        .stat-badge {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 4px solid #4a69bd;
+            font-size: 20px;
+            color: #4a69bd;
+            box-shadow: 0 6px 0px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Fredoka One';
+        }
+        .menu-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 3rem;
+            text-align: center;
+            pointer-events: auto;
+            box-shadow: 0 15px 0px #d1d8e0, 0 30px 50px rgba(0,0,0,0.2);
+            max-width: 580px;
+            width: 90%;
+            border: 8px solid #4a69bd;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .btn {
+            background: #ff7675;
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 1.5rem;
+            font-size: 1.5rem;
+            font-family: 'Fredoka One', cursive;
+            cursor: pointer;
+            transition: transform 0.1s;
+            border: none;
+            box-shadow: 0 8px 0px #d63031;
+            margin: 0.5rem;
+        }
+        .btn:hover { transform: translateY(2px); box-shadow: 0 6px 0px #d63031; }
+        .btn:active { transform: translateY(8px); box-shadow: 0 0px 0px #d63031; }
+        
+        .btn-blue { background: #4a69bd; box-shadow: 0 8px 0px #3c548c; }
+        .btn-green { background: #00b894; box-shadow: 0 8px 0px #009476; }
+        .btn-yellow { background: #feca57; box-shadow: 0 8px 0px #f39c12; color: #2d3436; }
+
+        .hidden { display: none !important; }
+        h1 { font-family: 'Fredoka One', cursive; color: #4a69bd; -webkit-text-stroke: 2px #fff; text-shadow: 4px 4px 0px rgba(0,0,0,0.1); }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 1rem;
+        }
+        .item-box {
+            border: 4px solid #eee;
+            border-radius: 1.5rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .item-box.selected { border-color: #4a69bd; background: #f0f3ff; transform: translateY(-5px); }
+        
+        .tab-bar {
+            display: flex;
+            background: #f1f2f6;
+            border-radius: 1rem;
+            padding: 5px;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+            gap: 4px;
+        }
+        .tab {
+            flex: 1;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #747d8c;
+            border-radius: 0.8rem;
+            transition: 0.2s;
+            white-space: nowrap;
+            font-size: 0.8rem;
+        }
+        .tab.active {
+            background: white;
+            color: #4a69bd;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        #checkoutModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #ff7675;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            border: 2px solid white;
+        }
+
+        .remove-btn {
+            background: #ff7675;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            font-family: 'Fredoka One';
+        }
+
+        .qty-input {
+            width: 40px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .lvl-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 1rem;
+        }
+        .lvl-btn {
+            background: white;
+            border: 3px solid #4a69bd;
+            color: #4a69bd;
+            padding: 10px;
+            border-radius: 12px;
+            font-family: 'Fredoka One';
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .lvl-btn.active {
+            background: #4a69bd;
+            color: white;
+        }
+        .lvl-btn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stats-container">
+        <div class="stat-badge">🏆 <span id="scoreDisplay">0</span></div>
+        <div class="stat-badge">⭐ <span id="totalStarDisplay">0</span></div>
+        <div class="stat-badge" id="lvlBadge" style="color: #ee5253; border-color: #ee5253;">Lvl <span id="levelDisplay">1</span></div>
+    </div>
+
+    <div class="ui-overlay" id="startScreen">
+        <div class="menu-card">
+            <h1 class="text-6xl mb-4">GRAVITY DASH</h1>
+            <div class="flex flex-col gap-2">
+                <button class="btn" onclick="startGame()">PLAY GAME</button>
+                <div class="flex justify-center gap-2">
+                    <button class="btn btn-blue text-sm" onclick="showMenu('storeScreen')">STORE</button>
+                    <button class="btn btn-blue text-sm" onclick="showMenu('libraryScreen')">LEVELS</button>
+                </div>
+            </div>
+            <div class="mt-4 text-slate-500 font-bold text-sm flex justify-center gap-4">
+                <span>🦴 Food: <span id="foodCount">0</span></span>
+                <span>🎾 Toy: <span id="toyOwned">No</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ui-overlay hidden" id="catchScreenInfo">
+        <div class="absolute bottom-10 left-1/2 -translate-x-1/2 bg-white/90 p-4 rounded-2xl border-4 border-blue-500 text-blue-600 font-bold text-center">
+            CATCH THE BALLS!<br>
+            USE ARROW KEYS! GET FREE FOOD!
+        </div>
+    </div>
+
+    <div class="ui-overlay hidden" id="storeScreen">
+        <div class="menu-card">
+            <div class="flex justify-between items-center mb-2">
+                <h1 class="text-5xl">STORE</h1>
+                <div class="relative cursor-pointer" onclick="openCheckout()">
+                    <span class="text-3xl">🛒</span>
+                    <div id="cartCount" class="cart-badge hidden">0</div>
+                </div>
+            </div>
+            <p class="text-slate-500 mb-4 font-bold">Your Stars: ⭐ <span id="shopStarCount">0</span></p>
+            
+            <div class="tab-bar">
+                <div class="tab active" id="tab-skins" onclick="setStoreTab('skins')">Skins</div>
+                <div class="tab" id="tab-cars" onclick="setStoreTab('cars')">Cars</div>
+                <div class="tab" id="tab-drivers" onclick="setStoreTab('drivers')">Drivers</div>
+                <div class="tab" id="tab-pets" onclick="setStoreTab('pets')">Pets</div>
+                <div class="tab" id="tab-care" onclick="setStoreTab('care')">Care</div>
+            </div>
+
+            <div class="grid-container" id="storeGrid"></div>
+            <button class="btn btn-blue mt-6" onclick="showMenu('startScreen')">BACK</button>
+        </div>
+    </div>
+
+    <div id="checkoutModal" class="hidden">
+        <div class="menu-card max-w-sm">
+            <h1 class="text-4xl mb-4">CHECKOUT</h1>
+            <div id="cartItems" class="text-left text-slate-700 mb-4 max-h-40 overflow-y-auto border-b pb-2">
+            </div>
+            <div class="text-right text-slate-600 font-bold space-y-1">
+                <p>Subtotal: ⭐ <span id="subtotal">0</span></p>
+                <p>Tax (7%): ⭐ <span id="taxAmount">0</span></p>
+                <p class="text-2xl text-blue-600">Total: ⭐ <span id="cartTotal">0</span></p>
+            </div>
+            <div class="flex flex-col gap-2 mt-4">
+                <button class="btn btn-green" id="buyBtn" onclick="confirmPurchase()">BUY NOW</button>
+                <button class="btn btn-blue text-sm" onclick="closeCheckout()">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ui-overlay hidden" id="libraryScreen">
+        <div class="menu-card">
+            <h1 class="text-5xl mb-2">SELECT LEVEL</h1>
+            <p class="text-slate-400 mb-4 font-bold">Higher levels are faster!</p>
+            <div class="lvl-grid" id="levelGrid"></div>
+            <button class="btn btn-blue mt-6" onclick="showMenu('startScreen')">BACK</button>
+        </div>
+    </div>
+
+    <div class="ui-overlay hidden" id="gameOverScreen">
+        <div class="menu-card">
+            <h1 class="text-6xl mb-4 text-red-500">OH NO!</h1>
+            <p id="petAlert" class="text-orange-500 font-bold mb-2 hidden">Your pet ate the food! Buy more to keep him!</p>
+            <p class="text-3xl mb-2 text-slate-700 font-bold" id="finalScore"></p>
+            <p class="text-yellow-500 font-bold text-xl mb-6">+<span id="starsEarned">0</span> Stars Collected!</p>
+            <div class="flex flex-col sm:flex-row justify-center gap-2">
+                <button class="btn" onclick="startGame()">RETRY</button>
+                <button class="btn btn-blue" onclick="showMenu('startScreen')">MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const screens = ['startScreen', 'storeScreen', 'libraryScreen', 'gameOverScreen', 'catchScreenInfo'];
+        let gameState = 'START';
+        let score = 0, sessionStars = 0, currentLevel = 1, frameCount = 0;
+        let currentStoreTab = 'skins';
+        let cart = [];
+        const TAX_RATE = 0.07;
+        const STAR_VALUE = 10; 
+
+        const keys = {};
+
+        let userData = JSON.parse(localStorage.getItem('gravityDashData_v10')) || {
+            highscore: 0,
+            stars: 100,
+            unlockedItems: { skins: ['default'], cars: ['none'], drivers: ['smile'], pets: ['none'], care: [] },
+            inventory: { foodCount: 0, hasToy: false },
+            equipped: { skin: 'default', car: 'none', driver: 'smile', pet: 'none' },
+            currentLevel: 1
+        };
+        currentLevel = userData.currentLevel || 1;
+
+        const storeData = {
+            skins: {
+                'default': { name: 'Classic', color: '#ff9f43', border: '#ee5253', price: 0 },
+                'blue': { name: 'Cool Blue', color: '#4a69bd', border: '#1e3799', price: 15 },
+                'green': { name: 'Neon Green', color: '#78e08f', border: '#079992', price: 30 },
+                'pink': { name: 'Berry Pink', color: '#eb4d4b', border: '#b33939', price: 50 },
+                'gold': { name: 'Goldy', color: '#f1c40f', border: '#f39c12', price: 200 }
+            },
+            cars: {
+                'none': { name: 'No Car', emoji: '', price: 0 },
+                'racecar': { name: 'Race Car', emoji: '🏎️', price: 50 },
+                'taxi': { name: 'Taxi', emoji: '🚕', price: 35 },
+                'bus': { name: 'Bus', emoji: '🚌', price: 40 },
+                'ufo': { name: 'UFO', emoji: '🛸', price: 150 }
+            },
+            drivers: {
+                'smile': { name: 'Happy', emoji: '😊', price: 0 },
+                'cool': { name: 'Cool Guy', emoji: '😎', price: 20 },
+                'ninja': { name: 'Ninja', emoji: '🥷', price: 60 },
+                'robot': { name: 'Bot', emoji: '🤖', price: 50 },
+                'alien': { name: 'Zorp', emoji: '👽', price: 80 }
+            },
+            pets: {
+                'none': { name: 'No Pet', emoji: '', price: 0 },
+                'dog': { name: 'Doggy', emoji: '🐶', price: 40 },
+                'cat': { name: 'Kitty', emoji: '🐱', price: 40 }
+            },
+            care: {
+                'kibble': { name: 'Pet Food', emoji: '🦴', price: 20, type: 'consumable' },
+                'ball': { name: 'Pet Toy', emoji: '🎾', price: 100, type: 'permanent' }
+            }
+        };
+
+        const petQuotes = ["Go go go!", "You're fast!", "Don't crash!", "Wanna play?", "Stars!!", "Look out!", "Gravity is weird!", "Doing great!", "Who's a good human?"];
+        
+        // 20 levels with different themes
+        const themes = [
+            { bg: '#a1c4fd', wall: '#4834d4' }, // L1
+            { bg: '#55efc4', wall: '#00b894' }, // L2
+            { bg: '#ffeaa7', wall: '#d35400' }, // L3
+            { bg: '#fab1a0', wall: '#e17055' }, // L4
+            { bg: '#fd79a8', wall: '#d63031' }, // L5
+            { bg: '#a29bfe', wall: '#6c5ce7' }, // L6
+            { bg: '#dfe6e9', wall: '#2d3436' }, // L7
+            { bg: '#81ecec', wall: '#00cec9' }, // L8
+            { bg: '#55efc4', wall: '#00b894' }, // L9
+            { bg: '#ffeaa7', wall: '#fdcb6e' }, // L10
+            { bg: '#ff7675', wall: '#c0392b' }, // L11
+            { bg: '#74b9ff', wall: '#0984e3' }, // L12
+            { bg: '#a29bfe', wall: '#2c3e50' }, // L13
+            { bg: '#b2bec3', wall: '#636e72' }, // L14
+            { bg: '#e84393', wall: '#8e44ad' }, // L15
+            { bg: '#00b894', wall: '#2d3436' }, // L16
+            { bg: '#f9ca24', wall: '#f0932b' }, // L17
+            { bg: '#eb4d4b', wall: '#4834d4' }, // L18
+            { bg: '#6ab04c', wall: '#badc58' }, // L19
+            { bg: '#22a6b3', wall: '#7ed6df' }  // L20
+        ];
+
+        const INITIAL_SPEED = 5;
+        const GRAVITY = 0.6;
+        const WALL_HEIGHT = 80;
+        let gameSpeed = INITIAL_SPEED;
+        
+        const player = { x: 0, y: 0, size: 50, velocity: 0, direction: 1 };
+        const petState = { x: 0, y: 0, active: false, quote: "", quoteTimer: 0 };
+        let obstacles = [], stars = [];
+
+        const catchGame = { timer: 600, balls: [], caughtCount: 0, petX: 0, throwCooldown: 30 };
+
+        function saveData() {
+            userData.currentLevel = currentLevel;
+            localStorage.setItem('gravityDashData_v10', JSON.stringify(userData));
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('totalStarDisplay').innerText = userData.stars;
+            document.getElementById('shopStarCount').innerText = userData.stars;
+            document.getElementById('foodCount').innerText = userData.inventory.foodCount;
+            document.getElementById('toyOwned').innerText = userData.inventory.hasToy ? "Yes" : "No";
+            document.getElementById('levelDisplay').innerText = currentLevel;
+            
+            const count = cart.reduce((acc, item) => acc + item.quantity, 0);
+            const badge = document.getElementById('cartCount');
+            badge.innerText = count;
+            count > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+        }
+
+        function showMenu(menuId) {
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(menuId).classList.remove('hidden');
+            if (menuId === 'storeScreen') renderStore();
+            if (menuId === 'libraryScreen') renderLevelGrid();
+            gameState = (menuId === 'startScreen') ? 'START' : 'MENU';
+        }
+
+        function renderLevelGrid() {
+            const grid = document.getElementById('levelGrid');
+            grid.innerHTML = '';
+            for (let i = 1; i <= 20; i++) {
+                const btn = document.createElement('button');
+                btn.className = `lvl-btn ${currentLevel === i ? 'active' : ''}`;
+                btn.innerText = i;
+                btn.onclick = () => { currentLevel = i; saveData(); renderLevelGrid(); };
+                grid.appendChild(btn);
+            }
+        }
+
+        function renderStore() {
+            const grid = document.getElementById('storeGrid');
+            grid.innerHTML = '';
+            const items = storeData[currentStoreTab];
+            for (let id in items) {
+                const item = items[id];
+                const isCare = currentStoreTab === 'care';
+                const isConsumable = isCare && item.type === 'consumable';
+                const isUnlocked = userData.unlockedItems[currentStoreTab]?.includes(id);
+                let statusLabel = "";
+                let isEquipped = false;
+                if (!isCare) {
+                    const equipCat = currentStoreTab === 'skins' ? 'skin' : currentStoreTab.slice(0, -1);
+                    isEquipped = userData.equipped[equipCat] === id;
+                } else {
+                    if (id === 'kibble') statusLabel = `(${userData.inventory.foodCount} Owned)`;
+                    if (id === 'ball') statusLabel = userData.inventory.hasToy ? "(Owned)" : "";
+                }
+                const box = document.createElement('div');
+                box.className = `item-box ${isEquipped ? 'selected' : ''}`;
+                let previewHTML = currentStoreTab === 'skins' 
+                    ? `<div style="width:40px; height:40px; background:${item.color}; border:3px solid ${item.border}; border-radius:8px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px;">
+                        <div style="display: flex; gap: 8px;"><div style="width: 4px; height: 4px; background: black; border-radius: 50%;"></div><div style="width: 4px; height: 4px; background: black; border-radius: 50%;"></div></div>
+                        <div style="width: 14px; height: 7px; border-bottom: 2px solid black; border-radius: 0 0 10px 10px;"></div>
+                       </div>`
+                    : `<div class="text-3xl">${item.emoji || '❌'}</div>`;
+                let actionBtn = '';
+                if (isUnlocked || (isCare && item.type === 'permanent' && userData.inventory.hasToy)) {
+                    actionBtn = isCare ? `<button class="btn btn-yellow text-xs py-1 px-3" disabled>OWNED</button>` : `<button class="btn btn-blue text-xs py-1 px-3" onclick="equipItem('${currentStoreTab}', '${id}')">${isEquipped ? 'EQUIPPED' : 'EQUIP'}</button>`;
+                } else {
+                    let qtyInput = isConsumable ? `<div class="flex items-center gap-1 mb-1"><span class="text-[10px] text-slate-500 font-bold">Qty:</span><input type="number" id="qty-${id}" value="1" min="1" max="99" class="qty-input"></div>` : '';
+                    actionBtn = `${qtyInput}<button class="btn btn-green text-xs py-1 px-3" onclick="addToCart('${currentStoreTab}', '${id}')">${isConsumable ? 'ADD' : '⭐ '+item.price}</button>`;
+                }
+                box.innerHTML = `${previewHTML}<div class="flex flex-col items-center"><span class="font-bold text-slate-700 text-sm text-center">${item.name}</span><span class="text-[10px] text-slate-400 font-bold">${statusLabel}</span></div>${actionBtn}`;
+                grid.appendChild(box);
+            }
+        }
+
+        function addToCart(cat, id) {
+            const qtyInput = document.getElementById(`qty-${id}`);
+            const quantity = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+            const existing = cart.find(c => c.cat === cat && c.id === id);
+            if (existing && storeData[cat][id].type === 'consumable') existing.quantity += quantity;
+            else cart.push({ cat, id, price: storeData[cat][id].price, name: storeData[cat][id].name, quantity });
+            updateUI();
+            renderStore();
+        }
+
+        function confirmPurchase() {
+            let sub = 0;
+            cart.forEach(item => sub += (item.price * item.quantity));
+            const total = sub + Math.round(sub * TAX_RATE);
+            if (userData.stars >= total) {
+                userData.stars -= total;
+                cart.forEach(item => {
+                    if (item.cat === 'care') {
+                        if (item.id === 'kibble') userData.inventory.foodCount += item.quantity;
+                        if (item.id === 'ball') userData.inventory.hasToy = true;
+                    } else {
+                        if (!userData.unlockedItems[item.cat]) userData.unlockedItems[item.cat] = [];
+                        userData.unlockedItems[item.cat].push(item.id);
+                    }
+                });
+                cart = []; saveData(); closeCheckout(); renderStore();
+            }
+        }
+
+        function equipItem(category, id) {
+            const equipCat = category === 'skins' ? 'skin' : category.slice(0, -1);
+            userData.equipped[equipCat] = id;
+            saveData(); renderStore();
+        }
+
+        function startCatchGame() {
+            gameState = 'CATCH';
+            catchGame.timer = 600;
+            catchGame.balls = [];
+            catchGame.caughtCount = 0;
+            catchGame.petX = canvas.width / 2;
+            player.x = canvas.width / 2 - player.size / 2;
+            player.y = canvas.height - 150;
+            document.getElementById('catchScreenInfo').classList.remove('hidden');
+            setTimeout(() => document.getElementById('catchScreenInfo').classList.add('hidden'), 2000);
+        }
+
+        function updateCatchGame() {
+            ctx.fillStyle = '#27ae60';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 4;
+            for (let i = 0; i < canvas.height; i += 100) {
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+
+            if (keys['ArrowLeft']) player.x -= 12;
+            if (keys['ArrowRight']) player.x += 12;
+            player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+
+            catchGame.petX += Math.sin(frameCount / 15) * 10;
+            
+            catchGame.throwCooldown--;
+            if (catchGame.throwCooldown <= 0) {
+                catchGame.balls.push({ x: catchGame.petX, y: 100, vy: 7 });
+                catchGame.throwCooldown = 45 + Math.random() * 30;
+            }
+
+            catchGame.balls.forEach((ball, i) => {
+                ball.y += ball.vy;
+                ctx.font = '35px serif';
+                ctx.fillText('🏈', ball.x, ball.y);
+                
+                if (ball.y > player.y && ball.y < player.y + player.size && ball.x > player.x - 20 && ball.x < player.x + player.size + 20) {
+                    catchGame.caughtCount++;
+                    sessionStars += 5;
+                    catchGame.balls.splice(i, 1);
+                } else if (ball.y > canvas.height) {
+                    catchGame.balls.splice(i, 1);
+                }
+            });
+
+            const petEmoji = storeData.pets[userData.equipped.pet].emoji;
+            ctx.font = '55px serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(petEmoji, catchGame.petX, 85);
+
+            const driver = storeData.drivers[userData.equipped.driver];
+            ctx.save();
+            ctx.font = '60px serif';
+            ctx.fillText(driver.emoji, player.x + player.size/2, player.y + player.size);
+            ctx.restore();
+
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'left';
+            ctx.font = 'bold 32px Nunito';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 4;
+            ctx.fillText(`CATCHES: ${catchGame.caughtCount}`, 30, 160);
+            ctx.fillText(`TIME: ${Math.ceil(catchGame.timer / 60)}s`, 30, 200);
+            ctx.font = 'bold 24px Nunito';
+            ctx.fillStyle = '#feca57';
+            ctx.fillText(`REWARD: +${catchGame.caughtCount} FREE FOOD!`, 30, 240);
+            ctx.shadowBlur = 0;
+
+            catchGame.timer--;
+            if (catchGame.timer <= 0) {
+                userData.inventory.foodCount += catchGame.caughtCount;
+                saveData();
+                setStoreTab('care');
+                showMenu('storeScreen');
+            }
+        }
+
+        function flipGravity() {
+            if (gameState !== 'PLAYING') return;
+            player.direction *= -1;
+            player.velocity = player.direction * 5;
+        }
+
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                if (gameState === 'PLAYING') flipGravity();
+                else if (gameState === 'START' || gameState === 'OVER') startGame();
+            }
+            if (e.code === 'ArrowUp' && gameState === 'PLAYING' && petState.quote === "Wanna play?" && petState.quoteTimer > 0) {
+                startCatchGame();
+            }
+        });
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function startGame() {
+            gameState = 'PLAYING'; score = 0; sessionStars = 0; frameCount = 0;
+            // Higher level = Higher Speed
+            gameSpeed = INITIAL_SPEED + (currentLevel - 1) * 0.8;
+            
+            player.x = canvas.width / 2 - player.size / 2;
+            player.y = canvas.height - WALL_HEIGHT - player.size;
+            player.direction = 1; player.velocity = 0; obstacles = []; stars = [];
+            
+            const petId = userData.equipped.pet;
+            if (petId !== 'none' && userData.inventory.foodCount > 0) {
+                petState.active = true; petState.x = player.x - 70; petState.y = player.y; petState.quoteTimer = 0;
+            } else petState.active = false;
+            
+            screens.forEach(s => document.getElementById(s).classList.add('hidden'));
+            requestAnimationFrame(update);
+        }
+
+        function drawPet() {
+            if (!petState.active || gameState === 'CATCH') return;
+            const pet = storeData.pets[userData.equipped.pet];
+            petState.x += (player.x - 70 - petState.x) * 0.1;
+            petState.y += (player.y - petState.y) * 0.1;
+            ctx.font = '30px serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(pet.emoji, petState.x, petState.y + 25);
+            if (userData.inventory.hasToy) {
+                if (petState.quoteTimer <= 0 && Math.random() < 0.005) {
+                    petState.quote = petQuotes[Math.floor(Math.random() * petQuotes.length)];
+                    petState.quoteTimer = 180;
+                }
+                if (petState.quoteTimer > 0) {
+                    ctx.save(); ctx.font = 'bold 12px Nunito';
+                    const tw = ctx.measureText(petState.quote).width;
+                    ctx.fillStyle = 'white'; ctx.strokeStyle = '#4a69bd'; ctx.lineWidth = 2; ctx.beginPath();
+                    ctx.roundRect(petState.x - tw/2, petState.y - 35, tw + 20, 25, 10);
+                    ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = (petState.quote === "Wanna play?") ? "#e67e22" : "#333";
+                    ctx.textAlign = 'center';
+                    ctx.fillText(petState.quote, petState.x + 10, petState.y - 18);
+                    if (petState.quote === "Wanna play?") {
+                        ctx.font = 'bold 9px Nunito';
+                        ctx.fillStyle = '#4a69bd';
+                        ctx.fillText("[PRESS UP ARROW]", petState.x + 10, petState.y - 42);
+                    }
+                    ctx.restore(); petState.quoteTimer--;
+                }
+            }
+        }
+
+        function drawPlayer(isMiniGame = false) {
+            const skin = storeData.skins[userData.equipped.skin];
+            const car = storeData.cars[userData.equipped.car];
+            const driver = storeData.drivers[userData.equipped.driver];
+            const s = player.size;
+            const hasCar = car && userData.equipped.car !== 'none' && !isMiniGame;
+            if (!isMiniGame) drawPet();
+            ctx.save(); ctx.translate(player.x + s/2, player.y + s/2);
+            if (!hasCar) {
+                ctx.fillStyle = skin.color; ctx.strokeStyle = skin.border; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.roundRect(-s/2, -s/2, s, s, 12); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(-10, -5, 3, 0, Math.PI * 2); ctx.arc(10, -5, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 5, 12, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
+            } else {
+                if (driver) { ctx.font = '24px serif'; ctx.textAlign = 'center'; ctx.fillText(driver.emoji, 0, -8); }
+                ctx.font = '50px serif'; ctx.textAlign = 'center'; ctx.fillText(car.emoji, 0, 5);
+            }
+            ctx.restore();
+        }
+
+        function update() {
+            if (gameState === 'CATCH') { frameCount++; updateCatchGame(); requestAnimationFrame(update); return; }
+            if (gameState !== 'PLAYING') return;
+            frameCount++;
+            const theme = themes[currentLevel - 1] || themes[0];
+            ctx.fillStyle = theme.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            player.x = canvas.width / 2 - player.size / 2;
+
+            player.velocity += GRAVITY * player.direction;
+            player.y += player.velocity;
+            const limitBot = canvas.height - WALL_HEIGHT - player.size;
+            const limitTop = WALL_HEIGHT;
+            if (player.y > limitBot) { player.y = limitBot; player.velocity = 0; }
+            if (player.y < limitTop) { player.y = limitTop; player.velocity = 0; }
+            
+            ctx.fillStyle = theme.wall; ctx.fillRect(0, 0, canvas.width, WALL_HEIGHT); ctx.fillRect(0, canvas.height - WALL_HEIGHT, canvas.width, WALL_HEIGHT);
+            
+            // Obstacle spawning logic
+            if (frameCount % Math.max(30, 60 - currentLevel) === 0) {
+                obstacles.push({ x: canvas.width + 50, y: Math.random() > 0.5 ? WALL_HEIGHT : canvas.height - WALL_HEIGHT, ceil: Math.random() > 0.5 });
+            }
+            if (frameCount % 120 === 0) stars.push({ x: canvas.width + 50, y: Math.random() * (canvas.height - 300) + 150 });
+            
+            obstacles.forEach((obs, i) => {
+                obs.x -= gameSpeed; ctx.fillStyle = '#ff4d4d'; ctx.beginPath();
+                if(obs.ceil) { ctx.moveTo(obs.x-20, WALL_HEIGHT); ctx.lineTo(obs.x+20, WALL_HEIGHT); ctx.lineTo(obs.x, WALL_HEIGHT+40); }
+                else { ctx.moveTo(obs.x-20, canvas.height-WALL_HEIGHT); ctx.lineTo(obs.x+20, canvas.height-WALL_HEIGHT); ctx.lineTo(obs.x, canvas.height-WALL_HEIGHT-40); }
+                ctx.fill();
+                if (Math.abs(player.x - obs.x) < 30 && ((obs.ceil && player.y < WALL_HEIGHT + 30) || (!obs.ceil && player.y > canvas.height - WALL_HEIGHT - 70))) gameOver();
+                if(obs.x < -100) obstacles.splice(i, 1);
+            });
+            
+            stars.forEach((star, i) => {
+                star.x -= gameSpeed; ctx.font = '30px serif'; ctx.fillText('⭐', star.x, star.y);
+                if (Math.abs(player.x - star.x) < 40 && Math.abs(player.y - star.y) < 40) { sessionStars += STAR_VALUE; stars.splice(i, 1); }
+                if(star.x < -50) stars.splice(i, 1);
+            });
+            
+            drawPlayer();
+            score += 0.1; document.getElementById('scoreDisplay').innerText = Math.floor(score);
+            requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            gameState = 'OVER'; userData.stars += sessionStars;
+            if (petState.active) { userData.inventory.foodCount--; document.getElementById('petAlert').classList.remove('hidden'); }
+            saveData(); document.getElementById('starsEarned').innerText = sessionStars;
+            document.getElementById('finalScore').innerText = `Score: ${Math.floor(score)}`;
+            showMenu('gameOverScreen');
+        }
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize(); updateUI();
+        function menuLoop() { 
+            if(gameState === 'START' || gameState === 'MENU' || gameState === 'OVER') { 
+                const theme = themes[currentLevel - 1] || themes[0];
+                ctx.fillStyle = theme.bg; ctx.fillRect(0,0,canvas.width, canvas.height); 
+                ctx.fillStyle = theme.wall; ctx.fillRect(0, 0, canvas.width, WALL_HEIGHT); ctx.fillRect(0, canvas.height - WALL_HEIGHT, canvas.width, WALL_HEIGHT); 
+                requestAnimationFrame(menuLoop); 
+            } 
+        }
+        menuLoop();
+        function setStoreTab(tab) { currentStoreTab = tab; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); document.getElementById(`tab-${tab}`).classList.add('active'); renderStore(); }
+        function closeCheckout() { document.getElementById('checkoutModal').classList.add('hidden'); }
+        function openCheckout() {
+            if (cart.length === 0) return;
+            const modal = document.getElementById('checkoutModal');
+            const list = document.getElementById('cartItems'); list.innerHTML = '';
+            let sub = 0;
+            cart.forEach((item, index) => {
+                const itemTotal = item.price * item.quantity; sub += itemTotal;
+                const isConsumable = storeData[item.cat][item.id].type === 'consumable';
+                const div = document.createElement('div'); div.className = "flex justify-between items-center py-2 border-b border-slate-100 last:border-0";
+                div.innerHTML = `<div class="flex items-center gap-2"><button class="remove-btn" onclick="removeFromCart(${index})">✕</button><div class="flex flex-col"><span class="font-semibold text-sm">${item.name}</span><div class="flex items-center gap-1">${isConsumable ? `<input type="number" value="${item.quantity}" min="1" class="qty-input !w-10 !text-[10px]" onchange="updateCartQuantity(${index}, this.value)">` : `<span class="text-[10px] text-slate-400">Qty: 1</span>`}<span class="text-[10px] text-slate-400">@ ⭐${item.price}</span></div></div></div><span class="text-sm font-bold">⭐ ${itemTotal}</span>`;
+                list.appendChild(div);
+            });
+            const tax = Math.round(sub * TAX_RATE); const total = sub + tax;
+            document.getElementById('subtotal').innerText = sub; document.getElementById('taxAmount').innerText = tax; document.getElementById('cartTotal').innerText = total;
+            const buyBtn = document.getElementById('buyBtn');
+            if (userData.stars < total) { buyBtn.className = "btn bg-slate-300 cursor-not-allowed opacity-50"; buyBtn.innerText = "NOT ENOUGH STARS"; buyBtn.onclick = null; }
+            else { buyBtn.className = "btn btn-green"; buyBtn.innerText = "BUY NOW"; buyBtn.onclick = confirmPurchase; }
+            modal.classList.remove('hidden');
+        }
+        function removeFromCart(index) { cart.splice(index, 1); updateUI(); renderStore(); if (cart.length === 0) closeCheckout(); else openCheckout(); }
+        function updateCartQuantity(index, newQty) { const qty = parseInt(newQty); if (qty <= 0) removeFromCart(index); else { cart[index].quantity = qty; openCheckout(); updateUI(); } }
+    </script>
+</body>
+</html>
