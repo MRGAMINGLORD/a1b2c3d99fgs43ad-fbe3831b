@@ -173,11 +173,12 @@ ${snippet}
       );
       zip.file(
         "README.md",
-        `# Custom Games Export
+        `# Custom + Test Games Export
 
-This ZIP contains every custom game currently stored in the database.
+This ZIP contains every custom game AND every test game currently stored
+in the database, so a fork of the app ships with them baked into the repo.
 
-## How to bake them into the repo
+## How to bake them in
 
 1. Extract this ZIP into the **root of your project** (it will create/merge
    into \`public/games/<slug>/\`).
@@ -187,7 +188,7 @@ This ZIP contains every custom game currently stored in the database.
 3. Commit the new files. From now on, any fork of the app ships with these
    games baked in — no database round-trip required.
 
-Exported ${games.length} game(s), ${totalFiles} file(s) total.
+Exported ${games.length} game(s) (${customGames.length} custom + ${testGames.length} test), ${totalFiles} file(s) total.
 `,
       );
 
