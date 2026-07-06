@@ -11,6 +11,7 @@ import GameProfilesAdmin from "@/components/GameProfilesAdmin";
 import CustomGamesAdmin from "@/components/CustomGamesAdmin";
 import PatchNotesAdmin from "@/components/PatchNotesAdmin";
 import DefconAdmin from "@/components/DefconAdmin";
+import ExportGamesAdmin from "@/components/ExportGamesAdmin";
 
 interface Feedback {
   id: string;
