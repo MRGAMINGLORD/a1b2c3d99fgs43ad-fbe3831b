@@ -219,8 +219,9 @@ Exported ${games.length} game(s) (${customGames.length} custom + ${testGames.len
     <div className="mb-10 rounded-lg border border-border bg-card p-6">
       <h2 className="mb-1 font-display text-xl text-primary">Export games to public/</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Bundle every custom game (files + covers) into a ZIP that drops
-        straight into <span className="font-mono text-primary">public/games/&lt;slug&gt;/</span>.
+        Bundle every custom <span className="text-primary">and test</span> game
+        (files + covers) into a ZIP that drops straight into{" "}
+        <span className="font-mono text-primary">public/games/&lt;slug&gt;/</span>.
         Extract at the project root, paste the snippet into{" "}
         <span className="font-mono text-primary">src/lib/games.ts</span>, commit — and any
         fork of the app carries the games baked in.
