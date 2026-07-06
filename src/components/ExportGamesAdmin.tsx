@@ -60,11 +60,12 @@ const extFromUrl = (url: string): string => {
 const escapeString = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
 const buildRegistrySnippet = (
-  entries: Array<{ slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null }>,
+  entries: Array<{ slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null; source: "custom" | "test" }>,
 ) =>
   entries
     .map(
-      (e) => `  {
+      (e) => `  // from ${e.source}_games
+  {
     id: "${e.slug}",
     title: "${escapeString(e.title)}",
     description: "${escapeString(e.description)}",
