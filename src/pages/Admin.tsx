@@ -155,6 +155,7 @@ const Admin = () => {
             <FeaturedGamesAdmin />
             <GameProfilesAdmin />
             <CustomGamesAdmin />
+            <ExportGamesAdmin />
           </>
         )}
 
