@@ -83,14 +83,24 @@ const ExportGamesAdmin = () => {
   const handleExport = async () => {
     setBusy(true);
     try {
-      const { data: rows, error } = await supabase
-        .from("custom_games")
-        .select("*")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      const games = (rows ?? []) as CustomGameRow[];
+      // Pull BOTH tables so custom games AND unsynced test games get baked
+      // into the repo. Custom rows win on slug collisions (they're the live copy).
+      const [customRes, testRes] = await Promise.all([
+        supabase.from("custom_games").select("*").order("created_at", { ascending: true }),
+        supabase.from("test_custom_games").select("*").order("created_at", { ascending: true }),
+      ]);
+      if (customRes.error) throw customRes.error;
+      // Test table may not be readable for every admin — treat errors as "no test games".
+      const customGames = (customRes.data ?? []) as CustomGameRow[];
+      const testGames = ((testRes.data ?? []) as CustomGameRow[]).filter(
+        (t) => !customGames.some((c) => c.slug === t.slug),
+      );
+      const games: Array<CustomGameRow & { __source: "custom" | "test" }> = [
+        ...customGames.map((g) => ({ ...g, __source: "custom" as const })),
+        ...testGames.map((g) => ({ ...g, __source: "test" as const })),
+      ];
       if (games.length === 0) {
-        toast({ title: "Nothing to export", description: "No custom games in the database yet." });
+        toast({ title: "Nothing to export", description: "No custom or test games in the database yet." });
         setBusy(false);
         return;
       }
@@ -98,7 +108,7 @@ const ExportGamesAdmin = () => {
       const zip = new JSZip();
       const publicRoot = zip.folder("public")!.folder("games")!;
       const registryEntries: Array<{
-        slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null;
+        slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null; source: "custom" | "test";
       }> = [];
 
       let totalFiles = 0;
@@ -146,6 +156,7 @@ const ExportGamesAdmin = () => {
           category: row.category,
           credits: row.credits ?? "",
           coverPath,
+          source: row.__source,
         });
       }
 
