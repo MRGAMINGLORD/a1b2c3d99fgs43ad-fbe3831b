@@ -60,11 +60,12 @@ const extFromUrl = (url: string): string => {
 const escapeString = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
 const buildRegistrySnippet = (
-  entries: Array<{ slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null }>,
+  entries: Array<{ slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null; source: "custom" | "test" }>,
 ) =>
   entries
     .map(
-      (e) => `  {
+      (e) => `  // from ${e.source}_games
+  {
     id: "${e.slug}",
     title: "${escapeString(e.title)}",
     description: "${escapeString(e.description)}",
@@ -83,14 +84,24 @@ const ExportGamesAdmin = () => {
   const handleExport = async () => {
     setBusy(true);
     try {
-      const { data: rows, error } = await supabase
-        .from("custom_games")
-        .select("*")
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      const games = (rows ?? []) as CustomGameRow[];
+      // Pull BOTH tables so custom games AND unsynced test games get baked
+      // into the repo. Custom rows win on slug collisions (they're the live copy).
+      const [customRes, testRes] = await Promise.all([
+        supabase.from("custom_games").select("*").order("created_at", { ascending: true }),
+        supabase.from("test_custom_games").select("*").order("created_at", { ascending: true }),
+      ]);
+      if (customRes.error) throw customRes.error;
+      // Test table may not be readable for every admin — treat errors as "no test games".
+      const customGames = (customRes.data ?? []) as CustomGameRow[];
+      const testGames = ((testRes.data ?? []) as CustomGameRow[]).filter(
+        (t) => !customGames.some((c) => c.slug === t.slug),
+      );
+      const games: Array<CustomGameRow & { __source: "custom" | "test" }> = [
+        ...customGames.map((g) => ({ ...g, __source: "custom" as const })),
+        ...testGames.map((g) => ({ ...g, __source: "test" as const })),
+      ];
       if (games.length === 0) {
-        toast({ title: "Nothing to export", description: "No custom games in the database yet." });
+        toast({ title: "Nothing to export", description: "No custom or test games in the database yet." });
         setBusy(false);
         return;
       }
@@ -98,7 +109,7 @@ const ExportGamesAdmin = () => {
       const zip = new JSZip();
       const publicRoot = zip.folder("public")!.folder("games")!;
       const registryEntries: Array<{
-        slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null;
+        slug: string; title: string; description: string; category: string; credits: string; coverPath: string | null; source: "custom" | "test";
       }> = [];
 
       let totalFiles = 0;
@@ -146,6 +157,7 @@ const ExportGamesAdmin = () => {
           category: row.category,
           credits: row.credits ?? "",
           coverPath,
+          source: row.__source,
         });
       }
 
@@ -161,11 +173,12 @@ ${snippet}
       );
       zip.file(
         "README.md",
-        `# Custom Games Export
+        `# Custom + Test Games Export
 
-This ZIP contains every custom game currently stored in the database.
+This ZIP contains every custom game AND every test game currently stored
+in the database, so a fork of the app ships with them baked into the repo.
 
-## How to bake them into the repo
+## How to bake them in
 
 1. Extract this ZIP into the **root of your project** (it will create/merge
    into \`public/games/<slug>/\`).
@@ -175,7 +188,7 @@ This ZIP contains every custom game currently stored in the database.
 3. Commit the new files. From now on, any fork of the app ships with these
    games baked in — no database round-trip required.
 
-Exported ${games.length} game(s), ${totalFiles} file(s) total.
+Exported ${games.length} game(s) (${customGames.length} custom + ${testGames.length} test), ${totalFiles} file(s) total.
 `,
       );
 
@@ -206,8 +219,9 @@ Exported ${games.length} game(s), ${totalFiles} file(s) total.
     <div className="mb-10 rounded-lg border border-border bg-card p-6">
       <h2 className="mb-1 font-display text-xl text-primary">Export games to public/</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Bundle every custom game (files + covers) into a ZIP that drops
-        straight into <span className="font-mono text-primary">public/games/&lt;slug&gt;/</span>.
+        Bundle every custom <span className="text-primary">and test</span> game
+        (files + covers) into a ZIP that drops straight into{" "}
+        <span className="font-mono text-primary">public/games/&lt;slug&gt;/</span>.
         Extract at the project root, paste the snippet into{" "}
         <span className="font-mono text-primary">src/lib/games.ts</span>, commit — and any
         fork of the app carries the games baked in.
