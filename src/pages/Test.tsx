@@ -287,6 +287,10 @@ const EditGameDialog = ({
       html: game.html,
     });
     setHistory([]);
+    setBundleFiles([]);
+    if (folderInputRef.current) folderInputRef.current.value = "";
+    if (filesInputRef.current) filesInputRef.current.value = "";
+    if (zipInputRef.current) zipInputRef.current.value = "";
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [game?.id, open]);
 
