@@ -35,6 +35,7 @@ import {
   remainingPasswordGateAttempts,
 } from "@/lib/passwordGate";
 import CoverImagePicker from "@/components/CoverImagePicker";
+import { expandZips, relPathOf, uploadBundle } from "@/lib/gameBundle";
 import { prepareGameSource, looksLikeReact } from "@/lib/reactGameWrapper";
 import GameCard from "@/components/GameCard";
 import TesterChat from "@/components/TesterChat";
