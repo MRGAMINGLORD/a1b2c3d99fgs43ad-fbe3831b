@@ -167,6 +167,7 @@ const CustomGamesAdmin = () => {
     setBundleFiles([]);
     if (folderInputRef.current) folderInputRef.current.value = "";
     if (filesInputRef.current) filesInputRef.current.value = "";
+    if (zipInputRef.current) zipInputRef.current.value = "";
   };
 
   const startEdit = async (row: CustomGameRow) => {
