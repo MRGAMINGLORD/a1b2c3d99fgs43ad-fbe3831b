@@ -136,6 +136,7 @@ const CustomGamesAdmin = () => {
   const [bundleFiles, setBundleFiles] = useState<File[]>([]);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
 
