@@ -443,6 +443,108 @@ const EditGameDialog = ({
                 ))}
               </div>
             </div>
+            <div className="rounded-md border border-primary/40 bg-background/40 p-3">
+              <Label className="font-display text-xs uppercase tracking-wider text-primary">
+                Upload folder / files / ZIP (optional)
+              </Label>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Pick a whole folder or ZIP — every file uploads to <span className="font-mono text-primary">/game-files/__test__/{game?.slug ?? "slug"}/</span>.
+                Entry: <span className="font-mono">index.html</span>. When files are picked, they take precedence over the pasted source below.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => folderInputRef.current?.click()}>
+                  <FolderUp className="mr-1 h-3 w-3" /> Pick folder
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => filesInputRef.current?.click()}>
+                  <Upload className="mr-1 h-3 w-3" /> Add files
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => zipInputRef.current?.click()}>
+                  <FileArchive className="mr-1 h-3 w-3" /> Import ZIP
+                </Button>
+                {bundleFiles.length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setBundleFiles([]);
+                      if (folderInputRef.current) folderInputRef.current.value = "";
+                      if (filesInputRef.current) filesInputRef.current.value = "";
+                      if (zipInputRef.current) zipInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="mr-1 h-3 w-3" /> Clear
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                hidden
+                {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
+                onChange={async (e) => {
+                  const list = Array.from(e.target.files ?? []);
+                  if (list.length > 0) setBundleFiles(await expandZips(list));
+                }}
+              />
+              <input
+                ref={filesInputRef}
+                type="file"
+                multiple
+                hidden
+                onChange={async (e) => {
+                  const list = Array.from(e.target.files ?? []);
+                  if (list.length > 0) {
+                    const expanded = await expandZips(list);
+                    setBundleFiles((prev) => [...prev, ...expanded]);
+                  }
+                }}
+              />
+              <input
+                ref={zipInputRef}
+                type="file"
+                accept=".zip,application/zip"
+                hidden
+                onChange={async (e) => {
+                  const list = Array.from(e.target.files ?? []);
+                  if (list.length === 0) return;
+                  try {
+                    const expanded = await expandZips(list);
+                    if (expanded.length === 0) {
+                      toast({ title: "Empty ZIP", description: "No files found inside.", variant: "destructive" });
+                      return;
+                    }
+                    setBundleFiles(expanded);
+                    toast({ title: "ZIP imported", description: `${expanded.length} file(s) ready.` });
+                  } catch (err) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    toast({ title: "Could not read ZIP", description: msg, variant: "destructive" });
+                  }
+                }}
+              />
+              {bundleFiles.length > 0 && (
+                <div className="mt-2 max-h-32 overflow-y-auto rounded border border-primary/30 bg-background/60 p-2 font-mono text-[10px]">
+                  {bundleFiles.map((f, i) => (
+                    <div key={`${relPathOf(f)}-${i}`} className="flex items-center justify-between gap-2">
+                      <span className="truncate text-primary">{relPathOf(f)}</span>
+                      <span className="shrink-0 text-muted-foreground">{(f.size / 1024).toFixed(1)} KB</span>
+                      <button
+                        type="button"
+                        className="text-destructive hover:opacity-80"
+                        onClick={() => setBundleFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                        aria-label={`Remove ${relPathOf(f)}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="mt-1 text-muted-foreground">
+                    {bundleFiles.length} file(s) ready
+                  </div>
+                </div>
+              )}
+            </div>
             <div>
               <div className="flex items-center justify-between">
                 <Label>Game source — HTML or React/JSX</Label>
