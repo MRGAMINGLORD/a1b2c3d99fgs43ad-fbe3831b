@@ -446,6 +446,14 @@ const CustomGamesAdmin = () => {
             >
               <Upload className="mr-1 h-4 w-4" /> Add files
             </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => zipInputRef.current?.click()}
+            >
+              <FileArchive className="mr-1 h-4 w-4" /> Import ZIP
+            </Button>
             {bundleFiles.length > 0 && (
               <Button
                 type="button"
@@ -455,6 +463,7 @@ const CustomGamesAdmin = () => {
                   setBundleFiles([]);
                   if (folderInputRef.current) folderInputRef.current.value = "";
                   if (filesInputRef.current) filesInputRef.current.value = "";
+                  if (zipInputRef.current) zipInputRef.current.value = "";
                 }}
               >
                 <X className="mr-1 h-4 w-4" /> Clear
@@ -468,9 +477,9 @@ const CustomGamesAdmin = () => {
             hidden
             // Nonstandard but supported in Chromium/WebKit for folder selection.
             {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-            onChange={(e) => {
+            onChange={async (e) => {
               const list = Array.from(e.target.files ?? []);
-              if (list.length > 0) setBundleFiles(list);
+              if (list.length > 0) setBundleFiles(await expandZips(list));
             }}
           />
           <input
@@ -478,13 +487,37 @@ const CustomGamesAdmin = () => {
             type="file"
             multiple
             hidden
-            onChange={(e) => {
+            onChange={async (e) => {
               const list = Array.from(e.target.files ?? []);
               if (list.length > 0) {
-                setBundleFiles((prev) => [...prev, ...list]);
+                const expanded = await expandZips(list);
+                setBundleFiles((prev) => [...prev, ...expanded]);
               }
             }}
           />
+          <input
+            ref={zipInputRef}
+            type="file"
+            accept=".zip,application/zip"
+            hidden
+            onChange={async (e) => {
+              const list = Array.from(e.target.files ?? []);
+              if (list.length === 0) return;
+              try {
+                const expanded = await expandZips(list);
+                if (expanded.length === 0) {
+                  toast({ title: "Empty ZIP", description: "No files found inside the archive.", variant: "destructive" });
+                  return;
+                }
+                setBundleFiles(expanded);
+                toast({ title: "ZIP imported", description: `${expanded.length} file(s) ready to upload.` });
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                toast({ title: "Could not read ZIP", description: msg, variant: "destructive" });
+              }
+            }}
+          />
+
           {bundleFiles.length > 0 && (
             <div className="mt-2 max-h-40 overflow-y-auto rounded border border-primary/30 bg-background/60 p-2 font-mono text-[11px]">
               {bundleFiles.map((f, i) => (
