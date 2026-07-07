@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye, FolderUp, X, Upload } from "lucide-react";
+import { Trash2, Plus, Pencil, FileCode, Eye, FolderUp, X, Upload, FileArchive } from "lucide-react";
+import JSZip from "jszip";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,8 +52,11 @@ const contentTypeFor = (file: File, relPath: string): string => {
 };
 
 // Chrome/Edge/Safari expose the folder-relative path via a nonstandard
-// property. Fall back to plain name for multi-file picks.
+// property. Fall back to plain name for multi-file picks. For files that
+// came from a ZIP import we stash the archive-relative path on `__relPath`.
 const relPathOf = (f: File): string => {
+  const custom = (f as unknown as { __relPath?: string }).__relPath;
+  if (custom && custom.length > 0) return custom;
   const rel = (f as unknown as { webkitRelativePath?: string }).webkitRelativePath;
   if (rel && rel.length > 0) {
     // Strip the top-level folder so uploads land at <slug>/<file>, not
@@ -62,6 +66,39 @@ const relPathOf = (f: File): string => {
   }
   return f.name;
 };
+
+// Expand any .zip files inside the picked list into their contained files.
+// Files with a common top-level folder are flattened so the archive layout
+// mirrors what "Pick folder" produces (entry at the root).
+const expandZips = async (files: File[]): Promise<File[]> => {
+  const out: File[] = [];
+  for (const file of files) {
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      out.push(file);
+      continue;
+    }
+    const zip = await JSZip.loadAsync(file);
+    const entries = Object.values(zip.files).filter((e) => !e.dir);
+    // Detect a shared top-level folder to strip (e.g. "my-game/index.html").
+    const topLevels = new Set(
+      entries.map((e) => {
+        const idx = e.name.indexOf("/");
+        return idx >= 0 ? e.name.slice(0, idx) : "";
+      }),
+    );
+    const stripTop = topLevels.size === 1 && !topLevels.has("");
+    for (const entry of entries) {
+      const rel = stripTop ? entry.name.slice(entry.name.indexOf("/") + 1) : entry.name;
+      if (!rel) continue;
+      const blob = await entry.async("blob");
+      const inner = new File([blob], rel.split("/").pop() ?? rel);
+      Object.defineProperty(inner, "__relPath", { value: rel, enumerable: false });
+      out.push(inner);
+    }
+  }
+  return out;
+};
+
 
 
 
@@ -99,6 +136,7 @@ const CustomGamesAdmin = () => {
   const [bundleFiles, setBundleFiles] = useState<File[]>([]);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
   // Profile viewer state — shows the cover, description, location, credits, etc.
   const [profileGameKey, setProfileGameKey] = useState<string | null>(null);
 
@@ -129,6 +167,7 @@ const CustomGamesAdmin = () => {
     setBundleFiles([]);
     if (folderInputRef.current) folderInputRef.current.value = "";
     if (filesInputRef.current) filesInputRef.current.value = "";
+    if (zipInputRef.current) zipInputRef.current.value = "";
   };
 
   const startEdit = async (row: CustomGameRow) => {
@@ -407,6 +446,14 @@ const CustomGamesAdmin = () => {
             >
               <Upload className="mr-1 h-4 w-4" /> Add files
             </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => zipInputRef.current?.click()}
+            >
+              <FileArchive className="mr-1 h-4 w-4" /> Import ZIP
+            </Button>
             {bundleFiles.length > 0 && (
               <Button
                 type="button"
@@ -416,6 +463,7 @@ const CustomGamesAdmin = () => {
                   setBundleFiles([]);
                   if (folderInputRef.current) folderInputRef.current.value = "";
                   if (filesInputRef.current) filesInputRef.current.value = "";
+                  if (zipInputRef.current) zipInputRef.current.value = "";
                 }}
               >
                 <X className="mr-1 h-4 w-4" /> Clear
@@ -429,9 +477,9 @@ const CustomGamesAdmin = () => {
             hidden
             // Nonstandard but supported in Chromium/WebKit for folder selection.
             {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-            onChange={(e) => {
+            onChange={async (e) => {
               const list = Array.from(e.target.files ?? []);
-              if (list.length > 0) setBundleFiles(list);
+              if (list.length > 0) setBundleFiles(await expandZips(list));
             }}
           />
           <input
@@ -439,13 +487,37 @@ const CustomGamesAdmin = () => {
             type="file"
             multiple
             hidden
-            onChange={(e) => {
+            onChange={async (e) => {
               const list = Array.from(e.target.files ?? []);
               if (list.length > 0) {
-                setBundleFiles((prev) => [...prev, ...list]);
+                const expanded = await expandZips(list);
+                setBundleFiles((prev) => [...prev, ...expanded]);
               }
             }}
           />
+          <input
+            ref={zipInputRef}
+            type="file"
+            accept=".zip,application/zip"
+            hidden
+            onChange={async (e) => {
+              const list = Array.from(e.target.files ?? []);
+              if (list.length === 0) return;
+              try {
+                const expanded = await expandZips(list);
+                if (expanded.length === 0) {
+                  toast({ title: "Empty ZIP", description: "No files found inside the archive.", variant: "destructive" });
+                  return;
+                }
+                setBundleFiles(expanded);
+                toast({ title: "ZIP imported", description: `${expanded.length} file(s) ready to upload.` });
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                toast({ title: "Could not read ZIP", description: msg, variant: "destructive" });
+              }
+            }}
+          />
+
           {bundleFiles.length > 0 && (
             <div className="mt-2 max-h-40 overflow-y-auto rounded border border-primary/30 bg-background/60 p-2 font-mono text-[11px]">
               {bundleFiles.map((f, i) => (
