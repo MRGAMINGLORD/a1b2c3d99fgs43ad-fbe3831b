@@ -547,7 +547,7 @@ const EditGameDialog = ({
             </div>
             <div>
               <div className="flex items-center justify-between">
-                <Label>Game source — HTML or React/JSX</Label>
+                <Label>Game source — HTML or React/JSX {bundleFiles.length > 0 && <span className="text-muted-foreground">(ignored while files are picked)</span>}</Label>
                 <div className="flex gap-1">
                   <Button type="button" size="sm" variant="outline" onClick={runPreview}>
                     {previewOpen ? <RefreshCw className="mr-1 h-3 w-3" /> : <Eye className="mr-1 h-3 w-3" />}
