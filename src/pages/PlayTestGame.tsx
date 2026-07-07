@@ -54,10 +54,19 @@ const PlayTestGame = () => {
         setLoading(false);
         return;
       }
-      const blob = new Blob([prepareGameSource(row.html)], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      blobRef.current = url;
-      setSrc(url);
+      // If html is a URL to a stored bundle, load it directly so relative
+      // asset paths (css/js/images) resolve. Otherwise wrap the inline source
+      // in a blob URL.
+      const trimmed = row.html.trim();
+      const isUrl = /^https?:\/\//i.test(trimmed);
+      if (isUrl) {
+        setSrc(trimmed);
+      } else {
+        const blob = new Blob([prepareGameSource(row.html)], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        blobRef.current = url;
+        setSrc(url);
+      }
       setTitle(row.title);
       setLoading(false);
     })();
