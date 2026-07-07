@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Trash2, Plus, Pencil, FileCode, Eye, FolderUp, X, Upload } from "lucide-react";
+import { Trash2, Plus, Pencil, FileCode, Eye, FolderUp, X, Upload, FileArchive } from "lucide-react";
+import JSZip from "jszip";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
