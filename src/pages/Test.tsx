@@ -358,8 +358,23 @@ const EditGameDialog = ({
   const save = async () => {
     if (!game) return;
     setSaving(true);
-    // Auto-wrap React/JSX so /play-test/<slug> can serve it as plain HTML.
-    const storedHtml = html.trim() ? prepareGameSource(html) : html;
+    let storedHtml: string;
+    try {
+      if (bundleFiles.length > 0) {
+        // Multi-file bundle wins — upload to game-files/__test__/<slug>/ and
+        // store the entry URL. Relative asset paths resolve because the
+        // iframe loads the URL directly.
+        storedHtml = await uploadBundle(game.slug, bundleFiles, "__test__");
+      } else {
+        // Auto-wrap React/JSX so /play-test/<slug> can serve it as plain HTML.
+        storedHtml = html.trim() ? prepareGameSource(html) : html;
+      }
+    } catch (err) {
+      setSaving(false);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast({ title: "Upload failed", description: msg, variant: "destructive" });
+      return;
+    }
     const { error } = await supabase
       .from("test_custom_games")
       .update({
@@ -375,7 +390,7 @@ const EditGameDialog = ({
       toast({ title: "Save failed", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Saved to TEST" });
+    toast({ title: "Saved to TEST", description: bundleFiles.length > 0 ? `${bundleFiles.length} file(s) uploaded.` : undefined });
     handleClose(false);
     onSaved();
   };
