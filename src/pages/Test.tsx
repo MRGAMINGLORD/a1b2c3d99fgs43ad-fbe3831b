@@ -242,6 +242,10 @@ const EditGameDialog = ({
   const [form, setForm] = useState<Snapshot>(emptySnapshot());
   const [history, setHistory] = useState<Snapshot[]>([]);
   const [saving, setSaving] = useState(false);
+  const [bundleFiles, setBundleFiles] = useState<File[]>([]);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const filesInputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
   const { title, description, coverUrl, category, html } = form;
 
