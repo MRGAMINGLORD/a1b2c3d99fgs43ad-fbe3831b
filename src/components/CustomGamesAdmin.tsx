@@ -52,8 +52,11 @@ const contentTypeFor = (file: File, relPath: string): string => {
 };
 
 // Chrome/Edge/Safari expose the folder-relative path via a nonstandard
-// property. Fall back to plain name for multi-file picks.
+// property. Fall back to plain name for multi-file picks. For files that
+// came from a ZIP import we stash the archive-relative path on `__relPath`.
 const relPathOf = (f: File): string => {
+  const custom = (f as unknown as { __relPath?: string }).__relPath;
+  if (custom && custom.length > 0) return custom;
   const rel = (f as unknown as { webkitRelativePath?: string }).webkitRelativePath;
   if (rel && rel.length > 0) {
     // Strip the top-level folder so uploads land at <slug>/<file>, not
@@ -63,6 +66,39 @@ const relPathOf = (f: File): string => {
   }
   return f.name;
 };
+
+// Expand any .zip files inside the picked list into their contained files.
+// Files with a common top-level folder are flattened so the archive layout
+// mirrors what "Pick folder" produces (entry at the root).
+const expandZips = async (files: File[]): Promise<File[]> => {
+  const out: File[] = [];
+  for (const file of files) {
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      out.push(file);
+      continue;
+    }
+    const zip = await JSZip.loadAsync(file);
+    const entries = Object.values(zip.files).filter((e) => !e.dir);
+    // Detect a shared top-level folder to strip (e.g. "my-game/index.html").
+    const topLevels = new Set(
+      entries.map((e) => {
+        const idx = e.name.indexOf("/");
+        return idx >= 0 ? e.name.slice(0, idx) : "";
+      }),
+    );
+    const stripTop = topLevels.size === 1 && !topLevels.has("");
+    for (const entry of entries) {
+      const rel = stripTop ? entry.name.slice(entry.name.indexOf("/") + 1) : entry.name;
+      if (!rel) continue;
+      const blob = await entry.async("blob");
+      const inner = new File([blob], rel.split("/").pop() ?? rel);
+      Object.defineProperty(inner, "__relPath", { value: rel, enumerable: false });
+      out.push(inner);
+    }
+  }
+  return out;
+};
+
 
 
 
