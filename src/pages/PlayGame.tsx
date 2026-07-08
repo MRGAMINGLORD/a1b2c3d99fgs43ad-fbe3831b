@@ -5,6 +5,8 @@ import { setLastGame } from "@/lib/gameStorage";
 import { fetchCustomGame } from "@/hooks/useCustomGames";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
+import { LockedRouteGate } from "@/components/LockedRouteGate";
+import { useGamesUnlocked } from "@/lib/gamesUnlock";
 
 type GameId =
   | "turtle-trade-co"
@@ -483,6 +485,7 @@ const isStoredGameFileUrl = (url: string) =>
 
 const PlayGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const gamesUnlocked = useGamesUnlocked();
   const builtIn = gameId && (gameId in GAMES) ? GAMES[gameId as GameId] : undefined;
 
   const [resolved, setResolved] = useState<ResolvedGame | null>(
@@ -492,6 +495,11 @@ const PlayGame = () => {
   const [notFound, setNotFound] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
   const [loaded, setLoaded] = useState(false);
+
+  // Hard-gate direct URL access: /play/* only works after Sir Wafflington
+  // unlocks the Games sections. Prevents bypassing the frosted overlay by
+  // typing a slug into the address bar.
+  if (!gamesUnlocked) return <LockedRouteGate />;
 
   const blobUrlRef = useMemo(() => ({ current: null as string | null }), []);
 
