@@ -7,6 +7,8 @@ import { isTestUnlocked } from "@/lib/testAuth";
 import { ConfirmExitLink } from "@/components/ConfirmExitLink";
 import { GameErrorOverlay } from "@/components/GameErrorOverlay";
 import { GameConsolePanel } from "@/components/GameConsolePanel";
+import { LockedRouteGate } from "@/components/LockedRouteGate";
+import { useGamesUnlocked } from "@/lib/gamesUnlock";
 
 const TEST_UNLOCK_EVENT = "apocalypse-waffle:test-unlocked";
 
@@ -19,6 +21,7 @@ const BUILTIN_TEST_ROUTES: Record<string, { title: string; src: string }> = {
 
 const PlayTestGame = () => {
   const { gameId } = useParams<{ gameId: string }>();
+  const gamesUnlocked = useGamesUnlocked();
   const [testUnlocked, setTestUnlocked] = useState(isTestUnlocked());
   const [src, setSrc] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -78,6 +81,10 @@ const PlayTestGame = () => {
       }
     };
   }, [gameId, blobRef]);
+
+  // Same hard gate as /play/* — direct URL to a test build shouldn't work
+  // until Sir Wafflington unlocks the Games sections.
+  if (!gamesUnlocked) return <LockedRouteGate />;
 
   // Test play is gated behind the same TEST password
   if (!testUnlocked) {
