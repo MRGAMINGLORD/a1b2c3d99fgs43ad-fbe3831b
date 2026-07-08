@@ -358,7 +358,7 @@ const CustomGamesAdmin = () => {
   const remove = async (id: string) => {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
-    if (!confirm(`Delete "${row.title}"? The file at /game-files/${row.slug}/index.html will also be removed. This can't be undone.`)) return;
+    
 
     // Best-effort delete of the storage file; don't block DB delete on failure.
     if (isStoredFileUrl(row.html)) {

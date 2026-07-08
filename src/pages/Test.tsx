@@ -857,7 +857,7 @@ const Test = () => {
   };
 
   const handlePost = async (g: TestGameRow) => {
-    if (!confirm(`Post "${g.title}" to the LIVE hub? This will overwrite any existing live game with the same slug.`)) return;
+    
     const { error } = await supabase.from("custom_games").upsert(
       {
         slug: g.slug,
@@ -877,7 +877,7 @@ const Test = () => {
   };
 
   const handleDelete = async (g: TestGameRow) => {
-    if (!confirm(`Delete "${g.title}" from TEST? (This does not affect live.)`)) return;
+    
     const { error } = await supabase.from("test_custom_games").delete().eq("id", g.id);
     if (error) {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
