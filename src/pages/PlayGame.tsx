@@ -496,11 +496,6 @@ const PlayGame = () => {
   const [showLoader, setShowLoader] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  // Hard-gate direct URL access: /play/* only works after Sir Wafflington
-  // unlocks the Games sections. Prevents bypassing the frosted overlay by
-  // typing a slug into the address bar.
-  if (!gamesUnlocked) return <LockedRouteGate />;
-
   const blobUrlRef = useMemo(() => ({ current: null as string | null }), []);
 
   useEffect(() => {
@@ -600,6 +595,11 @@ const PlayGame = () => {
   useEffect(() => {
     if (resolved && gameId) setLastGame(gameId);
   }, [resolved, gameId]);
+
+  // Hard-gate direct URL access: /play/* only works after Sir Wafflington
+  // unlocks the Games sections. Prevents bypassing the frosted overlay by
+  // typing a slug into the address bar.
+  if (!gamesUnlocked) return <LockedRouteGate />;
 
   if (resolving) {
     return (
