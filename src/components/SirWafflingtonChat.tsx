@@ -26,13 +26,16 @@ import { useWafflingtonUnlocked } from "@/lib/wafflingtonUnlock";
 import { areGamesUnlocked, unlockGames } from "@/lib/gamesUnlock";
 
 const PASSWORD = "67 IS GREAT"; // case-sensitive
+// First correct entry: play it straight — welcome & list the games.
+const FIRST_LINE =
+  "*Sir Wafflington adjusts his monocle and gives a small, delighted bow.* Ah — a proper password, spoken properly! Splendid. Allow me to present today's diversions:\n\n**Tycoons:** Turtle Trade Co · Waffle Works\n**Waffly Twists:** Arcade Games · Waffle Craft · Golden Grid · Mini Games\n**Other:** Defense of Belgium · Neon Snake · Gravity Runner\n\nWhich, pray tell, would you care to sample?";
+// 2nd and 3rd repeats: he grows increasingly cross.
 const DENY_LINES = [
-  "*Sir Wafflington raises a powdered eyebrow.* I haven't the foggiest notion what 'keys' you speak of, dear visitor. Perhaps you'd be happier on one of those *other* gaming sites — they have such delightful pop-ups, I hear.",
-  "*sighs theatrically* Still on about keys? There are no keys. Truly, you'd save yourself such heartache by simply closing this tab and visiting Coolmath, or whatever the children play these days.",
-  "I shall say it once more, in the plainest English: there. are. no. keys. Run along, find another wasteland. This one is, regrettably, all out of games for you.",
+  "*Sir Wafflington's monocle pops out and dangles.* …I have *already* welcomed you, dear visitor. Repeating the password is neither clever nor charming. Kindly pick a game.",
+  "*a vein twitches beneath the golden crust.* This is the THIRD time. THIRD. Passwords are said ONCE. One! Uno! Say the phrase again and I shall be forced to fetch my cane in a most un-gentlemanly fashion.",
 ];
 const GRANT_LINE =
-  "*A long pause. Sir Wafflington dabs his monocle with a silk handkerchief.* …Very well. You have proven *unreasonably* persistent, and I do so admire that in a visitor. Consider the Games unlocked. Close this chat and they shall appear, as if by magic — because, in a sense, they did.";
+  "*A long, weary pause. Sir Wafflington dabs his monocle with a silk handkerchief.* …Very well. You have proven *unreasonably* persistent, and I do so grudgingly admire that. Consider the Games unlocked. Close this chat and they shall appear, as if by magic — because, in a sense, they did.";
 
 const STARTER_PROMPTS = [
   "What games are available?",
@@ -82,11 +85,14 @@ export const SirWafflingtonChat = ({ hidden = false }: { hidden?: boolean }) => 
       const attempt = passwordAttempts.current + 1;
       passwordAttempts.current = attempt;
       let reply: string;
-      if (attempt >= 4) {
+      if (attempt === 1) {
+        reply = FIRST_LINE;
+      } else if (attempt >= 4) {
         reply = GRANT_LINE;
         pendingUnlock.current = true;
       } else {
-        reply = DENY_LINES[Math.min(attempt - 1, DENY_LINES.length - 1)];
+        // attempts 2 & 3 → escalating annoyance
+        reply = DENY_LINES[Math.min(attempt - 2, DENY_LINES.length - 1)];
       }
       setMessages((prev) => [
         ...prev,
